@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="page-narrow">
+    <header class="page-header">
+        <h1><i class="fa-solid fa-gear me-2"></i>Settings</h1>
+        <p class="text-muted">Manage your profile and password.</p>
+    </header>
+
+    {% if error %}<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>{% endif %}
+    {% if success %}<div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i>{{ success }}</div>{% endif %}
+
+    <div class="card surface-card mb-4">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fa-solid fa-id-card me-2 text-primary"></i>Profile Details</h5>
+            <form method="POST" action="{{ url_for('settings') }}" class="row g-3 mt-1">
+                <input type="hidden" name="action" value="profile" />
+                <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control" value="{{ user.UserName or '' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input type="tel" name="phone" class="form-control" value="{{ user.ContactNo or '' }}" pattern="[0-9]{10}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Gender</label>
+                    <select name="gender" class="form-select">
+                        {% for g in ['Male','Female','Other'] %}
+                        <option value="{{ g }}" {% if user.Gender == g %}selected{% endif %}>{{ g }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">City</label>
+                    <input type="text" name="location" class="form-control" value="{{ user.Location or '' }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>Save profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card surface-card mb-4">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fa-solid fa-key me-2 text-primary"></i>Change Password</h5>
+            <form method="POST" action="{{ url_for('settings') }}" class="row g-3 mt-1">
+                <input type="hidden" name="action" value="password" />
+                <div class="col-md-12">
+                    <label class="form-label">Current password</label>
+                    <input type="password" name="current_password" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">New password</label>
+                    <input type="password" name="new_password" class="form-control" minlength="6" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Confirm new password</label>
+                    <input type="password" name="confirm_password" class="form-control" minlength="6" required>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-shield-halved me-1"></i>Update password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card surface-card border-danger-subtle">
+        <div class="card-body">
+            <h5 class="card-title text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Sign out</h5>
+            <p class="text-muted mb-3">End your current session.</p>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
