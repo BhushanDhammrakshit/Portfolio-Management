@@ -94,6 +94,11 @@ def _fetch_volume(symbol):
         if hist is None or len(hist) < 2:
             return None
 
+        # Drop rows with NaN Close (incomplete bars after-hours / pre-market)
+        hist = hist.dropna(subset=["Close", "Volume"])
+        if len(hist) < 2:
+            return None
+
         today_vol = int(hist["Volume"].iloc[-1])
         # Previous 10 trading days (excluding today)
         prev_vols = hist["Volume"].iloc[-11:-1] if len(hist) >= 11 else hist["Volume"].iloc[:-1]
@@ -106,6 +111,10 @@ def _fetch_volume(symbol):
 
         price = float(hist["Close"].iloc[-1])
         prev_close = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else price
+        # Guard against NaN values that would corrupt JSON output
+        import math
+        if math.isnan(price) or math.isnan(prev_close):
+            return None
         change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0
 
         # ── Signal: combine volume surge + price direction ─────────────
