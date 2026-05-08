@@ -1,0 +1,444 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="advanced-dashboard">
+    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <div>
+            <h1><i class="fa-solid fa-chart-line me-2"></i>Advanced Analytics</h1>
+            <p>Bloomberg-style portfolio risk &amp; performance metrics.</p>
+        </div>
+        <button id="loadAnalytics" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-bolt me-1"></i>Load analytics
+        </button>
+    </header>
+
+    <div id="analyticsLoading" class="text-center py-5" hidden>
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Crunching 1-year historical data&hellip; This may take a few seconds.</p>
+    </div>
+
+    <div id="analyticsError" hidden></div>
+
+    <div id="analyticsContent" hidden>
+        <!-- Performance Summary Strip -->
+        <div class="metrics-strip" id="perfStrip"></div>
+
+        <!-- Performance vs Benchmark chart -->
+        <div class="row g-3 mt-2">
+            <div class="col-lg-8">
+                <div class="surface-card p-3 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0"><i class="fa-solid fa-chart-area me-1 text-primary"></i>Cumulative return vs NIFTY 50</h6>
+                        <span class="badge bg-light text-dark" id="periodBadge">1Y</span>
+                    </div>
+                    <div class="adv-chart-wrap"><canvas id="cumReturnChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="surface-card p-3 h-100">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-gauge-high me-1 text-warning"></i>Risk ratios</h6>
+                    <div id="riskRatiosPanel"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawdown + VaR -->
+        <div class="row g-3 mt-2">
+            <div class="col-lg-8">
+                <div class="surface-card p-3 h-100">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-water me-1 text-danger"></i>Drawdown</h6>
+                    <div class="adv-chart-wrap-sm"><canvas id="drawdownChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="surface-card p-3 h-100">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-shield-halved me-1 text-danger"></i>Value at Risk</h6>
+                    <div id="varPanel"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Returns Heatmap -->
+        <div class="surface-card p-3 mt-3">
+            <h6 class="fw-bold mb-2"><i class="fa-solid fa-calendar-days me-1 text-success"></i>Monthly returns heatmap</h6>
+            <div class="monthly-heatmap" id="monthlyHeatmap"></div>
+        </div>
+
+        <!-- Diversification -->
+        <div class="row g-3 mt-2">
+            <div class="col-lg-6">
+                <div class="surface-card p-3 h-100">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-pie-chart me-1 text-info"></i>Sector allocation</h6>
+                    <div class="adv-chart-wrap"><canvas id="sectorChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="surface-card p-3 h-100">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-layer-group me-1 text-purple"></i>Diversification</h6>
+                    <div id="diversificationPanel"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock-level metrics table -->
+        <div class="surface-card p-3 mt-3">
+            <h6 class="fw-bold mb-2"><i class="fa-solid fa-table me-1 text-primary"></i>Holdings breakdown</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle adv-table" id="holdingsTable">
+                    <thead>
+                        <tr>
+                            <th>Stock</th>
+                            <th>Symbol</th>
+                            <th>Sector</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Percentage of your total portfolio value this stock represents. Higher weight means more impact on portfolio performance.">Weight</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Current market value of your holding (Quantity × Current Price).">Value</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Absolute profit or loss in rupees. Positive means you've gained, negative means you've lost.">P/L</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Percentage return on your investment. Shows how much your holding has grown or shrunk relative to what you paid.">P/L %</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Annualized volatility — measures how much the stock price fluctuates. Higher values mean more risk and unpredictable price swings.">Vol (ann)</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Beta measures sensitivity to market moves. Beta=1 moves with market, >1 is more volatile, <1 is less volatile, negative moves opposite.">Beta</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="Relative Strength Index (0-100). Above 70 = overbought (may fall), below 30 = oversold (may rise). Helps time entries/exits.">RSI</th>
+                            <th class="text-center" data-bs-toggle="tooltip" title="50-Day Moving Average. 'Above' suggests short-term uptrend (bullish momentum), 'Below' suggests short-term downtrend.">50 DMA</th>
+                            <th class="text-center" data-bs-toggle="tooltip" title="200-Day Moving Average. 'Above' suggests long-term uptrend (strong bullish signal), 'Below' suggests long-term downtrend.">200 DMA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="holdingsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.advanced-dashboard .metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+.metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+}
+.metric-card .metric-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+.metric-card .metric-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-top: 2px;
+}
+.metric-card .metric-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.metric-card.positive .metric-value { color: var(--success); }
+.metric-card.negative .metric-value { color: var(--danger); }
+
+.adv-chart-wrap { position: relative; height: 380px; width: 100%; }
+.adv-chart-wrap-sm { position: relative; height: 320px; width: 100%; }
+
+.risk-ratio-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+}
+.risk-ratio-item:last-child { border-bottom: 0; }
+.risk-ratio-item .ratio-name { color: var(--text-muted); font-weight: 600; }
+.risk-ratio-item .ratio-value { font-weight: 800; font-size: 1rem; }
+.risk-ratio-item .ratio-value.good { color: var(--success); }
+.risk-ratio-item .ratio-value.bad { color: var(--danger); }
+.risk-ratio-item .ratio-value.neutral { color: var(--text); }
+
+.var-card {
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+}
+.var-card .var-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+.var-card .var-value { font-size: 1.2rem; font-weight: 800; color: var(--danger); }
+.var-card .var-desc { font-size: 0.72rem; color: var(--text-muted); }
+
+.monthly-heatmap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 4px;
+}
+.month-cell {
+    padding: 8px 6px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.month-cell .month-label { display: block; font-size: 0.62rem; color: rgba(0,0,0,0.5); font-weight: 600; text-transform: uppercase; }
+
+.diversification-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+.diversification-stat:last-child { border-bottom: 0; }
+.diversification-stat .ds-label { color: var(--text-muted); font-weight: 600; }
+.diversification-stat .ds-value { font-weight: 800; }
+
+.adv-table th {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.adv-table td { font-size: 0.82rem; white-space: nowrap; }
+.adv-table .stock-name { font-weight: 700; }
+.adv-table .symbol-pill { background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-weight: 600; color: var(--primary); font-size: 0.72rem; }
+.dma-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+.dma-above { background: var(--success-light); color: var(--success); }
+.dma-below { background: var(--danger-light); color: var(--danger); }
+
+.text-purple { color: #8b5cf6; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+const pct = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+
+function initTooltips() {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        if (!bootstrap.Tooltip.getInstance(el)) {
+            new bootstrap.Tooltip(el, { trigger: 'hover', delay: { show: 200, hide: 100 } });
+        }
+    });
+}
+// Init tooltips for static elements (table headers)
+document.addEventListener('DOMContentLoaded', initTooltips);
+
+document.getElementById('loadAnalytics').addEventListener('click', loadData);
+
+async function loadData() {
+    const btn = document.getElementById('loadAnalytics');
+    const loading = document.getElementById('analyticsLoading');
+    const content = document.getElementById('analyticsContent');
+    const errorDiv = document.getElementById('analyticsError');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Loading\u2026';
+    loading.hidden = false;
+    content.hidden = true;
+    errorDiv.hidden = true;
+
+    try {
+        const r = await fetch('/api/advanced-analytics');
+        const data = await r.json();
+        if (data.error === 'no_stocks') {
+            errorDiv.innerHTML = '<div class="surface-card p-4 text-center"><div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div><h5>No stocks in portfolio</h5><p>Add holdings first to generate analytics.</p></div>';
+            errorDiv.hidden = false;
+            loading.hidden = true;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Load analytics';
+            return;
+        }
+        render(data);
+        loading.hidden = true;
+        content.hidden = false;
+    } catch (e) {
+        errorDiv.innerHTML = '<div class="alert alert-danger">Failed to load analytics. Please try again.</div>';
+        errorDiv.hidden = false;
+        loading.hidden = true;
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+}
+
+function render(d) {
+    renderPerfStrip(d);
+    renderCumChart(d);
+    renderDrawdown(d);
+    renderRiskRatios(d);
+    renderVaR(d);
+    renderMonthly(d);
+    renderSector(d);
+    renderDiversification(d);
+    renderHoldings(d);
+}
+
+function renderPerfStrip(d) {
+    const p = d.performance;
+    const s = d.summary;
+    const strip = document.getElementById('perfStrip');
+    const cards = [
+        { label: 'Portfolio value', value: fmt(s.total_value), cls: '', tip: 'The total current market value of all your holdings combined.' },
+        { label: 'Total P/L', value: fmt(s.total_gain), cls: s.total_gain >= 0 ? 'positive' : 'negative', sub: pct(p.total_return), tip: 'Your overall profit or loss across all holdings since purchase. Green = profit, Red = loss.' },
+        { label: 'Ann. return', value: pct(p.annualized_return), cls: p.annualized_return >= 0 ? 'positive' : 'negative', sub: 'vs Benchmark ' + pct(p.benchmark_return), tip: 'Your portfolio return scaled to a yearly rate. Compare with the benchmark (NIFTY 50) to see if you are outperforming the market.' },
+        { label: 'Volatility', value: p.volatility.toFixed(2) + '%', cls: '', sub: 'Annualized', tip: 'How much your portfolio value swings up and down. Lower volatility means steadier returns. Above 20% is considered high risk.' },
+        { label: 'Max drawdown', value: p.max_drawdown.toFixed(2) + '%', cls: 'negative', sub: 'Worst peak-to-trough', tip: 'The largest percentage drop from a peak to a trough. Shows your worst-case loss scenario. A -20% drawdown means you lost 20% from the highest point.' },
+        { label: 'Sharpe ratio', value: d.risk_ratios.sharpe.toFixed(3), cls: d.risk_ratios.sharpe >= 1 ? 'positive' : (d.risk_ratios.sharpe < 0 ? 'negative' : ''), sub: '>1 good, >2 great', tip: 'Risk-adjusted return. Measures how much extra return you earn per unit of risk. Above 1 = good, above 2 = excellent, negative = losing money.' },
+    ];
+    strip.innerHTML = cards.map(c => `
+        <div class="metric-card ${c.cls}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="${c.tip}">
+            <span class="metric-label">${c.label}</span>
+            <span class="metric-value">${c.value}</span>
+            ${c.sub ? `<span class="metric-sub">${c.sub}</span>` : ''}
+        </div>
+    `).join('');
+    initTooltips();
+}
+
+function renderCumChart(d) {
+    const ctx = document.getElementById('cumReturnChart');
+    if (!d.charts.dates.length) { ctx.parentElement.innerHTML = '<p class="text-muted text-center">Insufficient data for chart.</p>'; return; }
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: d.charts.dates,
+            datasets: [
+                { label: 'Portfolio', data: d.charts.portfolio_cum, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.08)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+                { label: 'NIFTY 50', data: d.charts.benchmark_cum, borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,3], tension: 0.3, pointRadius: 0, borderWidth: 1.5 },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%' } } },
+            scales: { x: { display: true, ticks: { maxTicksLimit: 8, font: { size: 10 } } }, y: { ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } }
+        }
+    });
+}
+
+function renderDrawdown(d) {
+    const ctx = document.getElementById('drawdownChart');
+    if (!d.charts.drawdown.length) { ctx.parentElement.innerHTML = '<p class="text-muted text-center">No drawdown data.</p>'; return; }
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: d.charts.dates,
+            datasets: [{
+                label: 'Drawdown', data: d.charts.drawdown,
+                borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)',
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.5
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } }, y: { ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } } }
+        }
+    });
+}
+
+function renderRiskRatios(d) {
+    const r = d.risk_ratios;
+    const items = [
+        { name: 'Sharpe', value: r.sharpe, good: v => v >= 1, bad: v => v < 0, tip: 'Return earned per unit of total risk. >1 = good, >2 = great, <0 = losing money after accounting for risk.' },
+        { name: 'Sortino', value: r.sortino, good: v => v >= 1.5, bad: v => v < 0, tip: 'Like Sharpe but only penalizes downside volatility. Higher is better. Focuses on harmful volatility, ignoring upside swings.' },
+        { name: 'Treynor', value: r.treynor, good: v => v > 0, bad: v => v < 0, tip: 'Return earned per unit of market risk (beta). Higher = better compensation for market-related risk you are taking.' },
+        { name: 'Calmar', value: r.calmar, good: v => v >= 1, bad: v => v < 0.5, tip: 'Annual return divided by max drawdown. >1 means your returns exceed your worst loss. Higher = more resilient portfolio.' },
+        { name: 'Info ratio', value: r.information_ratio, good: v => v > 0.5, bad: v => v < 0, tip: 'Measures excess return over benchmark per unit of tracking error. >0.5 = good active management, <0 = underperforming the market.' },
+        { name: 'Beta', value: r.beta, good: v => v >= 0.8 && v <= 1.2, bad: v => v > 1.5, tip: 'Portfolio sensitivity to market. 1 = moves with market, >1 = amplifies market moves (more risky), <1 = defensive.' },
+        { name: 'Alpha', value: r.alpha + '%', good: v => parseFloat(v) > 0, bad: v => parseFloat(v) < 0, tip: 'Excess return above what the market gave. Positive alpha = your picks beat the market. Negative = you would be better off in an index fund.' },
+        { name: 'Correlation', value: r.correlation, good: () => false, bad: () => false, tip: 'How closely your portfolio moves with the market (0 to 1). Lower correlation means better diversification benefit.' },
+    ];
+    const panel = document.getElementById('riskRatiosPanel');
+    panel.innerHTML = items.map(i => {
+        const val = typeof i.value === 'number' ? i.value.toFixed(3) : i.value;
+        const cls = i.good(i.value) ? 'good' : (i.bad(i.value) ? 'bad' : 'neutral');
+        return `<div class="risk-ratio-item" data-bs-toggle="tooltip" data-bs-placement="left" title="${i.tip}"><span class="ratio-name">${i.name}</span><span class="ratio-value ${cls}">${val}</span></div>`;
+    }).join('');
+    initTooltips();
+}
+
+function renderVaR(d) {
+    const v = d.risk_metrics;
+    const panel = document.getElementById('varPanel');
+    panel.innerHTML = `
+        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="With 95% confidence, your portfolio won't lose more than this amount in a single day. 1 in 20 days may exceed this loss."><span class="var-label">VaR (95%)</span><div class="var-value">${fmt(Math.abs(v.var_95))}</div><span class="var-desc">Max daily loss with 95% confidence</span></div>
+        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="With 99% confidence, your portfolio won't lose more than this amount in a single day. Only 1 in 100 days may exceed this. Used for stress-testing."><span class="var-label">VaR (99%)</span><div class="var-value">${fmt(Math.abs(v.var_99))}</div><span class="var-desc">Max daily loss with 99% confidence</span></div>
+        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="Conditional VaR — the average loss on the worst 5% of days. Shows how bad it gets when things go really wrong. Higher than VaR."><span class="var-label">CVaR / ES (95%)</span><div class="var-value">${fmt(Math.abs(v.cvar_95))}</div><span class="var-desc">Expected loss beyond VaR</span></div>
+        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="How much your portfolio value swings annually. Below 15% = low risk, 15-25% = moderate, above 25% = high risk."><span class="var-label">Ann. volatility</span><div class="var-value">${v.ann_volatility.toFixed(2)}%</div><span class="var-desc">Portfolio standard deviation</span></div>
+    `;
+    initTooltips();
+}
+
+function renderMonthly(d) {
+    const heatmap = document.getElementById('monthlyHeatmap');
+    const monthly = d.charts.monthly_returns;
+    if (!Object.keys(monthly).length) { heatmap.innerHTML = '<p class="text-muted">No monthly data.</p>'; return; }
+    heatmap.innerHTML = Object.entries(monthly).map(([month, ret]) => {
+        const bg = ret >= 0 ? `rgba(22,163,74,${Math.min(Math.abs(ret)/8, 0.8)})` : `rgba(220,38,38,${Math.min(Math.abs(ret)/8, 0.8)})`;
+        const color = Math.abs(ret) > 4 ? '#fff' : (ret >= 0 ? '#166534' : '#991b1b');
+        return `<div class="month-cell" style="background:${bg};color:${color}"><span class="month-label">${month}</span>${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%</div>`;
+    }).join('');
+}
+
+function renderSector(d) {
+    const ctx = document.getElementById('sectorChart');
+    const sw = d.diversification.sector_weights;
+    const labels = Object.keys(sw);
+    const values = Object.values(sw);
+    const colors = ['#4f46e5','#0ea5e9','#16a34a','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#84cc16','#f97316','#ef4444'];
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_,i) => colors[i % colors.length]), borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { size: 11 }, padding: 8 } } }, cutout: '55%' }
+    });
+}
+
+function renderDiversification(d) {
+    const div = d.diversification;
+    const panel = document.getElementById('diversificationPanel');
+    const hhi_status = div.hhi < 0.15 ? 'Well diversified' : (div.hhi < 0.25 ? 'Moderately concentrated' : 'Highly concentrated');
+    const hhi_cls = div.hhi < 0.15 ? 'color:var(--success)' : (div.hhi < 0.25 ? 'color:var(--warning)' : 'color:var(--danger)');
+    panel.innerHTML = `
+        <div class="diversification-stat" data-bs-toggle="tooltip" title="Herfindahl-Hirschman Index measures concentration. Below 0.15 = well diversified, 0.15-0.25 = moderate, above 0.25 = too concentrated in few stocks."><span class="ds-label">HHI (concentration)</span><span class="ds-value" style="${hhi_cls}">${div.hhi.toFixed(4)}</span></div>
+        <div class="diversification-stat"><span class="ds-label">Status</span><span class="ds-value" style="${hhi_cls}">${hhi_status}</span></div>
+        <div class="diversification-stat" data-bs-toggle="tooltip" title="If your money were spread equally, this is how many stocks it would feel like. Higher = better diversified. Low number means a few stocks dominate."><span class="ds-label">Effective # of stocks</span><span class="ds-value">${div.effective_n.toFixed(1)}</span></div>
+        <div class="diversification-stat" data-bs-toggle="tooltip" title="How much of your portfolio is in just the top 3 holdings. Above 60% means high concentration risk — if those 3 stocks fall, your portfolio takes a big hit."><span class="ds-label">Top 3 concentration</span><span class="ds-value">${div.concentration_top3.toFixed(1)}%</span></div>
+        <hr class="my-2">
+        <p class="mb-1 fw-bold" style="font-size:0.75rem; color:var(--text-muted)">SECTOR WEIGHTS</p>
+        ${Object.entries(div.sector_weights).map(([s, w]) => `
+            <div class="diversification-stat"><span class="ds-label">${s}</span><span class="ds-value">${w.toFixed(1)}%</span></div>
+        `).join('')}
+    `;
+    initTooltips();
+}
+
+function renderHoldings(d) {
+    const tbody = document.getElementById('holdingsBody');
+    tbody.innerHTML = d.stocks.map(s => {
+        const plCls = s.gain >= 0 ? 'gain-positive' : 'gain-negative';
+        const rsi = s.rsi != null ? s.rsi : '—';
+        const rsiCls = s.rsi > 70 ? 'color:var(--danger)' : (s.rsi < 30 ? 'color:var(--success)' : '');
+        const dma50 = s.above_50dma != null ? (s.above_50dma ? '<span class="dma-badge dma-above">Above</span>' : '<span class="dma-badge dma-below">Below</span>') : '—';
+        const dma200 = s.above_200dma != null ? (s.above_200dma ? '<span class="dma-badge dma-above">Above</span>' : '<span class="dma-badge dma-below">Below</span>') : '—';
+        return `<tr>
+            <td class="stock-name">${s.name}</td>
+            <td>${s.symbol ? `<span class="symbol-pill">${s.symbol}</span>` : '—'}</td>
+            <td>${s.sector || '—'}</td>
+            <td class="text-end">${s.weight.toFixed(1)}%</td>
+            <td class="text-end">${fmt(s.value)}</td>
+            <td class="text-end ${plCls}">${s.gain >= 0 ? '+' : ''}${fmt(s.gain)}</td>
+            <td class="text-end ${plCls}">${pct(s.gain_pct)}</td>
+            <td class="text-end">${s.volatility ? s.volatility.toFixed(1) + '%' : '—'}</td>
+            <td class="text-end">${s.beta != null ? s.beta.toFixed(2) : '—'}</td>
+            <td class="text-end" style="${rsiCls}">${rsi}</td>
+            <td class="text-center">${dma50}</td>
+            <td class="text-center">${dma200}</td>
+        </tr>`;
+    }).join('');
+}
+</script>
+{% endblock %}
