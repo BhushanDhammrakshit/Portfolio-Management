@@ -1,0 +1,331 @@
+﻿{% extends "layout.html" %}
+{% block content %}
+<style>
+/* ── AI Insight KPIs ───────────────────────────────────────────── */
+.insight-action-banner{display:flex;align-items:center;gap:18px;padding:14px 18px;border-radius:10px;margin-bottom:14px;border:1px solid var(--border);flex-wrap:wrap}
+.insight-action-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;font-weight:800;font-size:.95rem;letter-spacing:.04em;color:#fff;white-space:nowrap;text-transform:uppercase}
+.insight-action-text{flex:1;min-width:200px;font-size:.92rem;color:var(--text);font-weight:600;line-height:1.4}
+.act-strong-buy   { background:linear-gradient(135deg,#dcfce7,#bbf7d0); }
+.act-strong-buy   .insight-action-pill{ background:#15803d }
+.act-buy          { background:linear-gradient(135deg,#ecfdf5,#d1fae5); }
+.act-buy          .insight-action-pill{ background:#16a34a }
+.act-accumulate   { background:linear-gradient(135deg,#eff6ff,#dbeafe); }
+.act-accumulate   .insight-action-pill{ background:#2563eb }
+.act-hold         { background:linear-gradient(135deg,#fef3c7,#fde68a); }
+.act-hold         .insight-action-pill{ background:#d97706 }
+.act-book-profit  { background:linear-gradient(135deg,#fef3c7,#fcd34d); }
+.act-book-profit  .insight-action-pill{ background:#b45309 }
+.act-reduce       { background:linear-gradient(135deg,#fff7ed,#fed7aa); }
+.act-reduce       .insight-action-pill{ background:#ea580c }
+.act-sell         { background:linear-gradient(135deg,#fee2e2,#fecaca); }
+.act-sell         .insight-action-pill{ background:#dc2626 }
+.act-strong-sell  { background:linear-gradient(135deg,#fecaca,#fca5a5); }
+.act-strong-sell  .insight-action-pill{ background:#991b1b }
+
+.insight-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.insight-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;position:relative;cursor:help}
+.insight-kpi-label{font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:5px}
+.kpi-tip-ico{font-size:.7rem;color:var(--text-muted);opacity:.55;transition:opacity .15s}
+.insight-kpi:hover .kpi-tip-ico{opacity:1;color:var(--primary)}
+.insight-kpi-value{font-size:1rem;font-weight:800;color:var(--text)}
+.insight-kpi-value.gain-positive{color:var(--success)}
+.insight-kpi-value.gain-negative{color:var(--danger)}
+
+/* Tooltip */
+[data-tip]{position:relative}
+[data-tip]::after{
+    content:attr(data-tip);
+    position:absolute;
+    bottom:calc(100% + 8px);
+    left:50%;
+    transform:translateX(-50%) translateY(4px);
+    background:#1f2937;
+    color:#f9fafb;
+    padding:8px 12px;
+    border-radius:6px;
+    font-size:.75rem;
+    font-weight:500;
+    line-height:1.4;
+    letter-spacing:0;
+    text-transform:none;
+    white-space:normal;
+    width:max-content;
+    max-width:260px;
+    box-shadow:0 6px 20px rgba(0,0,0,.18);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .15s, transform .15s;
+    z-index:50;
+}
+[data-tip]::before{
+    content:'';
+    position:absolute;
+    bottom:calc(100% + 2px);
+    left:50%;
+    transform:translateX(-50%);
+    border:6px solid transparent;
+    border-top-color:#1f2937;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .15s;
+    z-index:50;
+}
+[data-tip]:hover::after,
+[data-tip]:hover::before{
+    opacity:1;
+    visibility:visible;
+}
+[data-tip]:hover::after{ transform:translateX(-50%) translateY(0); }
+.insight-action-banner[data-tip]::after{ max-width:340px; }
+
+.badge-lvl-high{color:#15803d}.badge-lvl-med{color:#d97706}.badge-lvl-low{color:#64748b}
+.badge-risk-high{color:#dc2626}.badge-risk-med{color:#d97706}.badge-risk-low{color:#16a34a}
+
+.insight-dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media (max-width:720px){ .insight-dr-grid{grid-template-columns:1fr} }
+.insight-dr-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.insight-dr-card h6{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.insight-dr-card ul{margin:0;padding-left:18px;font-size:.85rem;color:var(--text);line-height:1.6}
+.insight-dr-card li{margin-bottom:3px}
+.insight-drivers h6{color:#16a34a}
+.insight-risks   h6{color:#dc2626}
+
+/* ── Dark mode overrides for AI Insight ─────────────────────── */
+[data-theme="dark"] .act-strong-buy   { background:linear-gradient(135deg,rgba(22,101,52,.3),rgba(21,128,61,.2)); }
+[data-theme="dark"] .act-buy          { background:linear-gradient(135deg,rgba(22,163,74,.2),rgba(34,197,94,.15)); }
+[data-theme="dark"] .act-accumulate   { background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(59,130,246,.15)); }
+[data-theme="dark"] .act-hold         { background:linear-gradient(135deg,rgba(217,119,6,.2),rgba(245,158,11,.15)); }
+[data-theme="dark"] .act-book-profit  { background:linear-gradient(135deg,rgba(180,83,9,.2),rgba(217,119,6,.15)); }
+[data-theme="dark"] .act-reduce       { background:linear-gradient(135deg,rgba(234,88,12,.2),rgba(249,115,22,.15)); }
+[data-theme="dark"] .act-sell         { background:linear-gradient(135deg,rgba(220,38,38,.2),rgba(239,68,68,.15)); }
+[data-theme="dark"] .act-strong-sell  { background:linear-gradient(135deg,rgba(153,27,27,.25),rgba(220,38,38,.2)); }
+[data-theme="dark"] .badge-lvl-high{color:var(--success)}
+[data-theme="dark"] .badge-lvl-med{color:var(--warning)}
+[data-theme="dark"] .badge-lvl-low{color:var(--text-muted)}
+[data-theme="dark"] .badge-risk-high{color:var(--danger)}
+[data-theme="dark"] .badge-risk-med{color:var(--warning)}
+[data-theme="dark"] .badge-risk-low{color:var(--success)}
+[data-theme="dark"] .insight-drivers h6{color:var(--success)}
+[data-theme="dark"] .insight-risks   h6{color:var(--danger)}
+[data-theme="dark"] [data-tip]::after{background:var(--surface-2);color:var(--text)}
+[data-theme="dark"] [data-tip]::before{border-top-color:var(--surface-2)}
+
+.insight-summary-toggle{margin-top:6px;border-top:1px solid var(--border);padding-top:10px}
+.insight-summary-toggle summary{cursor:pointer;font-weight:700;color:var(--primary);font-size:.85rem;padding:6px 0;outline:none;list-style:none}
+.insight-summary-toggle summary::-webkit-details-marker{display:none}
+.insight-summary-toggle summary::before{content:'\25B8 ';display:inline-block;transition:transform .15s;margin-right:4px}
+.insight-summary-toggle[open] summary::before{transform:rotate(90deg)}
+.insight-summary-body{padding:10px 4px 4px;font-size:.88rem;color:var(--text);line-height:1.65}
+.insight-summary-body p{margin-bottom:8px}
+.insight-summary-body strong{color:var(--text)}
+</style>
+<header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div>
+        <h1><i class="fa-solid fa-magnifying-glass-chart me-2"></i>Portfolio analysis</h1>
+        <p>Pick a stock to view full details and an AI-driven outlook.</p>
+    </div>
+    {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings</span>{% endif %}
+</header>
+
+{% if not stocks %}
+<div class="surface-card">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+        <h4>No stocks to analyze</h4>
+        <p>Add stocks first to see detailed analysis here.</p>
+        <a href="{{ url_for('portfolioMaker') }}" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i>Add a stock</a>
+    </div>
+</div>
+{% else %}
+<div class="portfolio-analysis-container">
+    <aside class="portfolio-stock-list">
+        <div class="list-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="stockSearch" placeholder="Search stocks" />
+        </div>
+        <div class="list-group-header">Your holdings</div>
+        <ul class="stock-list-scroll" id="stockList"></ul>
+    </aside>
+
+    <section class="portfolio-stock-info" id="stockInfo">
+        <!-- populated by JS -->
+    </section>
+</div>
+
+<script>
+const stocks = {{ stocks|tojson }};
+const fmt = v => '₹' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+
+function renderList(filter) {
+    const ul = document.getElementById('stockList');
+    ul.innerHTML = '';
+    const f = (filter||'').toLowerCase().trim();
+    stocks.forEach((s, i) => {
+        if (f && !(s.StockName||'').toLowerCase().includes(f)) return;
+        const li = document.createElement('li');
+        li.className = 'stock-list-item';
+        li.dataset.index = i;
+        if (i === window._activeIdx) li.classList.add('active');
+        li.innerHTML = `<span>${s.StockName}</span><span class="stock-list-meta">${s.Quantity || 0} qty</span>`;
+        ul.appendChild(li);
+    });
+}
+
+function renderDetail(stock) {
+    const qty = stock.Quantity || 0;
+    const pp = stock.PurchasePrice || 0;
+    const cp = stock.CurrentPrice || pp;
+    const invested = qty * pp;
+    const current = qty * cp;
+    const gain = current - invested;
+    const gainPct = invested > 0 ? (gain / invested * 100) : 0;
+
+    document.getElementById('stockInfo').innerHTML = `
+        <h4>${stock.StockName}</h4>
+        <div class="stock-detail-grid">
+            <div class="stock-detail-item"><span class="stock-detail-label">Quantity</span><div class="stock-detail-value">${qty}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Buy price</span><div class="stock-detail-value">${fmt(pp)}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Current price</span><div class="stock-detail-value">${fmt(cp)}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Invested</span><div class="stock-detail-value">${fmt(invested)}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Value</span><div class="stock-detail-value">${fmt(current)}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">P/L</span><div class="stock-detail-value ${gain>=0?'gain-positive':'gain-negative'}">${gain>=0?'+':''}${fmt(gain)} (${gainPct.toFixed(2)}%)</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Sector</span><div class="stock-detail-value">${stock.Sector || 'N/A'}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Exchange</span><div class="stock-detail-value">${stock.Exchange || 'N/A'}</div></div>
+            <div class="stock-detail-item"><span class="stock-detail-label">Bought on</span><div class="stock-detail-value">${stock.PurchaseDate || '—'}</div></div>
+        </div>
+        <div class="stock-analysis-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>AI insight</h5>
+                <button type="button" id="generateInsightBtn" class="btn btn-primary btn-sm"><i class="fa-solid fa-sparkles me-1"></i>Generate insight</button>
+            </div>
+            <div class="analysis-body" id="analysisBody"><span class="text-muted">Click <strong>Generate insight</strong> to get an AI-driven outlook for this stock.</span></div>
+        </div>
+    `;
+    const cached = analysisCache[stock.StockName];
+    if (cached) {
+        document.getElementById('analysisBody').innerHTML = renderInsight(stock, cached);
+    }
+    document.getElementById('generateInsightBtn').addEventListener('click', () => fetchAnalysis(stock));
+}
+
+const analysisCache = {};
+
+const ACTION_CLASS = {
+    'STRONG BUY':   { cls: 'act-strong-buy',  icon: 'fa-rocket' },
+    'BUY':          { cls: 'act-buy',         icon: 'fa-arrow-up' },
+    'ACCUMULATE':   { cls: 'act-accumulate',  icon: 'fa-cart-plus' },
+    'HOLD':         { cls: 'act-hold',        icon: 'fa-hand' },
+    'BOOK PROFIT':  { cls: 'act-book-profit', icon: 'fa-coins' },
+    'REDUCE':       { cls: 'act-reduce',      icon: 'fa-arrow-down' },
+    'SELL':         { cls: 'act-sell',        icon: 'fa-circle-minus' },
+    'STRONG SELL':  { cls: 'act-strong-sell', icon: 'fa-circle-xmark' }
+};
+
+function badgeClass(level, prefix) {
+    const v = (level || '').toLowerCase();
+    if (v.includes('high')) return prefix + '-high';
+    if (v.includes('low'))  return prefix + '-low';
+    return prefix + '-med';
+}
+
+function renderInsight(stock, data) {
+    const cp = stock.CurrentPrice || stock.PurchasePrice || 0;
+    const meta = ACTION_CLASS[data.action] || { cls: 'act-hold', icon: 'fa-hand' };
+    const upsideCls = (data.upside_pct || 0) >= 0 ? 'gain-positive' : 'gain-negative';
+    const upsideSign = (data.upside_pct || 0) >= 0 ? '+' : '';
+
+    const drivers = (data.key_drivers || []).map(d => `<li>${d}</li>`).join('') || '<li class="text-muted">No drivers identified.</li>';
+    const risks   = (data.key_risks   || []).map(r => `<li>${r}</li>`).join('') || '<li class="text-muted">No specific risks flagged.</li>';
+
+    return `
+    <div class="insight-action-banner ${meta.cls}" data-tip="The bottom-line recommendation. ${data.what_to_do || ''}">
+        <div class="insight-action-pill"><i class="fa-solid ${meta.icon}"></i> ${data.action}</div>
+        <div class="insight-action-text">${data.what_to_do || ''}</div>
+    </div>
+
+    <div class="insight-kpi-grid">
+        <div class="insight-kpi" data-tip="How sure the model is about this call. High = strong signal, Low = mixed signals — treat as directional only."><span class="insight-kpi-label">Confidence <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value badge-${badgeClass(data.confidence, 'lvl')}">${data.confidence}</span></div>
+        <div class="insight-kpi" data-tip="Time frame this view applies to. Short = weeks, Medium = 3–12 months, Long = 1 year+."><span class="insight-kpi-label">Horizon <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value">${data.horizon}</span></div>
+        <div class="insight-kpi" data-tip="Volatility & downside risk for this stock. High risk = bigger swings — size positions accordingly."><span class="insight-kpi-label">Risk <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value badge-${badgeClass(data.risk, 'risk')}">${data.risk}</span></div>
+        <div class="insight-kpi" data-tip="Estimated fair price over the next ~12 months. Consider booking partial profits as price approaches this."><span class="insight-kpi-label">12M Target <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value">${fmt(data.target_price)}</span></div>
+        <div class="insight-kpi" data-tip="Suggested exit price if the trade goes wrong. Closing below this level invalidates the thesis."><span class="insight-kpi-label">Stop-loss <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value">${fmt(data.stop_loss)}</span></div>
+        <div class="insight-kpi" data-tip="Expected gain (or loss) from the current market price to the 12-month target. Positive = room to grow."><span class="insight-kpi-label">Upside vs CMP <i class="fa-regular fa-circle-question kpi-tip-ico"></i></span><span class="insight-kpi-value ${upsideCls}">${upsideSign}${(data.upside_pct||0).toFixed(2)}%</span></div>
+    </div>
+
+    <div class="insight-dr-grid">
+        <div class="insight-dr-card insight-drivers">
+            <h6><i class="fa-solid fa-circle-check me-1"></i>Key drivers</h6>
+            <ul>${drivers}</ul>
+        </div>
+        <div class="insight-dr-card insight-risks">
+            <h6><i class="fa-solid fa-triangle-exclamation me-1"></i>Key risks</h6>
+            <ul>${risks}</ul>
+        </div>
+    </div>
+
+    <details class="insight-summary-toggle">
+        <summary><i class="fa-solid fa-book-open me-1"></i>Read full analysis</summary>
+        <div class="insight-summary-body">${formatMd(data.summary || '')}</div>
+        ${data.source ? `<div class="text-muted mt-2" style="font-size:.7rem"><i class="fa-solid fa-circle-info me-1"></i>Source: ${data.source}</div>` : ''}
+    </details>`;
+}
+
+async function fetchAnalysis(stock) {
+    const key = stock.StockName;
+    const body = document.getElementById('analysisBody');
+    const btn = document.getElementById('generateInsightBtn');
+    if (analysisCache[key]) {
+        body.innerHTML = renderInsight(stock, analysisCache[key]);
+        return;
+    }
+    body.innerHTML = '<div class="text-muted py-3 text-center"><i class="fa-solid fa-spinner fa-spin me-1"></i>Analyzing position\u2026 this may take a few seconds.</div>';
+    if (btn) { btn.disabled = true; }
+    try {
+        const r = await fetch('/api/stock_analysis', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ stock })
+        });
+        const data = await r.json();
+        if (data && data.action) {
+            analysisCache[key] = data;
+            body.innerHTML = renderInsight(stock, data);
+        } else {
+            body.innerHTML = '<span class="text-danger">Could not generate analysis.</span>';
+        }
+    } catch (e) {
+        body.innerHTML = '<span class="text-danger">Network error.</span>';
+    } finally {
+        if (btn) { btn.disabled = false; }
+    }
+}
+
+function formatMd(text) {
+    return (text || '')
+        .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
+        .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/^/, '<p>') + '</p>';
+}
+
+window._activeIdx = 0;
+renderList('');
+renderDetail(stocks[0]);
+
+document.getElementById('stockList').addEventListener('click', (e) => {
+    const li = e.target.closest('.stock-list-item');
+    if (!li) return;
+    window._activeIdx = parseInt(li.dataset.index);
+    renderList(document.getElementById('stockSearch').value);
+    renderDetail(stocks[window._activeIdx]);
+});
+document.getElementById('stockSearch').addEventListener('input', (e) => {
+    renderList(e.target.value);
+});
+</script>
+{% endif %}
+{% endblock %}

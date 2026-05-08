@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="tenders-page">
+    <header class="page-header">
+        <h1><i class="fa-solid fa-newspaper me-2"></i>Market news & sentiment</h1>
+        <p>AI-classified Indian stock news. {% if last_updated %}Updated {{ last_updated }}.{% endif %}</p>
+    </header>
+
+    <div class="tenders-header-row">
+        <div class="tenders-stats">
+            <span class="tender-stat"><span class="pip up"></span>Bullish: {{ stocks | selectattr('sentiment', 'equalto', 'bullish') | list | length }}</span>
+            <span class="tender-stat"><span class="pip down"></span>Bearish: {{ stocks | selectattr('sentiment', 'equalto', 'bearish') | list | length }}</span>
+            <span class="tender-stat"><span class="pip neutral"></span>Neutral: {{ stocks | selectattr('sentiment', 'equalto', 'neutral') | list | length }}</span>
+            <span class="tender-stat">Total: {{ stocks | length }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="refreshTendersBtn" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="tender-filter-bar">
+        <button class="tender-filter-btn active" data-filter="all">All</button>
+        <button class="tender-filter-btn" data-filter="bullish">Bullish</button>
+        <button class="tender-filter-btn" data-filter="bearish">Bearish</button>
+        <button class="tender-filter-btn" data-filter="neutral">Neutral</button>
+    </div>
+
+    {% if stocks %}
+    <div class="tenders-grid" id="tendersGrid">
+        {% for stock in stocks %}
+        <div class="tender-card {% if stock.sentiment == 'bullish' %}tender-bullish{% elif stock.sentiment == 'bearish' %}tender-bearish{% else %}tender-neutral{% endif %}" data-sentiment="{{ stock.sentiment }}" data-stock="{{ stock.stock }}" data-summary="{{ stock.summary }}" data-time="{{ stock.time | default('Recently') }}">
+            <div class="tender-card-header">
+                <span class="tender-stock-name">{{ stock.stock }}</span>
+                {% if stock.sentiment == "bullish" %}
+                    <span class="badge-soft badge-soft-success"><i class="fa-solid fa-arrow-up"></i> Bullish</span>
+                {% elif stock.sentiment == "bearish" %}
+                    <span class="badge-soft badge-soft-danger"><i class="fa-solid fa-arrow-down"></i> Bearish</span>
+                {% else %}
+                    <span class="badge-soft" style="background:var(--surface-2);color:var(--text-muted)"><i class="fa-solid fa-minus"></i> Neutral</span>
+                {% endif %}
+            </div>
+            <div class="tender-card-body">{{ stock.summary }}</div>
+            <div class="tender-card-footer d-flex justify-content-between align-items-center mt-2">
+                <small class="text-muted"><i class="fa-regular fa-clock me-1"></i>{{ stock.time | default('Recently') }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="surface-card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+            <h4>No news available</h4>
+            {% if ai_configured is defined and not ai_configured %}
+            <p>AI service is not configured. Set <code>OPENAI_API_KEY</code> and <code>OPENAI_ENDPOINT</code> in your <code>.env</code> file to enable news classification.</p>
+            {% else %}
+            <p>Could not fetch market news right now. Click refresh to try again.</p>
+            <button id="emptyRefreshBtn" class="btn btn-primary"><i class="fa-solid fa-arrows-rotate me-1"></i>Try again</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.tender-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tender-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const f = btn.dataset.filter;
+        document.querySelectorAll('.tender-card').forEach(card => {
+            card.style.display = (f === 'all' || card.dataset.sentiment === f) ? '' : 'none';
+        });
+    });
+});
+
+document.getElementById('refreshTendersBtn').addEventListener('click', refreshTenders);
+const emptyBtn = document.getElementById('emptyRefreshBtn');
+if (emptyBtn) emptyBtn.addEventListener('click', refreshTenders);
+
+async function refreshTenders(e) {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Refreshing…';
+    try {
+        const r = await fetch('/api/tenders/refresh', { method: 'POST' });
+        if (r.ok) location.reload();
+        else { btn.disabled = false; btn.innerHTML = original; appAlert('Refresh failed.', 'danger'); }
+    } catch {
+        btn.disabled = false; btn.innerHTML = original; appAlert('Network error.', 'danger');
+    }
+}
+</script>
+{% endblock %}
