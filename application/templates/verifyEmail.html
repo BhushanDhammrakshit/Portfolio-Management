@@ -1,0 +1,197 @@
+{% extends "guest_layout.html" %}
+{% block content %}
+<style>
+.verify-card{max-width:480px;margin:0 auto}
+.otp-icon-wrap{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:#1e40af;font-size:1.6rem}
+.otp-email-pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:4px 12px;border-radius:999px;font-size:.82rem;font-weight:600;margin-bottom:18px}
+.otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;max-width:340px;margin:0 auto 8px}
+.otp-input{width:100%;height:54px;text-align:center;font-size:1.6rem;font-weight:800;border:2px solid #e5e7eb;border-radius:10px;background:#fff;color:#111827;font-family:Consolas,Menlo,monospace;transition:all .15s}
+.otp-input:focus{border-color:#2563eb;outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.otp-input.filled{border-color:#16a34a;background:#f0fdf4}
+.otp-input.has-error{border-color:#dc2626;background:#fef2f2}
+.otp-meta{display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px;font-size:.82rem;color:#6b7280}
+.otp-timer{font-weight:700;color:#374151}
+.otp-timer.expired{color:#dc2626}
+.spam-tip{background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#713f12;margin-top:14px;line-height:1.5}
+.spam-tip strong{color:#7c2d12}
+.resend-btn{background:none;border:none;color:#2563eb;font-weight:600;font-size:.85rem;cursor:pointer;padding:0;text-decoration:underline}
+.resend-btn:disabled{color:#9ca3af;cursor:not-allowed;text-decoration:none}
+.cancel-link{font-size:.78rem;color:#6b7280;text-decoration:none}
+.cancel-link:hover{color:#dc2626}
+[data-theme="dark"] .otp-input{background:#1f2937;color:#f9fafb;border-color:#374151}
+[data-theme="dark"] .otp-input.filled{background:#064e3b;border-color:#10b981}
+[data-theme="dark"] .otp-email-pill{background:#1f2937;border-color:#374151;color:#d1d5db}
+[data-theme="dark"] .spam-tip{background:#3f2d04;border-color:#854d0e;color:#fef3c7}
+</style>
+
+<div class="auth-card verify-card">
+    <div class="auth-card-header text-center">
+        <div class="otp-icon-wrap"><i class="fa-solid fa-envelope-circle-check"></i></div>
+        <h2>Verify your email</h2>
+        <p class="mb-1">We sent a 6-digit code to</p>
+        <span class="otp-email-pill">{{ email }}</span>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} small">
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if error %}
+    <div class="alert alert-danger small" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-1"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('verify_email') }}" id="verifyForm" class="auth-form">
+        <div class="otp-grid" id="otpGrid">
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <input type="hidden" name="code" id="codeHidden">
+
+        <div class="otp-meta">
+            <span>Code expires in <span class="otp-timer" id="otpTimer">10:00</span></span>
+            <button type="button" class="resend-btn" id="resendBtn" disabled>Resend code</button>
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit mt-2" id="verifyBtn" disabled>
+            <i class="fa-solid fa-check me-1"></i>Verify &amp; continue
+        </button>
+    </form>
+
+    <div class="spam-tip">
+        <strong><i class="fa-solid fa-triangle-exclamation me-1"></i>Can't find the email?</strong>
+        Please check your <strong>Spam</strong>, <strong>Junk</strong> or
+        <strong>Promotions</strong> folder. If you find it there, mark it
+        as <em>"Not spam"</em> so future codes land in your inbox.
+    </div>
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('verify_email_cancel') }}" class="cancel-link">
+            <i class="fa-solid fa-arrow-left me-1"></i>Wrong email? Start over
+        </a>
+    </div>
+</div>
+
+<script>
+(function(){
+    const inputs = Array.from(document.querySelectorAll('.otp-input'));
+    const hidden = document.getElementById('codeHidden');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const form = document.getElementById('verifyForm');
+    const resendBtn = document.getElementById('resendBtn');
+    const timerEl = document.getElementById('otpTimer');
+
+    function syncCode(){
+        const code = inputs.map(i => i.value).join('');
+        hidden.value = code;
+        verifyBtn.disabled = code.length !== 6;
+    }
+
+    inputs.forEach((inp, idx) => {
+        inp.addEventListener('input', () => {
+            inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
+            inp.classList.toggle('filled', !!inp.value);
+            inp.classList.remove('has-error');
+            if (inp.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+            syncCode();
+            // Auto-submit when full
+            if (hidden.value.length === 6) form.submit();
+        });
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !inp.value && idx > 0) {
+                inputs[idx - 1].focus();
+            } else if (e.key === 'ArrowLeft' && idx > 0) {
+                inputs[idx - 1].focus();
+            } else if (e.key === 'ArrowRight' && idx < inputs.length - 1) {
+                inputs[idx + 1].focus();
+            }
+        });
+        inp.addEventListener('paste', (e) => {
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = (text || '').replace(/\D/g, '').slice(0, 6);
+            if (!digits) return;
+            e.preventDefault();
+            inputs.forEach((box, i) => {
+                box.value = digits[i] || '';
+                box.classList.toggle('filled', !!box.value);
+            });
+            syncCode();
+            const next = inputs[Math.min(digits.length, inputs.length - 1)];
+            if (next) next.focus();
+            if (hidden.value.length === 6) form.submit();
+        });
+    });
+
+    // 10-minute countdown
+    let secondsLeft = 600;
+    const tick = () => {
+        if (secondsLeft <= 0) {
+            timerEl.textContent = 'expired';
+            timerEl.classList.add('expired');
+            return;
+        }
+        const m = Math.floor(secondsLeft / 60);
+        const s = secondsLeft % 60;
+        timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        secondsLeft -= 1;
+    };
+    tick();
+    setInterval(tick, 1000);
+
+    // 60-second resend cooldown
+    let cooldown = 60;
+    const cooldownTick = () => {
+        if (cooldown <= 0) {
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'Resend code';
+            return;
+        }
+        resendBtn.textContent = `Resend code (${cooldown}s)`;
+        cooldown -= 1;
+        setTimeout(cooldownTick, 1000);
+    };
+    cooldownTick();
+
+    resendBtn.addEventListener('click', async () => {
+        resendBtn.disabled = true;
+        resendBtn.textContent = 'Sending...';
+        try {
+            const r = await fetch("{{ url_for('verify_email_resend') }}", { method: 'POST' });
+            const data = await r.json();
+            if (r.ok && data.ok) {
+                window.appAlert
+                    ? window.appAlert('A new code has been sent. Check your inbox <em>and</em> Spam folder.', 'success')
+                    : alert('A new code has been sent. Check your inbox and Spam folder.');
+                cooldown = 60;
+                secondsLeft = 600;
+                cooldownTick();
+                inputs.forEach(i => { i.value = ''; i.classList.remove('filled', 'has-error'); });
+                inputs[0].focus();
+                syncCode();
+            } else {
+                window.appAlert
+                    ? window.appAlert(data.message || 'Could not resend code.', 'warning')
+                    : alert(data.message || 'Could not resend code.');
+                cooldown = 30;
+                cooldownTick();
+            }
+        } catch (e) {
+            alert('Network error while resending.');
+            cooldown = 30;
+            cooldownTick();
+        }
+    });
+})();
+</script>
+{% endblock %}
