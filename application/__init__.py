@@ -1,0 +1,105 @@
+import os
+from flask import Flask, render_template
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# Register blueprints
+from application.routes.user_routes import user_blueprint
+from application.routes.tender_api import tender_api
+from application.routes.stock_analysis_api import stock_analysis_api
+from application.routes.heatmap import heatmap_bp
+from application.routes.ai_portfolio_api import ai_portfolio_api
+from application.routes.stock_lookup_api import stock_lookup_api
+from application.routes.advanced_analytics_api import advanced_analytics_api
+from application.routes.intraday_api import intraday_api
+from application.routes.volume_api import volume_api
+from application.routes.broker_api import broker_api
+from application.routes.billing import billing_bp
+from application.routes.rag_admin import rag_admin_bp
+
+app.register_blueprint(user_blueprint)
+app.register_blueprint(tender_api)
+app.register_blueprint(stock_analysis_api)
+app.register_blueprint(heatmap_bp)
+app.register_blueprint(ai_portfolio_api)
+app.register_blueprint(stock_lookup_api)
+app.register_blueprint(advanced_analytics_api)
+app.register_blueprint(intraday_api)
+app.register_blueprint(volume_api)
+app.register_blueprint(broker_api)
+app.register_blueprint(billing_bp)
+app.register_blueprint(rag_admin_bp)
+
+# Plain routes registered against the app
+from application.routes import route  # noqa: F401, E402
+
+
+@app.errorhandler(404)
+def _not_found(_e):
+    return render_template("error.html", code=404,
+                           message="The page you are looking for does not exist."), 404
+
+
+@app.errorhandler(500)
+def _server_error(_e):
+    return render_template("error.html", code=500,
+                           message="Something went wrong. Please try again."), 500
+
+
+@app.context_processor
+def _inject_globals():
+    from flask import session
+    from application.services.market_data import provider_name
+    from application.services import plans
+
+    plan_dict = None
+    if session.get("email"):
+        try:
+            plan_dict = plans.current_plan()
+        except Exception:
+            plan_dict = plans.PLANS["free"]
+
+    return {
+        "current_user": {
+            "name": session.get("name"),
+            "email": session.get("email"),
+            "id": session.get("user_id"),
+        },
+        "market_data_provider": provider_name(),
+        "current_plan": plan_dict,
+    }
+
+
+# ── Daily RAG ingestion scheduler (free, in-process) ──
+# Pulls news + filings for every symbol any user holds, stores them in
+# Azure Tables (RagDocs / RagEmbed). Disabled by RAG_ENABLE_SCHEDULER=0.
+def _start_rag_scheduler():
+    import os
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
+        # Avoid double-start under Flask debug reloader (parent process)
+        return
+    try:
+        from application.config import RAG_ENABLE_SCHEDULER, RAG_INGEST_HOUR_IST
+        if not RAG_ENABLE_SCHEDULER:
+            return
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from application.services.rag.ingest import runner as rag_runner
+
+        sched = BackgroundScheduler(timezone="Asia/Kolkata", daemon=True)
+        sched.add_job(
+            rag_runner.run_daily,
+            trigger=CronTrigger(hour=RAG_INGEST_HOUR_IST, minute=0),
+            id="rag_daily_ingest",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        sched.start()
+        print(f"[rag] daily ingest scheduled @ {RAG_INGEST_HOUR_IST:02d}:00 IST")
+    except Exception as e:
+        print(f"[rag] scheduler start failed: {e}")
+
+
+_start_rag_scheduler()
