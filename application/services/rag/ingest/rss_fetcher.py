@@ -6,7 +6,10 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List
 
-import feedparser
+try:
+    import feedparser  # type: ignore
+except ImportError:  # pragma: no cover - optional dep
+    feedparser = None  # type: ignore[assignment]
 
 from .rss_sources import RSS_FEEDS
 
@@ -51,6 +54,9 @@ def _matches_terms(text: str, terms: Iterable[str]) -> bool:
 
 def fetch_all_entries(timeout: int = 20) -> List[dict]:
     """Pull every RSS entry from all feeds. Each item is a normalized dict."""
+    if feedparser is None:
+        log.warning("[rag.rss] feedparser not installed; skipping RSS ingest")
+        return []
     items = []
     for feed in RSS_FEEDS:
         try:
