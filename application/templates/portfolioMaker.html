@@ -1,0 +1,1068 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="portfolio-maker-page">
+    <header class="page-header">
+        <h1><i class="fa-solid fa-plus me-2"></i>Add stocks to your portfolio</h1>
+        <p>Add manually, upload a CSV from your broker, or connect your broker account.</p>
+    </header>
+
+    {% if error %}<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>{% endif %}
+
+    <!-- ── Method selector tabs ──────────────────────────────── -->
+    <div class="import-method-tabs" id="methodTabs">
+        <button class="import-tab active" data-tab="manual">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span class="import-tab-title">Manual entry</span>
+            <span class="import-tab-desc">Search &amp; add one stock at a time</span>
+        </button>
+        <button class="import-tab" data-tab="csv">
+            <i class="fa-solid fa-file-csv"></i>
+            <span class="import-tab-title">Upload CSV</span>
+            <span class="import-tab-desc">Bulk import from any broker export</span>
+        </button>
+        <button class="import-tab" data-tab="broker">
+            <i class="fa-solid fa-link"></i>
+            <span class="import-tab-title">Connect broker</span>
+            <span class="import-tab-desc">Auto-sync via broker API</span>
+        </button>
+    </div>
+
+    <!-- ── Tab 1: Manual entry (existing) ────────────────────── -->
+    <div class="import-panel" id="panel-manual">
+        <form method="POST" action="{{ url_for('add_to_portfolio') }}" class="portfolio-form" id="addStockForm">
+            <div class="row g-3">
+                <div class="col-12 position-relative">
+                    <label class="form-label" for="stock_name"><i class="fa-solid fa-magnifying-glass"></i> Search stock</label>
+                    <input type="text" class="form-control" id="stock_name" name="stock_name" placeholder="e.g. Reliance, TCS, Infosys…" autocomplete="off" required>
+                    <div class="autocomplete-list" id="autocompleteList" hidden></div>
+                    <input type="hidden" id="symbol" name="symbol">
+                    <input type="hidden" id="sector" name="sector">
+                    <div id="resolvedInfo" class="resolved-info" hidden>
+                        <div class="resolved-row"><span class="resolved-label">Symbol</span><strong id="rSymbol">—</strong></div>
+                        <div class="resolved-row"><span class="resolved-label">Sector</span><strong id="rSector">—</strong></div>
+                        <div class="resolved-row"><span class="resolved-label">Live price</span><strong id="rPrice">—</strong></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="quantity"><i class="fa-solid fa-hashtag"></i> Quantity</label>
+                    <input type="number" class="form-control" id="quantity" name="quantity" min="1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="purchase_price"><i class="fa-solid fa-indian-rupee-sign"></i> Buy price</label>
+                    <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" required>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                        <i class="fa-solid fa-plus me-1"></i>Add to portfolio
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Tab 2: CSV Upload ─────────────────────────────────── -->
+    <div class="import-panel" id="panel-csv" hidden>
+        <div class="csv-upload-zone" id="csvDropZone">
+            <input type="file" id="csvFileInput" accept=".csv" hidden>
+            <div class="csv-upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <p class="csv-upload-title">Drag &amp; drop your CSV file here</p>
+            <p class="csv-upload-sub">or <a href="#" id="csvBrowseLink">browse from your computer</a></p>
+            <div class="csv-upload-formats">
+                <span class="badge-soft badge-soft-info">.csv</span>
+                <span class="text-muted small">Supports: Zerodha, Angel One, Groww, Upstox, 5paisa, Dhan, and more</span>
+            </div>
+        </div>
+
+        <!-- CSV preview -->
+        <div id="csvPreview" hidden>
+            <div class="csv-preview-header">
+                <div>
+                    <h6 class="mb-0"><i class="fa-solid fa-table me-2"></i>Preview: <span id="csvFileName"></span></h6>
+                    <small class="text-muted"><span id="csvRowCount">0</span> stocks detected</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" id="csvCancelBtn"><i class="fa-solid fa-xmark me-1"></i>Cancel</button>
+                    <button class="btn btn-sm btn-primary" id="csvImportBtn"><i class="fa-solid fa-file-import me-1"></i>Import all</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle" id="csvPreviewTable">
+                    <thead><tr id="csvPreviewHead"></tr></thead>
+                    <tbody id="csvPreviewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CSV result -->
+        <div id="csvResult" hidden></div>
+
+        <div class="surface-card mt-3 p-3">
+            <h6 class="fw-bold mb-2"><i class="fa-solid fa-circle-info me-1 text-primary"></i>Supported CSV formats</h6>
+            <p class="text-muted small mb-2">Your CSV should have headers like these (we auto-detect columns):</p>
+            <div class="csv-example">
+                <code>Stock Name, Symbol, Quantity, Buy Price, Current Price, Sector</code>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                <strong>Broker exports work too</strong> — We recognise column names from Zerodha, Angel One, Groww, Upstox, and more.
+            </p>
+        </div>
+
+        <div class="surface-card mt-3 p-3">
+            <h6 class="fw-bold mb-2"><i class="fa-solid fa-download me-1 text-primary"></i>How to download your holdings CSV</h6>
+            <div class="broker-steps-accordion" id="brokerStepsAccordion">
+
+                <details class="broker-step-item">
+                    <summary><img src="https://img.icons8.com/color/20/000000/z.png" alt="" class="broker-step-icon">Zerodha (Kite)</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://kite.zerodha.com" target="_blank" rel="noopener">kite.zerodha.com</a></li>
+                        <li>Go to <strong>Portfolio → Holdings</strong></li>
+                        <li>Click the <strong>download icon</strong> <i class="fa-solid fa-download text-muted"></i> at the top-right of the holdings table</li>
+                        <li>Select <strong>"Download as CSV"</strong></li>
+                        <li>Upload the downloaded <code>.csv</code> file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-a broker-step-icon text-danger"></i>Angel One</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://www.angelone.in" target="_blank" rel="noopener">angelone.in</a> or open the Angel One app</li>
+                        <li>Go to <strong>Portfolio → Holdings</strong></li>
+                        <li>Tap the <strong>three-dot menu</strong> <i class="fa-solid fa-ellipsis-vertical text-muted"></i> → <strong>"Download"</strong></li>
+                        <li>Choose <strong>CSV</strong> format</li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-g broker-step-icon text-success"></i>Groww</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://groww.in" target="_blank" rel="noopener">groww.in</a> (web only)</li>
+                        <li>Go to <strong>Stocks → Holdings</strong></li>
+                        <li>Click <strong>"Download Report"</strong> at the top of the page</li>
+                        <li>Select <strong>Holdings Report</strong> and date range → Download as CSV</li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-u broker-step-icon text-primary"></i>Upstox</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://pro.upstox.com" target="_blank" rel="noopener">pro.upstox.com</a></li>
+                        <li>Go to <strong>Portfolio → Holdings</strong></li>
+                        <li>Click the <strong>export/download</strong> button <i class="fa-solid fa-file-export text-muted"></i></li>
+                        <li>Download as <strong>CSV</strong></li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-f broker-step-icon" style="color:#2962ff"></i>Fyers</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://trade.fyers.in" target="_blank" rel="noopener">trade.fyers.in</a></li>
+                        <li>Go to <strong>Portfolio → Holdings</strong></li>
+                        <li>Click the <strong>download icon</strong> at the top-right corner</li>
+                        <li>Select <strong>CSV</strong> format</li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-5 broker-step-icon" style="color:#ff6600"></i>5paisa</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://trade.5paisa.com" target="_blank" rel="noopener">trade.5paisa.com</a></li>
+                        <li>Go to <strong>My Portfolio → Holdings</strong></li>
+                        <li>Click <strong>"Export"</strong> or the download icon</li>
+                        <li>Download as <strong>CSV/Excel</strong> (save as .csv if Excel)</li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-d broker-step-icon" style="color:#00bfa5"></i>Dhan</summary>
+                    <ol class="broker-step-list">
+                        <li>Log in to <a href="https://web.dhan.co" target="_blank" rel="noopener">web.dhan.co</a></li>
+                        <li>Go to <strong>Portfolio → Holdings</strong></li>
+                        <li>Click <strong>"Download"</strong> at the top of the holdings list</li>
+                        <li>Select <strong>CSV</strong></li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+                <details class="broker-step-item">
+                    <summary><i class="fa-solid fa-file-lines broker-step-icon text-muted"></i>CDSL / NSDL (CAS Statement)</summary>
+                    <ol class="broker-step-list">
+                        <li>Visit <a href="https://www.cdslindia.com/cas" target="_blank" rel="noopener">cdslindia.com/cas</a> or <a href="https://nsdl.co.in/cas" target="_blank" rel="noopener">nsdl.co.in/cas</a></li>
+                        <li>Download your <strong>Consolidated Account Statement</strong></li>
+                        <li>Open the PDF, copy the holdings table into Excel/Google Sheets</li>
+                        <li>Save as <strong>.csv</strong> with columns: Stock Name, ISIN, Quantity, Avg Price</li>
+                        <li>Upload the file here</li>
+                    </ol>
+                </details>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Tab 3: Connect Broker ─────────────────────────────── -->
+    <div class="import-panel" id="panel-broker" hidden>
+        <!-- Fyers connected status + import UI -->
+        <div class="surface-card p-4 mb-3" id="fyersSection">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2962ff,#448aff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;font-weight:800;">F</div>
+                    <div>
+                        <h5 class="mb-0 fw-bold">Fyers</h5>
+                        <span class="badge-soft badge-soft-success">Free API</span>
+                    </div>
+                </div>
+                <div id="fyersConnStatus">
+                    <span class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i>Checking…</span>
+                </div>
+            </div>
+
+            <!-- Not connected state -->
+            <div id="fyersNotConnected" hidden>
+                <div class="alert alert-info mb-3" style="font-size:.85rem">
+                    <i class="fa-solid fa-info-circle me-1"></i>
+                    Connect your Fyers demat account to <strong>auto-import all your holdings</strong> — stock names, quantities, and buy prices will be fetched automatically.
+                </div>
+                <a href="{{ url_for('broker_api.fyers_connect') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-link me-1"></i>Connect Fyers account
+                </a>
+            </div>
+
+            <!-- Connected state -->
+            <div id="fyersConnected" hidden>
+                <div class="alert alert-success mb-3" style="font-size:.85rem">
+                    <i class="fa-solid fa-circle-check me-1"></i>
+                    Your Fyers account is connected. Click <strong>Import Holdings</strong> to fetch your stocks.
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary" id="fyersSyncBtn">
+                        <i class="fa-solid fa-download me-1"></i>Import Holdings
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" id="fyersDisconnectBtn">
+                        <i class="fa-solid fa-unlink me-1"></i>Disconnect
+                    </button>
+                </div>
+
+                <!-- Import progress / results -->
+                <div id="fyersSyncLoading" class="text-center py-3" hidden>
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2 text-muted">Fetching your holdings from Fyers…</span>
+                </div>
+                <div id="fyersSyncResult" class="mt-3" hidden></div>
+            </div>
+        </div>
+
+        <!-- Other brokers (unchanged) -->
+        <h6 class="fw-bold text-muted mt-4 mb-2"><i class="fa-solid fa-building-columns me-1"></i>Other brokers</h6>
+
+        <!-- Dhan — token-paste flow -->
+        <div class="surface-card p-4 mb-3" id="dhanSection">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00bfa5,#1de9b6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;font-weight:800;">D</div>
+                    <div>
+                        <h5 class="mb-0 fw-bold">Dhan</h5>
+                        <span class="badge-soft badge-soft-success">Free API</span>
+                    </div>
+                </div>
+                <div id="dhanConnStatus">
+                    <span class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i>Checking…</span>
+                </div>
+            </div>
+
+            <!-- Not connected state -->
+            <div id="dhanNotConnected" hidden>
+                <div class="alert alert-info mb-3" style="font-size:.85rem">
+                    <i class="fa-solid fa-info-circle me-1"></i>
+                    Paste your <strong>Dhan access token</strong> to import your holdings. Tokens are valid for 24 hours.
+                    <br>
+                    <small class="text-muted">
+                        Log in to <a href="https://web.dhan.co" target="_blank" rel="noopener">web.dhan.co</a>
+                        → click <strong>My Profile</strong> → <strong>Access DhanHQ APIs</strong>
+                        → click <strong>"Generate Access Token"</strong> → copy the token.
+                    </small>
+                </div>
+                <div class="input-group mb-2" style="max-width:600px">
+                    <input type="password" class="form-control" id="dhanTokenInput" placeholder="Paste your Dhan access token here…">
+                    <button class="btn btn-primary" id="dhanConnectBtn" type="button">
+                        <i class="fa-solid fa-link me-1"></i>Connect
+                    </button>
+                </div>
+                <div id="dhanConnectError" class="text-danger small mt-1" hidden></div>
+            </div>
+
+            <!-- Connected state -->
+            <div id="dhanConnected" hidden>
+                <div class="alert alert-success mb-3" style="font-size:.85rem">
+                    <i class="fa-solid fa-circle-check me-1"></i>
+                    Dhan account connected. Click <strong>Import Holdings</strong> to fetch your stocks.
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary" id="dhanSyncBtn">
+                        <i class="fa-solid fa-download me-1"></i>Import Holdings
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" id="dhanDisconnectBtn">
+                        <i class="fa-solid fa-unlink me-1"></i>Disconnect
+                    </button>
+                </div>
+                <div id="dhanSyncLoading" class="text-center py-3" hidden>
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2 text-muted">Fetching your holdings from Dhan…</span>
+                </div>
+                <div id="dhanSyncResult" class="mt-3" hidden></div>
+            </div>
+        </div>
+
+        <div class="broker-grid">
+            <div class="broker-card">
+                <div class="broker-logo"><i class="fa-solid fa-building-columns"></i></div>
+                <div class="broker-info">
+                    <h6>Angel One</h6>
+                    <span class="badge-soft badge-soft-success">Free API</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary broker-connect-btn" disabled>
+                    <i class="fa-solid fa-link me-1"></i>Coming soon
+                </button>
+            </div>
+            <div class="broker-card">
+                <div class="broker-logo"><i class="fa-solid fa-building-columns"></i></div>
+                <div class="broker-info">
+                    <h6>Upstox</h6>
+                    <span class="badge-soft badge-soft-success">Free API</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary broker-connect-btn" disabled>
+                    <i class="fa-solid fa-link me-1"></i>Coming soon
+                </button>
+            </div>
+            <div class="broker-card">
+                <div class="broker-logo"><i class="fa-solid fa-building-columns"></i></div>
+                <div class="broker-info">
+                    <h6>Zerodha</h6>
+                    <span class="badge-soft badge-soft-warning">Paid API</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary broker-connect-btn" disabled>
+                    <i class="fa-solid fa-link me-1"></i>Coming soon
+                </button>
+            </div>
+            <div class="broker-card">
+                <div class="broker-logo"><i class="fa-solid fa-building-columns"></i></div>
+                <div class="broker-info">
+                    <h6>Groww</h6>
+                    <span class="text-muted small">No public API</span>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary broker-connect-btn" disabled>
+                    <i class="fa-solid fa-ban me-1"></i>Not available
+                </button>
+            </div>
+        </div>
+        <div class="surface-card mt-3 p-3 text-center">
+            <i class="fa-solid fa-lock me-2 text-muted"></i>
+            <span class="text-muted small">Broker connections use secure OAuth2. We never see or store your broker password.</span>
+        </div>
+    </div>
+
+    <!-- ── Existing portfolio table ──────────────────────────── -->
+    {% if stocks %}
+    <div class="surface-card mt-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="section-title mb-0"><i class="fa-solid fa-list"></i>Your portfolio <span class="badge-soft badge-soft-info ms-2">{{ stocks|length }}</span></h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle existing-stocks-table">
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Symbol</th>
+                        <th>Sector</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Buy price</th>
+                        <th class="text-end">Current</th>
+                        <th class="text-center" style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="existingStocksBody"></tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit modal -->
+<div class="modal fade" id="editStockModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-2 text-primary"></i>Edit stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editStockForm">
+        <input type="hidden" id="editRowKey" />
+        <div class="modal-body">
+          <div class="mb-2"><label class="form-label">Stock</label><input type="text" id="editStockName" class="form-control" disabled /></div>
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label">Quantity</label><input type="number" id="editQuantity" class="form-control" min="0" /></div>
+            <div class="col-6"><label class="form-label">Symbol</label><input type="text" id="editSymbol" class="form-control" placeholder="e.g. RELIANCE.NS" /></div>
+            <div class="col-6"><label class="form-label">Purchase price</label><input type="number" step="0.01" id="editPurchasePrice" class="form-control" /></div>
+            <div class="col-6"><label class="form-label">Current price</label><input type="number" step="0.01" id="editCurrentPrice" class="form-control" /></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ── Import method tabs ────────────────────────────────────── */
+.import-method-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.import-tab{
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:18px 14px;border-radius:var(--radius);border:2px solid var(--border);
+    background:var(--surface);cursor:pointer;transition:all .15s;text-align:center;
+    color:var(--text);
+}
+.import-tab i{font-size:1.4rem;color:var(--text-muted);transition:color .15s}
+.import-tab-title{font-weight:800;font-size:.88rem}
+.import-tab-desc{font-size:.72rem;color:var(--text-muted);line-height:1.3}
+.import-tab:hover{border-color:var(--primary);background:var(--primary-light)}
+.import-tab:hover i{color:var(--primary)}
+.import-tab.active{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.import-tab.active i{color:var(--primary)}
+@media(max-width:600px){.import-method-tabs{grid-template-columns:1fr}}
+
+.import-panel{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── CSV upload zone ───────────────────────────────────────── */
+.csv-upload-zone{
+    border:2px dashed var(--border);border-radius:var(--radius);
+    padding:48px 24px;text-align:center;cursor:pointer;
+    transition:border-color .15s,background .15s;
+    background:var(--surface);
+}
+.csv-upload-zone:hover,.csv-upload-zone.dragover{border-color:var(--primary);background:var(--primary-light)}
+.csv-upload-icon{font-size:2.5rem;color:var(--text-muted);margin-bottom:12px}
+.csv-upload-zone.dragover .csv-upload-icon{color:var(--primary)}
+.csv-upload-title{font-weight:700;font-size:1rem;color:var(--text);margin-bottom:4px}
+.csv-upload-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:12px}
+.csv-upload-sub a{color:var(--primary);font-weight:600;text-decoration:underline}
+.csv-upload-formats{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+
+/* CSV preview */
+.csv-preview-header{display:flex;justify-content:space-between;align-items:center;padding:14px 0;flex-wrap:wrap;gap:10px}
+.csv-example{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:.82rem;overflow-x:auto}
+
+/* CSV result */
+.csv-result-card{padding:18px;border-radius:var(--radius);border:1px solid var(--border);margin-top:16px}
+.csv-result-card.success{background:var(--success-light);border-color:var(--success)}
+.csv-result-card.error{background:var(--danger-light);border-color:var(--danger)}
+.csv-result-stat{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;font-size:.88rem;font-weight:600}
+
+/* Broker download steps accordion */
+.broker-step-item{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden}
+.broker-step-item summary{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 14px;cursor:pointer;font-weight:700;font-size:.88rem;
+    color:var(--text);list-style:none;transition:background .12s;
+}
+.broker-step-item summary::-webkit-details-marker{display:none}
+.broker-step-item summary::after{content:'\25B8';margin-left:auto;font-size:.7rem;color:var(--text-muted);transition:transform .15s}
+.broker-step-item[open] summary::after{transform:rotate(90deg)}
+.broker-step-item summary:hover{background:var(--primary-light)}
+.broker-step-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.broker-step-list{
+    margin:0;padding:8px 14px 14px 44px;
+    font-size:.82rem;color:var(--text-muted);line-height:1.7;
+}
+.broker-step-list li{margin-bottom:2px}
+.broker-step-list a{color:var(--primary);font-weight:600}
+.broker-step-list code{font-size:.78rem;background:var(--surface-2);padding:1px 6px;border-radius:4px}
+
+/* ── Broker cards ──────────────────────────────────────────── */
+.broker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.broker-card{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 18px;border-radius:var(--radius);
+    border:1px solid var(--border);background:var(--surface);
+    transition:border-color .15s;
+}
+.broker-card:hover{border-color:var(--primary)}
+.broker-logo{
+    width:42px;height:42px;border-radius:10px;
+    background:var(--surface-2);display:flex;align-items:center;justify-content:center;
+    font-size:1.2rem;color:var(--text-muted);flex-shrink:0;
+}
+.broker-info{flex:1}
+.broker-info h6{margin:0;font-size:.92rem;font-weight:700;color:var(--text)}
+.broker-connect-btn{font-size:.78rem}
+
+/* ── Existing styles (manual form) ─────────────────────────── */
+.position-relative { position: relative; }
+.autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+    z-index: 100; max-height: 280px; overflow-y: auto; margin-top: 4px;
+}
+.autocomplete-item {
+    padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+}
+.autocomplete-item:last-child { border-bottom: 0; }
+.autocomplete-item:hover, .autocomplete-item.active { background: var(--primary-light); }
+.autocomplete-name { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+.autocomplete-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px; }
+.autocomplete-meta .symbol-pill { background: var(--surface-2); padding: 1px 8px; border-radius: 999px; font-weight: 600; color: var(--primary); }
+.autocomplete-empty { padding: 14px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.resolved-info {
+    margin-top: 10px; padding: 10px 14px;
+    background: var(--primary-light); border: 1px solid #c7d2fe;
+    border-radius: var(--radius-sm); display: flex; gap: 18px; flex-wrap: wrap;
+}
+.resolved-row { display: flex; flex-direction: column; font-size: 0.78rem; }
+.resolved-label { color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.68rem; }
+.resolved-row strong { font-size: 0.92rem; color: var(--primary-dark); }
+.existing-stocks-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.existing-stocks-table td { font-size: 0.88rem; vertical-align: middle; }
+.existing-stocks-table .stock-cell-name { font-weight: 600; color: var(--text); }
+.existing-stocks-table .symbol-pill { background: var(--surface-2); padding: 1px 8px; border-radius: 999px; font-weight: 600; color: var(--primary); font-size: 0.75rem; }
+</style>
+
+<script>
+/* ── Tab switching ──────────────────────────────────────────── */
+function switchTab(tabName) {
+    document.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.import-panel').forEach(p => p.hidden = true);
+    const tab = document.querySelector(`.import-tab[data-tab="${tabName}"]`);
+    if (tab) { tab.classList.add('active'); document.getElementById('panel-' + tabName).hidden = false; }
+}
+document.querySelectorAll('.import-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+// Restore tab from URL hash (e.g. #broker)
+if (location.hash === '#broker') switchTab('broker');
+else if (location.hash === '#csv') switchTab('csv');
+
+/* ── CSV Upload ─────────────────────────────────────────────── */
+const csvInput = document.getElementById('csvFileInput');
+const dropZone = document.getElementById('csvDropZone');
+const browseLink = document.getElementById('csvBrowseLink');
+const csvPreview = document.getElementById('csvPreview');
+const csvResult = document.getElementById('csvResult');
+let _csvFile = null;
+let _csvRows = [];
+let _csvHeaders = [];
+
+browseLink.addEventListener('click', e => { e.preventDefault(); csvInput.click(); });
+dropZone.addEventListener('click', e => { if (e.target === dropZone || e.target.closest('.csv-upload-icon,.csv-upload-title')) csvInput.click(); });
+
+['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }));
+dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f && f.name.toLowerCase().endsWith('.csv')) handleCSV(f);
+    else appAlert('Please drop a .csv file.', 'warning');
+});
+csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleCSV(csvInput.files[0]); });
+
+function handleCSV(file) {
+    _csvFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) { appAlert('CSV file is empty or has only headers.', 'warning'); return; }
+
+        // Simple CSV parse (handles quoted fields)
+        function parseLine(line) {
+            const result = []; let cur = ''; let inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') { inQ = !inQ; continue; }
+                if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
+                cur += ch;
+            }
+            result.push(cur.trim());
+            return result;
+        }
+
+        _csvHeaders = parseLine(lines[0]);
+        _csvRows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const vals = parseLine(lines[i]);
+            if (vals.some(v => v)) _csvRows.push(vals);
+        }
+
+        // Build preview
+        document.getElementById('csvFileName').textContent = file.name;
+        document.getElementById('csvRowCount').textContent = _csvRows.length;
+        const thead = document.getElementById('csvPreviewHead');
+        thead.innerHTML = _csvHeaders.map(h => `<th>${escapeHtml(h)}</th>`).join('');
+        const tbody = document.getElementById('csvPreviewBody');
+        tbody.innerHTML = '';
+        _csvRows.slice(0, 10).forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = row.map(v => `<td>${escapeHtml(v)}</td>`).join('');
+            tbody.appendChild(tr);
+        });
+        if (_csvRows.length > 10) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="${_csvHeaders.length}" class="text-center text-muted">… and ${_csvRows.length - 10} more rows</td>`;
+            tbody.appendChild(tr);
+        }
+
+        dropZone.hidden = true;
+        csvPreview.hidden = false;
+        csvResult.hidden = true;
+    };
+    reader.readAsText(file);
+}
+
+document.getElementById('csvCancelBtn').addEventListener('click', () => {
+    csvPreview.hidden = true;
+    dropZone.hidden = false;
+    csvInput.value = '';
+    _csvFile = null;
+});
+
+document.getElementById('csvImportBtn').addEventListener('click', async () => {
+    if (!_csvFile) return;
+    const btn = document.getElementById('csvImportBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Importing…';
+
+    const formData = new FormData();
+    formData.append('csv_file', _csvFile);
+
+    try {
+        const r = await fetch('/portfolio/import-csv', { method: 'POST', body: formData });
+        const d = await r.json();
+        csvPreview.hidden = true;
+        csvResult.hidden = false;
+
+        if (d.error) {
+            csvResult.innerHTML = `<div class="csv-result-card error">
+                <h6><i class="fa-solid fa-circle-xmark text-danger me-2"></i>Import failed</h6>
+                <p class="mb-0">${escapeHtml(d.error)}</p>
+            </div>`;
+        } else {
+            csvResult.innerHTML = `<div class="csv-result-card success">
+                <h6><i class="fa-solid fa-circle-check text-success me-2"></i>Import complete</h6>
+                <div class="csv-result-stat">
+                    <span><strong>${d.imported}</strong> stocks imported</span>
+                    <span><strong>${d.skipped}</strong> skipped</span>
+                    ${d.errors && d.errors.length ? `<span class="text-danger">${d.errors.length} errors</span>` : ''}
+                </div>
+                ${d.errors && d.errors.length ? `<ul class="mt-2 small text-danger mb-0">${d.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>` : ''}
+                <button class="btn btn-primary btn-sm mt-3" onclick="location.reload()"><i class="fa-solid fa-rotate me-1"></i>Refresh page</button>
+            </div>`;
+        }
+    } catch (e) {
+        csvResult.hidden = false;
+        csvResult.innerHTML = `<div class="csv-result-card error"><p class="mb-0">Network error. Please try again.</p></div>`;
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-file-import me-1"></i>Import all';
+});
+
+/* ── Manual form: autocomplete (existing) ───────────────────── */
+const nameInput = document.getElementById('stock_name');
+const symbolInput = document.getElementById('symbol');
+const sectorInput = document.getElementById('sector');
+const priceInput = document.getElementById('purchase_price');
+const list = document.getElementById('autocompleteList');
+const resolvedBox = document.getElementById('resolvedInfo');
+const rSymbol = document.getElementById('rSymbol');
+const rSector = document.getElementById('rSector');
+const rPrice = document.getElementById('rPrice');
+
+let lastQuery = '';
+let debounceTimer = null;
+
+nameInput.addEventListener('input', () => {
+    const q = nameInput.value.trim();
+    symbolInput.value = '';
+    sectorInput.value = '';
+    resolvedBox.hidden = true;
+    if (q.length < 2) { list.hidden = true; list.innerHTML = ''; return; }
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => search(q), 250);
+});
+
+nameInput.addEventListener('blur', () => setTimeout(() => list.hidden = true, 180));
+nameInput.addEventListener('focus', () => { if (list.innerHTML) list.hidden = false; });
+
+async function search(q) {
+    if (q === lastQuery) return;
+    lastQuery = q;
+    list.innerHTML = '<div class="autocomplete-empty"><i class="fa-solid fa-spinner fa-spin"></i> Searching…</div>';
+    list.hidden = false;
+    try {
+        const r = await fetch(`/api/stock/search?q=${encodeURIComponent(q)}`);
+        const data = await r.json();
+        if (q !== lastQuery) return;
+        if (!data.results || data.results.length === 0) {
+            list.innerHTML = '<div class="autocomplete-empty">No matches found</div>';
+            return;
+        }
+        list.innerHTML = '';
+        data.results.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'autocomplete-item';
+            el.innerHTML = `
+                <div class="autocomplete-name">${escapeHtml(item.name)}</div>
+                <div class="autocomplete-meta">
+                    <span class="symbol-pill">${escapeHtml(item.symbol)}</span>
+                    <span>${escapeHtml(item.exchange || '')}</span>
+                    <span>${escapeHtml(item.type || '')}</span>
+                </div>
+            `;
+            el.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                pick(item);
+            });
+            list.appendChild(el);
+        });
+    } catch (e) {
+        list.innerHTML = '<div class="autocomplete-empty">Search unavailable.</div>';
+    }
+}
+
+async function pick(item) {
+    nameInput.value = item.name;
+    symbolInput.value = item.symbol;
+    list.hidden = true;
+    rSymbol.textContent = item.symbol;
+    rSector.textContent = 'Loading…';
+    rPrice.textContent = 'Loading…';
+    resolvedBox.hidden = false;
+    try {
+        const r = await fetch(`/api/stock/info?symbol=${encodeURIComponent(item.symbol)}`);
+        const info = await r.json();
+        const sector = info.sector || '';
+        sectorInput.value = sector;
+        rSector.textContent = sector || '—';
+        if (info.price != null) {
+            const formatted = '\u20B9' + Number(info.price).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+            rPrice.textContent = formatted;
+            if (!priceInput.value) priceInput.value = Number(info.price).toFixed(2);
+        } else {
+            rPrice.textContent = 'Unavailable';
+        }
+    } catch (e) {
+        rSector.textContent = '—';
+        rPrice.textContent = 'Unavailable';
+    }
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+// Allow form submit even without picking — backend will still try lookup.
+
+// ===== Existing portfolio table =====
+const existingStocks = {{ stocks|tojson if stocks is defined else '[]' }};
+const existingBody = document.getElementById('existingStocksBody');
+const fmtINR = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+function renderExisting() {
+    if (!existingBody) return;
+    existingBody.innerHTML = '';
+    existingStocks.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="stock-cell-name">${escapeHtml(s.StockName || '')}</span></td>
+            <td>${s.Symbol ? `<span class="symbol-pill">${escapeHtml(s.Symbol)}</span>` : '<span class="text-muted">—</span>'}</td>
+            <td>${escapeHtml(s.Sector || '—')}</td>
+            <td class="text-end">${s.Quantity || 0}</td>
+            <td class="text-end">${fmtINR(s.PurchasePrice)}</td>
+            <td class="text-end">${fmtINR(s.CurrentPrice || s.PurchasePrice)}</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary me-1" data-action="edit" data-key="${s.RowKey || ''}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-key="${s.RowKey || ''}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        `;
+        existingBody.appendChild(tr);
+    });
+}
+renderExisting();
+
+if (existingBody) {
+    existingBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const key = btn.dataset.key;
+        const stock = existingStocks.find(s => (s.RowKey || '') === key);
+        if (!stock) return;
+        if (btn.dataset.action === 'delete') {
+            const ok = await appConfirm(`Delete <strong>${stock.StockName}</strong> from your portfolio?`, {okText: 'Delete'});
+            if (!ok) return;
+            const r = await fetch(`/portfolio/delete/${key}`, { method: 'POST' });
+            if (r.ok) location.reload();
+            else appAlert('Could not delete: ' + (await r.text()), 'danger');
+        } else if (btn.dataset.action === 'edit') {
+            document.getElementById('editRowKey').value = key;
+            document.getElementById('editStockName').value = stock.StockName || '';
+            document.getElementById('editQuantity').value = stock.Quantity || 0;
+            document.getElementById('editPurchasePrice').value = stock.PurchasePrice || 0;
+            document.getElementById('editCurrentPrice').value = stock.CurrentPrice || 0;
+            document.getElementById('editSymbol').value = stock.Symbol || '';
+            new bootstrap.Modal(document.getElementById('editStockModal')).show();
+        }
+    });
+
+    document.getElementById('editStockForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = document.getElementById('editRowKey').value;
+        const payload = {
+            quantity: document.getElementById('editQuantity').value,
+            purchase_price: document.getElementById('editPurchasePrice').value,
+            current_price: document.getElementById('editCurrentPrice').value,
+            symbol: document.getElementById('editSymbol').value,
+        };
+        const r = await fetch(`/portfolio/update/${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (r.ok) location.reload();
+        else appAlert('Save failed.', 'danger');
+    });
+}
+
+/* ── Fyers broker integration ───────────────────────────────── */
+(async function() {
+    const statusEl = document.getElementById('fyersConnStatus');
+    const notConnEl = document.getElementById('fyersNotConnected');
+    const connEl = document.getElementById('fyersConnected');
+    const syncBtn = document.getElementById('fyersSyncBtn');
+    const discBtn = document.getElementById('fyersDisconnectBtn');
+    const syncLoading = document.getElementById('fyersSyncLoading');
+    const syncResult = document.getElementById('fyersSyncResult');
+
+    if (!statusEl) return; // Not on broker tab
+
+    // Check connection status
+    try {
+        const r = await fetch('/broker/fyers/status');
+        const d = await r.json();
+        if (d.connected) {
+            statusEl.innerHTML = '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i>Connected</span>';
+            notConnEl.hidden = true;
+            connEl.hidden = false;
+        } else {
+            statusEl.innerHTML = '<span class="badge bg-secondary"><i class="fa-solid fa-circle-xmark me-1"></i>Not connected</span>';
+            notConnEl.hidden = false;
+            connEl.hidden = true;
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span class="text-muted">Unable to check</span>';
+        notConnEl.hidden = false;
+        connEl.hidden = true;
+    }
+
+    // Import holdings
+    if (syncBtn) syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        syncLoading.hidden = false;
+        syncResult.hidden = true;
+
+        try {
+            const r = await fetch('/broker/fyers/sync', { method: 'POST' });
+            const d = await r.json();
+            syncLoading.hidden = true;
+            syncResult.hidden = false;
+
+            if (d.error) {
+                syncResult.innerHTML = `<div class="csv-result-card error">
+                    <h6><i class="fa-solid fa-circle-xmark text-danger me-2"></i>Import failed</h6>
+                    <p class="mb-0">${escapeHtml(d.error)}</p>
+                    ${d.error.includes('re-connect') || d.error.includes('expired')
+                        ? '<a href="/broker/fyers/connect" class="btn btn-sm btn-primary mt-2"><i class="fa-solid fa-link me-1"></i>Re-connect</a>'
+                        : ''}
+                </div>`;
+            } else {
+                let rows = '';
+                if (d.results && d.results.length) {
+                    rows = d.results.map(r => `<tr>
+                        <td><strong>${escapeHtml(r.name)}</strong></td>
+                        <td><span class="symbol-pill">${escapeHtml(r.symbol)}</span></td>
+                        <td class="text-end">${r.qty}</td>
+                        <td class="text-center">${r.status === 'imported'
+                            ? '<span class="badge bg-success">Imported</span>'
+                            : '<span class="badge bg-secondary">Skipped</span>'}
+                        </td>
+                    </tr>`).join('');
+                }
+
+                syncResult.innerHTML = `<div class="csv-result-card success">
+                    <h6><i class="fa-solid fa-circle-check text-success me-2"></i>Import complete</h6>
+                    <div class="csv-result-stat">
+                        <span><strong>${d.imported}</strong> imported</span>
+                        <span><strong>${d.skipped}</strong> skipped</span>
+                        <span>of <strong>${d.total}</strong> holdings</span>
+                    </div>
+                    ${d.errors && d.errors.length ? `<ul class="mt-2 small text-danger mb-0">${d.errors.map(e => '<li>'+escapeHtml(e)+'</li>').join('')}</ul>` : ''}
+                    ${rows ? `<div class="table-responsive mt-3"><table class="table table-sm align-middle">
+                        <thead><tr><th>Stock</th><th>Symbol</th><th class="text-end">Qty</th><th class="text-center">Status</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table></div>` : ''}
+                    <button class="btn btn-primary btn-sm mt-3" onclick="location.reload()"><i class="fa-solid fa-rotate me-1"></i>Refresh page</button>
+                </div>`;
+            }
+        } catch(e) {
+            syncLoading.hidden = true;
+            syncResult.hidden = false;
+            syncResult.innerHTML = `<div class="csv-result-card error"><p class="mb-0">Network error. Please try again.</p></div>`;
+        }
+        syncBtn.disabled = false;
+    });
+
+    // Disconnect
+    if (discBtn) discBtn.addEventListener('click', async () => {
+        const ok = await appConfirm('Disconnect your Fyers account?', {okText: 'Disconnect'});
+        if (!ok) return;
+        await fetch('/broker/fyers/disconnect', { method: 'POST' });
+        location.hash = 'broker'; location.reload();
+    });
+})();
+
+/* ── Dhan broker integration ────────────────────────────────── */
+(async function() {
+    const statusEl = document.getElementById('dhanConnStatus');
+    const notConnEl = document.getElementById('dhanNotConnected');
+    const connEl = document.getElementById('dhanConnected');
+    const tokenInput = document.getElementById('dhanTokenInput');
+    const connectBtn = document.getElementById('dhanConnectBtn');
+    const connectErr = document.getElementById('dhanConnectError');
+    const syncBtn = document.getElementById('dhanSyncBtn');
+    const discBtn = document.getElementById('dhanDisconnectBtn');
+    const syncLoading = document.getElementById('dhanSyncLoading');
+    const syncResult = document.getElementById('dhanSyncResult');
+
+    if (!statusEl) return;
+
+    // Check connection status
+    try {
+        const r = await fetch('/broker/dhan/status');
+        const d = await r.json();
+        if (d.connected) {
+            statusEl.innerHTML = '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i>Connected</span>';
+            notConnEl.hidden = true;
+            connEl.hidden = false;
+        } else {
+            statusEl.innerHTML = '<span class="badge bg-secondary"><i class="fa-solid fa-circle-xmark me-1"></i>Not connected</span>';
+            notConnEl.hidden = false;
+            connEl.hidden = true;
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span class="text-muted">Unable to check</span>';
+        notConnEl.hidden = false;
+        connEl.hidden = true;
+    }
+
+    // Connect with token
+    if (connectBtn) connectBtn.addEventListener('click', async () => {
+        const token = (tokenInput.value || '').trim();
+        if (!token) { connectErr.textContent = 'Please paste your token.'; connectErr.hidden = false; return; }
+        connectBtn.disabled = true;
+        connectBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Verifying…';
+        connectErr.hidden = true;
+
+        try {
+            const r = await fetch('/broker/dhan/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const d = await r.json();
+            if (d.ok) {
+                location.hash = 'broker'; location.reload();
+            } else {
+                connectErr.textContent = d.error || 'Connection failed.';
+                connectErr.hidden = false;
+            }
+        } catch(e) {
+            connectErr.textContent = 'Network error. Please try again.';
+            connectErr.hidden = false;
+        }
+        connectBtn.disabled = false;
+        connectBtn.innerHTML = '<i class="fa-solid fa-link me-1"></i>Connect';
+    });
+
+    // Import holdings
+    if (syncBtn) syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        syncLoading.hidden = false;
+        syncResult.hidden = true;
+
+        try {
+            const r = await fetch('/broker/dhan/sync', { method: 'POST' });
+            const d = await r.json();
+            syncLoading.hidden = true;
+            syncResult.hidden = false;
+
+            if (d.error) {
+                syncResult.innerHTML = `<div class="csv-result-card error">
+                    <h6><i class="fa-solid fa-circle-xmark text-danger me-2"></i>Import failed</h6>
+                    <p class="mb-0">${escapeHtml(d.error)}</p>
+                    ${d.error.includes('re-connect') || d.error.includes('expired')
+                        ? '<button class="btn btn-sm btn-primary mt-2" onclick="location.reload()"><i class="fa-solid fa-link me-1"></i>Re-connect</button>'
+                        : ''}
+                </div>`;
+            } else {
+                let rows = '';
+                if (d.results && d.results.length) {
+                    rows = d.results.map(r => `<tr>
+                        <td><strong>${escapeHtml(r.name)}</strong></td>
+                        <td><span class="symbol-pill">${escapeHtml(r.symbol)}</span></td>
+                        <td class="text-end">${r.qty}</td>
+                        <td class="text-center">${r.status === 'imported'
+                            ? '<span class="badge bg-success">Imported</span>'
+                            : '<span class="badge bg-secondary">Skipped</span>'}
+                        </td>
+                    </tr>`).join('');
+                }
+
+                syncResult.innerHTML = `<div class="csv-result-card success">
+                    <h6><i class="fa-solid fa-circle-check text-success me-2"></i>Import complete</h6>
+                    <div class="csv-result-stat">
+                        <span><strong>${d.imported}</strong> imported</span>
+                        <span><strong>${d.skipped}</strong> skipped</span>
+                        <span>of <strong>${d.total}</strong> holdings</span>
+                    </div>
+                    ${d.errors && d.errors.length ? `<ul class="mt-2 small text-danger mb-0">${d.errors.map(e => '<li>'+escapeHtml(e)+'</li>').join('')}</ul>` : ''}
+                    ${rows ? `<div class="table-responsive mt-3"><table class="table table-sm align-middle">
+                        <thead><tr><th>Stock</th><th>Symbol</th><th class="text-end">Qty</th><th class="text-center">Status</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table></div>` : ''}
+                    <button class="btn btn-primary btn-sm mt-3" onclick="location.reload()"><i class="fa-solid fa-rotate me-1"></i>Refresh page</button>
+                </div>`;
+            }
+        } catch(e) {
+            syncLoading.hidden = true;
+            syncResult.hidden = false;
+            syncResult.innerHTML = `<div class="csv-result-card error"><p class="mb-0">Network error. Please try again.</p></div>`;
+        }
+        syncBtn.disabled = false;
+    });
+
+    // Disconnect
+    if (discBtn) discBtn.addEventListener('click', async () => {
+        const ok = await appConfirm('Disconnect your Dhan account?', {okText: 'Disconnect'});
+        if (!ok) return;
+        await fetch('/broker/dhan/disconnect', { method: 'POST' });
+        location.hash = 'broker'; location.reload();
+    });
+})();
+</script>
+{% endblock %}
