@@ -1,6 +1,6 @@
 # PManagement
 
-A Flask-based personal portfolio manager with live price refresh (yfinance), Azure Table Storage backend, AI-powered insights (Azure OpenAI), Bloomberg-style advanced analytics, sector heatmaps, and tender tracking.
+A Flask-based personal portfolio manager with live price refresh (DhanHQ / yfinance), Azure Table Storage backend, AI-powered insights (Azure OpenAI), Bloomberg-style advanced analytics, sector heatmaps, and tender tracking.
 
 ## Features
 
@@ -49,8 +49,24 @@ Copy-Item .env.example .env
 | `OPENAI_API_KEY` | Azure OpenAI API key |
 | `OPENAI_ENDPOINT` | Full Azure OpenAI chat completions endpoint URL |
 | `SECRET_KEY` | Flask session signing key |
+| `MARKET_DATA_PROVIDER` | `dhan` or `yfinance` (default `yfinance`) |
+| `MARKET_DATA_FALLBACK` | Provider used when primary lacks data (default `yfinance`); set `none` to disable |
+| `DHAN_CLIENT_ID` | DhanHQ client id (only when provider = `dhan`) |
+| `DHAN_ACCESS_TOKEN` | DhanHQ v2 access token (only when provider = `dhan`) |
 
 See `.env.example` for the template.
+
+### Switching to DhanHQ as the live-data provider
+
+1. Log in to https://web.dhan.co → Profile → DhanHQ Trading APIs → generate an **Access Token** (24-hour or long-lived).
+2. Add to `.env`:
+   ```
+   MARKET_DATA_PROVIDER=dhan
+   DHAN_CLIENT_ID=<your client id>
+   DHAN_ACCESS_TOKEN=<your access token>
+   ```
+3. On first call the app downloads Dhan's instrument master CSV (~24 MB) to `application/_dhan_scrip_master.csv` and caches it for 24 hours.
+4. Symbols stay in Yahoo format (`RELIANCE.NS`, `^NSEI`) — the abstraction maps them to Dhan `security_id` automatically.
 
 ## Run
 
