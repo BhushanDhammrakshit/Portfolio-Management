@@ -1,0 +1,1148 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+/* ── Page header ─────────────────────────────────────────── */
+.fa-page-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.fa-page-head h2{font-size:1.25rem;font-weight:800;margin:0;color:var(--text);display:flex;align-items:center;gap:8px}
+.fa-page-head .lead{font-size:.85rem;color:var(--text-muted);margin:4px 0 0 0}
+
+/* ── Tabs (button reset is critical here) ────────────────── */
+.fa-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.fa-tab{
+    appearance:none;-webkit-appearance:none;
+    padding:10px 18px;
+    font:inherit;font-size:.86rem;font-weight:600;
+    color:var(--text-muted);
+    background:transparent;
+    border:0;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:color .15s,border-color .15s;
+}
+.fa-tab:hover{color:var(--text)}
+.fa-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.fa-tab:focus{outline:none}
+.fa-tab:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+.fa-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.fa-search{
+    position:relative;
+    display:flex;align-items:center;
+    flex:0 1 360px;min-width:200px;
+    height:40px;
+}
+.fa-search input{
+    flex:1;min-width:0;
+    width:100%;height:100%;
+    padding:0 12px 0 36px;
+    border:1px solid var(--border);border-radius:8px;
+    background:var(--surface);color:var(--text);
+    font:inherit;font-size:.88rem;line-height:1;
+    outline:none;
+    box-sizing:border-box;
+}
+.fa-search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.fa-search > i{
+    position:absolute;
+    left:12px;top:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    width:16px;
+    color:var(--text-muted);
+    pointer-events:none;
+    font-size:.85rem;
+    line-height:1;
+}
+.fa-btn{
+    appearance:none;-webkit-appearance:none;
+    height:40px;
+    padding:0 14px;border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--surface);color:var(--text);
+    font:inherit;font-weight:600;font-size:.83rem;
+    cursor:pointer;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    transition:background .15s,border-color .15s,opacity .15s;
+    white-space:nowrap;
+}
+.fa-btn i{font-size:.9rem;line-height:1}
+.fa-btn:hover{border-color:var(--primary)}
+.fa-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.fa-btn.primary:hover{filter:brightness(1.05)}
+.fa-btn:disabled{opacity:.55;cursor:not-allowed}
+.fa-hint{font-size:.78rem;color:var(--text-muted)}
+
+/* ── Aggregate strip ─────────────────────────────────────── */
+.fa-aggregate{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:none;align-items:center;gap:18px;flex-wrap:wrap}
+.fa-aggregate.show{display:flex}
+.fa-aggregate-score{font-size:1.6rem;font-weight:800;color:var(--primary);line-height:1}
+.fa-aggregate-label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px}
+
+/* ── Table ───────────────────────────────────────────────── */
+.fa-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.fa-table-scroll{overflow-x:auto;width:100%}
+.fa-table{width:100%;min-width:880px;border-collapse:collapse;font-size:.85rem}
+.fa-table th,.fa-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.fa-table th{
+    font-weight:700;color:var(--text-muted);
+    background:var(--surface-2);
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;
+    cursor:pointer;user-select:none;position:sticky;top:0;z-index:1;
+}
+.fa-table th .sort{opacity:.4;margin-left:4px;font-size:.7rem}
+.fa-table th.active-sort .sort{opacity:1;color:var(--primary)}
+.fa-table tr:last-child td{border-bottom:none}
+.fa-table tbody tr{cursor:pointer;transition:background .12s}
+.fa-table tbody tr:hover{background:var(--surface-2)}
+.fa-table td.num,.fa-table th.num{text-align:right;font-variant-numeric:tabular-nums}
+.fa-table .stock-name{font-weight:700;color:var(--text)}
+.fa-table .stock-sub{font-size:.72rem;color:var(--text-muted);margin-top:2px;font-weight:500}
+
+.fa-score-chip{display:inline-block;min-width:48px;text-align:center;padding:4px 10px;border-radius:6px;font-weight:800;font-size:.8rem;color:#fff;line-height:1.1}
+.score-strong-buy{background:#15803d}
+.score-buy{background:#16a34a}
+.score-hold{background:#d97706}
+.score-avoid{background:#ea580c}
+.score-sell{background:#dc2626}
+.score-na{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)}
+
+/* Institutional sentiment chip */
+.fa-inst-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:.7rem;font-weight:700;line-height:1;border:1px solid transparent;white-space:nowrap}
+.fa-inst-chip i{font-size:.7rem}
+.inst-bullish{background:rgba(22,163,74,.12);color:#15803d;border-color:rgba(22,163,74,.35)}
+.inst-neutral{background:rgba(217,119,6,.12);color:#a16207;border-color:rgba(217,119,6,.35)}
+.inst-bearish{background:rgba(220,38,38,.12);color:#b91c1c;border-color:rgba(220,38,38,.35)}
+.inst-unknown{background:var(--surface-2);color:var(--text-muted);border-color:var(--border)}
+[data-theme="dark"] .inst-bullish{background:rgba(22,163,74,.2);color:#86efac}
+[data-theme="dark"] .inst-neutral{background:rgba(217,119,6,.2);color:#fcd34d}
+[data-theme="dark"] .inst-bearish{background:rgba(220,38,38,.2);color:#fca5a5}
+
+.gain-pos{color:#16a34a;font-weight:700}
+.gain-neg{color:#dc2626;font-weight:700}
+
+.fa-loading{text-align:center;padding:34px;color:var(--text-muted);font-size:.9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.fa-loading i{margin-right:6px}
+.fa-empty{text-align:center;padding:40px 16px;color:var(--text-muted);font-size:.88rem;background:var(--surface);border:1px dashed var(--border);border-radius:10px}
+.fa-empty .icon{font-size:1.8rem;display:block;margin-bottom:8px;color:var(--text-muted);opacity:.6}
+
+/* ── Lookup suggestions ──────────────────────────────────── */
+.fa-suggest{
+    position:absolute;left:0;right:0;top:calc(100% + 4px);
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);
+    max-height:320px;overflow-y:auto;
+    z-index:50;display:none;
+}
+.fa-suggest.open{display:block}
+.fa-suggest-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 12px;cursor:pointer;font-size:.85rem;
+    border-bottom:1px solid var(--border);
+}
+.fa-suggest-item:last-child{border-bottom:none}
+.fa-suggest-item:hover,.fa-suggest-item.active{background:var(--surface-2)}
+.fa-suggest-main{display:flex;flex-direction:column;min-width:0;flex:1}
+.fa-suggest-sym{font-weight:700;color:var(--text);font-size:.86rem}
+.fa-suggest-name{color:var(--text-muted);font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa-suggest-tag{
+    font-size:.68rem;font-weight:600;color:var(--text-muted);
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:2px 6px;border-radius:4px;flex-shrink:0;
+}
+.fa-suggest-empty{padding:12px;text-align:center;color:var(--text-muted);font-size:.8rem}
+
+/* ── Lookup card ─────────────────────────────────────────── */
+.fa-lookup-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.fa-lookup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.fa-lookup-title{font-size:1.1rem;font-weight:800;color:var(--text);margin:0}
+.fa-lookup-sub{font-size:.78rem;color:var(--text-muted);margin-top:2px}
+
+/* ── Drawer ──────────────────────────────────────────────── */
+.fa-drawer-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);
+    z-index:1080;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.fa-drawer-backdrop.show{opacity:1;pointer-events:auto}
+.fa-drawer{
+    position:fixed;top:0;right:0;height:100vh;height:100dvh;
+    width:100%;max-width:720px;
+    background:var(--surface);border-left:1px solid var(--border);
+    z-index:1090;
+    transform:translateX(100%);transition:transform .25s ease;
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:-8px 0 28px rgba(0,0,0,.18);
+}
+.fa-drawer.show{transform:translateX(0)}
+.fa-drawer-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface)}
+.fa-drawer-head h3{margin:0;font-size:1.05rem;font-weight:800;color:var(--text);line-height:1.2}
+.fa-drawer-head .sym{font-size:.76rem;color:var(--text-muted);margin-top:3px}
+.fa-drawer-body{flex:1;overflow:auto;padding:18px 20px;-webkit-overflow-scrolling:touch}
+.fa-close{
+    appearance:none;-webkit-appearance:none;
+    background:transparent;border:0;
+    color:var(--text-muted);font-size:1.4rem;line-height:1;
+    cursor:pointer;padding:4px 10px;border-radius:6px;
+}
+.fa-close:hover{color:var(--text);background:var(--surface-2)}
+
+/* ── KPI / pillar / target grids ─────────────────────────── */
+.fa-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:8px}
+.fa-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:0}
+.fa-kpi-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.fa-kpi-value{font-size:1rem;font-weight:800;color:var(--text);margin-top:4px;word-break:break-word}
+
+.fa-pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px}
+.fa-pillar{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.fa-pillar-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700}
+.fa-pillar-value{font-size:1.4rem;font-weight:800;margin-top:4px;color:var(--text);line-height:1}
+.fa-pillar-bar{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.fa-pillar-fill{height:100%;background:var(--primary);border-radius:3px;transition:width .3s}
+
+.fa-section-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:800;margin:18px 0 8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fa-section-title .note{font-weight:500;text-transform:none;color:var(--text-muted);font-size:.72rem;letter-spacing:0}
+
+.fa-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.fa-target{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.fa-target-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.fa-target-value{font-size:1.02rem;font-weight:800;margin-top:4px;color:var(--text)}
+.fa-target.mean{border-color:var(--primary)}
+.fa-target.mean .fa-target-value{color:var(--primary)}
+
+.fa-expected{margin-top:10px;font-size:.88rem;color:var(--text)}
+
+.fa-flag-list{list-style:none;padding:0;margin:6px 0 0 0;display:flex;flex-direction:column;gap:6px}
+.fa-flag-list li{padding:8px 10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:.82rem;color:#92400e;display:flex;align-items:flex-start;gap:8px}
+.fa-flag-list li i{margin-top:2px}
+[data-theme="dark"] .fa-flag-list li{background:#3b2606;border-color:#92400e;color:#fcd34d}
+.fa-no-flags{font-size:.82rem;color:var(--text-muted);padding:8px 0}
+
+.fa-prose{font-size:.88rem;color:var(--text);line-height:1.55}
+.fa-prose p{margin:0 0 10px}
+.fa-prose p:last-child{margin-bottom:0}
+.fa-prose strong{color:var(--text)}
+.fa-prose h5,.fa-prose h6{margin:14px 0 6px;font-weight:800;color:var(--text)}
+.fa-prose h5{font-size:1rem}
+.fa-prose h6{font-size:.9rem}
+
+.fa-bull-bear{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.fa-bull,.fa-bear{padding:12px;border-radius:8px;font-size:.84rem;line-height:1.5}
+.fa-bull{background:#dcfce7;border:1px solid #86efac;color:#14532d}
+.fa-bear{background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d}
+.fa-bull strong,.fa-bear strong{display:block;margin-bottom:4px}
+[data-theme="dark"] .fa-bull{background:#052e16;border-color:#15803d;color:#86efac}
+[data-theme="dark"] .fa-bear{background:#450a0a;border-color:#991b1b;color:#fca5a5}
+
+.fa-ai-meta{margin-top:10px;font-size:.85rem;color:var(--text)}
+.fa-bullet-list{padding-left:20px;margin:4px 0 0 0;font-size:.85rem;color:var(--text)}
+.fa-bullet-list li{margin-bottom:4px}
+.fa-sources{padding-left:20px;font-size:.76rem;color:var(--text-muted)}
+
+.fa-disclaimer{margin-top:20px;padding:10px 12px;font-size:.74rem;color:var(--text-muted);background:var(--surface-2);border-radius:8px;border:1px solid var(--border);line-height:1.45}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px){
+    .fa-pillars{grid-template-columns:repeat(2,1fr)}
+    .fa-bull-bear{grid-template-columns:1fr}
+    .fa-drawer{max-width:100%}
+    .fa-drawer-body{padding:16px}
+}
+@media (max-width: 520px){
+    .fa-search{max-width:none}
+}
+</style>
+
+<div class="fa-page-head">
+    <div>
+        <h2><i class="fa-solid fa-book-open"></i>Fundamentals</h2>
+        <p class="lead">Score and analyse company fundamentals — for every holding and any other listed stock.</p>
+    </div>
+</div>
+
+<div class="fa-tabs" role="tablist">
+    <button class="fa-tab active" data-tab="portfolio" type="button" role="tab">Portfolio</button>
+    <button class="fa-tab" data-tab="lookup" type="button" role="tab">Lookup any stock</button>
+    <button class="fa-tab" data-tab="screener" type="button" role="tab">Top picks</button>
+</div>
+
+<!-- ── Portfolio tab ───────────────────────────────────────── -->
+<div id="tab-portfolio" class="fa-tab-pane">
+    <div class="fa-toolbar">
+        <div class="fa-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="faPortfolioSearch" placeholder="Filter holdings…" autocomplete="off">
+        </div>
+        <button class="fa-btn primary" id="faLoadPortfolio" type="button">
+            <i class="fa-solid fa-bolt"></i><span>Load fundamentals</span>
+        </button>
+        <button class="fa-btn" id="faRefreshPortfolio" type="button" title="Force refresh from yfinance" aria-label="Refresh">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+    </div>
+
+    <div class="fa-aggregate" id="faAggregate">
+        <div>
+            <div class="fa-aggregate-label">Portfolio score</div>
+            <div class="fa-aggregate-score" id="faAggregateScore">–</div>
+        </div>
+        <div class="fa-hint" style="max-width:520px">
+            Weighted by invested value. 0–30 weak · 30–45 below average · 45–65 stable · 65–80 strong · 80+ premier.
+        </div>
+    </div>
+
+    <div id="faPortfolioContent">
+        {% if not stocks %}
+        <div class="fa-empty">
+            <i class="fa-solid fa-folder-open icon"></i>
+            No holdings yet. Add some stocks from <a href="{{ url_for('portfolioMaker') }}">Add Stock</a> to see fundamentals here.
+        </div>
+        {% else %}
+        <div class="fa-empty" id="faPortfolioHint">
+            Click <strong>Load fundamentals</strong> to fetch ratios, scores and targets for your {{ stocks|length }} holding{{ 's' if stocks|length != 1 else '' }}.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Lookup tab ──────────────────────────────────────────── -->
+<div id="tab-lookup" class="fa-tab-pane" style="display:none">
+    <div class="fa-toolbar">
+        <div class="fa-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="faLookupInput" placeholder="Search by symbol or company name (e.g. Reliance, TCS, HDFC)…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="faLookupSuggest">
+            <div class="fa-suggest" id="faLookupSuggest" role="listbox"></div>
+        </div>
+        <button class="fa-btn primary" id="faLookupGo" type="button">
+            <i class="fa-solid fa-chart-bar"></i><span>Analyse</span>
+        </button>
+        <span class="fa-hint">NSE assumed by default. Append <code>.BO</code> for BSE.</span>
+    </div>
+    <div id="faLookupResult"></div>
+</div>
+
+<!-- ── Screener (Top picks) tab ────────────────────────────── -->
+<div id="tab-screener" class="fa-tab-pane" style="display:none">
+    <div class="fa-toolbar">
+        <label class="fa-hint" for="faScreenerMin" style="display:flex;align-items:center;gap:8px;height:40px;margin:0">
+            <span>Min score</span>
+            <select id="faScreenerMin" class="fa-btn" style="padding:0 10px;font-weight:600">
+                <option value="80" selected>80+ (premier)</option>
+                <option value="70">70+</option>
+                <option value="65">65+ (buy & above)</option>
+                <option value="50">50+</option>
+            </select>
+        </label>
+        <button class="fa-btn primary" id="faRunScreener" type="button">
+            <i class="fa-solid fa-magnifying-glass-chart"></i><span>Find top picks</span>
+        </button>
+        <button class="fa-btn" id="faRefreshScreener" type="button" title="Force re-scan (slower)" aria-label="Force refresh">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+        <span class="fa-hint" id="faScreenerMeta">Scans a curated NSE universe (~150 large/mid-caps). First run may take a minute; results cache for 6 hours.</span>
+    </div>
+    <div id="faScreenerContent">
+        <div class="fa-empty">
+            <i class="fa-solid fa-trophy icon"></i>
+            Pick a score threshold and click <strong>Find top picks</strong>.
+        </div>
+    </div>
+</div>
+
+<!-- ── Detail drawer ───────────────────────────────────────── -->
+<div class="fa-drawer-backdrop" id="faBackdrop"></div>
+<aside class="fa-drawer" id="faDrawer" aria-hidden="true" role="dialog" aria-labelledby="faDrawerName">
+    <div class="fa-drawer-head">
+        <div>
+            <h3 id="faDrawerName">—</h3>
+            <div class="sym" id="faDrawerMeta">—</div>
+        </div>
+        <button class="fa-close" id="faDrawerClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="fa-drawer-body" id="faDrawerBody"></div>
+</aside>
+
+<script>
+(function () {
+    "use strict";
+
+    const portfolioStocks = {{ stocks|tojson }} || [];
+    let portfolioCache = null;
+    let portfolioSort = { key: 'score', dir: 'desc' };
+
+    const $ = (id) => document.getElementById(id);
+
+    // ── formatters ──────────────────────────────────────────
+    function fmtNum(v, digits) {
+        if (v === null || v === undefined || v === '' || Number.isNaN(v)) return '–';
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '–';
+        return n.toLocaleString('en-IN', {
+            maximumFractionDigits: digits == null ? 2 : digits,
+            minimumFractionDigits: 0,
+        });
+    }
+    function fmtPct(v) {
+        if (v === null || v === undefined) return '–';
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '–';
+        const sign = n > 0 ? '+' : '';
+        return `${sign}${n.toFixed(2)}%`;
+    }
+    function fmtMoney(v, digits) {
+        if (v === null || v === undefined) return '–';
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '–';
+        return '₹' + fmtNum(n, digits == null ? 0 : digits);
+    }
+    function scoreClass(verdict) {
+        const v = (verdict || '').toLowerCase();
+        if (v.includes('strong buy')) return 'score-strong-buy';
+        if (v === 'buy') return 'score-buy';
+        if (v === 'hold') return 'score-hold';
+        if (v === 'avoid') return 'score-avoid';
+        if (v.includes('sell')) return 'score-sell';
+        return 'score-na';
+    }
+    function gainClass(v) {
+        if (v === null || v === undefined || !Number.isFinite(Number(v))) return '';
+        return Number(v) >= 0 ? 'gain-pos' : 'gain-neg';
+    }
+    function instChip(flag, signals) {
+        const f = String(flag || 'unknown').toLowerCase();
+        const cls = f === 'bullish' ? 'inst-bullish'
+                  : f === 'bearish' ? 'inst-bearish'
+                  : f === 'neutral' ? 'inst-neutral'
+                  : 'inst-unknown';
+        const icon = f === 'bullish' ? 'fa-arrow-trend-up'
+                   : f === 'bearish' ? 'fa-arrow-trend-down'
+                   : f === 'neutral' ? 'fa-minus'
+                   : 'fa-circle-question';
+        const label = f === 'unknown' ? '–'
+                    : f.charAt(0).toUpperCase() + f.slice(1);
+        const tip = Array.isArray(signals) && signals.length
+            ? signals.join(' · ')
+            : 'No institutional signal data available';
+        return `<span class="fa-inst-chip ${cls}" title="${escapeHtml(tip)}">
+            <i class="fa-solid ${icon}"></i>${escapeHtml(label)}
+        </span>`;
+    }
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+    function formatMd(text) {
+        let s = String(text == null ? '' : text).trim();
+        if (s.startsWith('```')) {
+            s = s.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
+        }
+        if (s.startsWith('{') && s.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(s);
+                if (parsed && typeof parsed === 'object' && typeof parsed.thesis === 'string') {
+                    s = parsed.thesis;
+                }
+            } catch (_) {}
+        }
+        s = escapeHtml(s);
+        return s
+            .replace(/^### (.*)$/gm, '<h6>$1</h6>')
+            .replace(/^## (.*)$/gm, '<h5>$1</h5>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+            .replace(/^/, '<p>') + '</p>';
+    }
+
+    // ── tab switching ───────────────────────────────────────
+    document.querySelectorAll('.fa-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.fa-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            $('tab-portfolio').style.display = btn.dataset.tab === 'portfolio' ? '' : 'none';
+            $('tab-lookup').style.display = btn.dataset.tab === 'lookup' ? '' : 'none';
+            $('tab-screener').style.display = btn.dataset.tab === 'screener' ? '' : 'none';
+        });
+    });
+
+    // ── portfolio ──────────────────────────────────────────
+    async function loadPortfolio(force) {
+        const btn = $('faLoadPortfolio');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="app-spinner" aria-hidden="true"></span><span>Loading…</span>';
+        $('faPortfolioContent').innerHTML =
+            '<div class="fa-loading"><span class="app-spinner me-1" aria-hidden="true"></span>Fetching fundamentals for your holdings…</div>';
+        try {
+            const resp = await fetch('/api/fundamentals/portfolio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh: !!force }),
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            portfolioCache = data;
+            renderPortfolioTable();
+        } catch (e) {
+            $('faPortfolioContent').innerHTML =
+                `<div class="fa-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    function renderPortfolioTable() {
+        if (!portfolioCache || !Array.isArray(portfolioCache.items)) return;
+
+        const agg = $('faAggregate');
+        if (portfolioCache.aggregate_score != null) {
+            agg.classList.add('show');
+            $('faAggregateScore').textContent = `${portfolioCache.aggregate_score}/100`;
+        } else {
+            agg.classList.remove('show');
+        }
+
+        const filter = ($('faPortfolioSearch').value || '').toLowerCase().trim();
+        const items = portfolioCache.items
+            .filter(it => !filter
+                || (it.name || '').toLowerCase().includes(filter)
+                || (it.symbol || '').toLowerCase().includes(filter))
+            .slice()
+            .sort((a, b) => {
+                const k = portfolioSort.key;
+                const dir = portfolioSort.dir === 'asc' ? 1 : -1;
+                const av = a[k];
+                const bv = b[k];
+                const aNull = av == null, bNull = bv == null;
+                if (aNull && bNull) return 0;
+                if (aNull) return 1;
+                if (bNull) return -1;
+                if (typeof av === 'string' || typeof bv === 'string') {
+                    return String(av).localeCompare(String(bv)) * dir;
+                }
+                return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+            });
+
+        if (!items.length) {
+            $('faPortfolioContent').innerHTML =
+                '<div class="fa-empty">No matching holdings.</div>';
+            return;
+        }
+
+        const arrow = (k) => portfolioSort.key === k
+            ? (portfolioSort.dir === 'asc' ? '▲' : '▼')
+            : '↕';
+        const activeCls = (k) => portfolioSort.key === k ? ' active-sort' : '';
+
+        const rows = items.map(it => {
+            const cls = scoreClass(it.verdict);
+            const upsideCls = gainClass(it.expected_return_1y_pct);
+            const revCls = gainClass(it.revenue_yoy);
+            const scoreLabel = it.score == null ? '–' : it.score;
+            return `<tr data-symbol="${escapeHtml(it.symbol)}">
+                <td>
+                    <div class="stock-name">${escapeHtml(it.name || it.symbol)}</div>
+                    <div class="stock-sub">${escapeHtml(it.symbol)} · ${escapeHtml(it.sector || '–')}</div>
+                </td>
+                <td class="num">${fmtNum(it.cmp)}</td>
+                <td class="num">${fmtNum(it.pe, 1)}</td>
+                <td class="num">${fmtNum(it.pb, 1)}</td>
+                <td class="num">${fmtPct(it.roe)}</td>
+                <td class="num">${fmtNum(it.de, 2)}</td>
+                <td class="num ${revCls}">${fmtPct(it.revenue_yoy)}</td>
+                <td class="num">${fmtNum(it.target_mean, 0)}</td>
+                <td class="num ${upsideCls}">${fmtPct(it.expected_return_1y_pct)}</td>
+                <td>${instChip(it.inst_flag, it.inst_signals)}</td>
+                <td><span class="fa-score-chip ${cls}" title="${escapeHtml(it.verdict || '')}">${scoreLabel}</span></td>
+            </tr>`;
+        }).join('');
+
+        $('faPortfolioContent').innerHTML = `
+            <div class="fa-table-wrap">
+                <div class="fa-table-scroll">
+                    <table class="fa-table">
+                        <thead><tr>
+                            <th data-sort="name" class="${activeCls('name').trim()}">Stock <span class="sort">${arrow('name')}</span></th>
+                            <th data-sort="cmp" class="num${activeCls('cmp')}">CMP <span class="sort">${arrow('cmp')}</span></th>
+                            <th data-sort="pe" class="num${activeCls('pe')}">P/E <span class="sort">${arrow('pe')}</span></th>
+                            <th data-sort="pb" class="num${activeCls('pb')}">P/B <span class="sort">${arrow('pb')}</span></th>
+                            <th data-sort="roe" class="num${activeCls('roe')}">ROE <span class="sort">${arrow('roe')}</span></th>
+                            <th data-sort="de" class="num${activeCls('de')}">D/E <span class="sort">${arrow('de')}</span></th>
+                            <th data-sort="revenue_yoy" class="num${activeCls('revenue_yoy')}">Rev YoY <span class="sort">${arrow('revenue_yoy')}</span></th>
+                            <th data-sort="target_mean" class="num${activeCls('target_mean')}">1Y Target <span class="sort">${arrow('target_mean')}</span></th>
+                            <th data-sort="expected_return_1y_pct" class="num${activeCls('expected_return_1y_pct')}">Upside <span class="sort">${arrow('expected_return_1y_pct')}</span></th>
+                            <th data-sort="inst_flag" class="${activeCls('inst_flag').trim()}" title="Institutional sentiment proxy (holding level + insider activity + analyst consensus)">Inst. <span class="sort">${arrow('inst_flag')}</span></th>
+                            <th data-sort="score" class="${activeCls('score').trim()}">Score <span class="sort">${arrow('score')}</span></th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        document.querySelectorAll('.fa-table thead th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const k = th.dataset.sort;
+                if (portfolioSort.key === k) {
+                    portfolioSort.dir = portfolioSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    portfolioSort.key = k;
+                    portfolioSort.dir = 'desc';
+                }
+                renderPortfolioTable();
+            });
+        });
+        document.querySelectorAll('.fa-table tbody tr').forEach(tr => {
+            tr.addEventListener('click', () => openDrawer(tr.dataset.symbol));
+        });
+    }
+
+    // ── lookup ─────────────────────────────────────────────
+    const suggestState = { items: [], active: -1, open: false, seq: 0, timer: null };
+
+    function closeSuggest() {
+        const el = $('faLookupSuggest');
+        if (!el) return;
+        el.classList.remove('open');
+        suggestState.open = false;
+        suggestState.active = -1;
+        $('faLookupInput').setAttribute('aria-expanded', 'false');
+    }
+
+    function openSuggest() {
+        const el = $('faLookupSuggest');
+        if (!el) return;
+        el.classList.add('open');
+        suggestState.open = true;
+        $('faLookupInput').setAttribute('aria-expanded', 'true');
+    }
+
+    function renderSuggest() {
+        const el = $('faLookupSuggest');
+        if (!el) return;
+        if (!suggestState.items.length) {
+            el.innerHTML = '<div class="fa-suggest-empty">No matches</div>';
+            openSuggest();
+            return;
+        }
+        el.innerHTML = suggestState.items.map((it, i) => `
+            <div class="fa-suggest-item${i === suggestState.active ? ' active' : ''}" role="option" data-idx="${i}">
+                <div class="fa-suggest-main">
+                    <span class="fa-suggest-sym">${escapeHtml(it.symbol || '')}</span>
+                    <span class="fa-suggest-name">${escapeHtml(it.name || '')}</span>
+                </div>
+                <span class="fa-suggest-tag">${escapeHtml(it.exchange || '')}</span>
+            </div>
+        `).join('');
+        el.querySelectorAll('.fa-suggest-item').forEach(node => {
+            node.addEventListener('mousedown', (ev) => {
+                ev.preventDefault();
+                const idx = parseInt(node.dataset.idx, 10);
+                pickSuggest(suggestState.items[idx]);
+            });
+            node.addEventListener('mouseenter', () => {
+                suggestState.active = parseInt(node.dataset.idx, 10);
+                el.querySelectorAll('.fa-suggest-item').forEach((n, i) => {
+                    n.classList.toggle('active', i === suggestState.active);
+                });
+            });
+        });
+        openSuggest();
+    }
+
+    function moveSuggest(delta) {
+        if (!suggestState.items.length) return;
+        const n = suggestState.items.length;
+        suggestState.active = (suggestState.active + delta + n) % n;
+        renderSuggest();
+        const el = $('faLookupSuggest');
+        const active = el && el.querySelector('.fa-suggest-item.active');
+        if (active) active.scrollIntoView({ block: 'nearest' });
+    }
+
+    function pickSuggest(item) {
+        if (!item) return;
+        $('faLookupInput').value = item.symbol || '';
+        closeSuggest();
+        runLookup();
+    }
+
+    function onSuggestInput() {
+        const q = ($('faLookupInput').value || '').trim();
+        clearTimeout(suggestState.timer);
+        if (q.length < 2) {
+            suggestState.items = [];
+            closeSuggest();
+            return;
+        }
+        const mySeq = ++suggestState.seq;
+        suggestState.timer = setTimeout(async () => {
+            try {
+                const resp = await fetch(`/api/stock/search?q=${encodeURIComponent(q)}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                if (mySeq !== suggestState.seq) return; // stale
+                suggestState.items = (data.results || []).slice(0, 12);
+                suggestState.active = -1;
+                renderSuggest();
+            } catch (e) {
+                if (mySeq !== suggestState.seq) return;
+                suggestState.items = [];
+                const el = $('faLookupSuggest');
+                if (el) {
+                    el.innerHTML = '<div class="fa-suggest-empty">Search failed</div>';
+                    openSuggest();
+                }
+            }
+        }, 180);
+    }
+
+    async function runLookup() {
+        const sym = ($('faLookupInput').value || '').trim().toUpperCase();
+        const target = $('faLookupResult');
+        if (!sym) { target.innerHTML = ''; return; }
+        target.innerHTML =
+            '<div class="fa-loading"><span class="app-spinner me-1" aria-hidden="true"></span>Fetching fundamentals…</div>';
+        try {
+            const resp = await fetch(`/api/fundamentals/${encodeURIComponent(sym)}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            renderLookupCard(data);
+        } catch (e) {
+            target.innerHTML = `<div class="fa-empty">Failed: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    function renderLookupCard(data) {
+        const f = data.fundamentals || {};
+        const target = $('faLookupResult');
+        if (!f.available) {
+            target.innerHTML = `<div class="fa-empty">
+                <i class="fa-solid fa-circle-question icon"></i>
+                <strong>${escapeHtml(f.symbol || '')}</strong> — no fundamentals available.
+                ${(f.errors && f.errors.length) ? '<div style="margin-top:6px;font-size:.78rem">' + escapeHtml(f.errors.join('; ')) + '</div>' : ''}
+            </div>`;
+            return;
+        }
+        const cls = scoreClass(data.score && data.score.verdict);
+        const composite = data.score ? data.score.composite : '–';
+        const verdict = data.score ? data.score.verdict : '';
+        target.innerHTML = `
+            <div class="fa-lookup-card">
+                <div class="fa-lookup-head">
+                    <div>
+                        <h4 class="fa-lookup-title">${escapeHtml(f.name || f.symbol)}</h4>
+                        <div class="fa-lookup-sub">${escapeHtml(f.symbol)} · ${escapeHtml(f.sector || '–')} · CMP ${fmtMoney(f.cmp, 2)}</div>
+                    </div>
+                    <span class="fa-score-chip ${cls}" style="font-size:.95rem;padding:6px 14px">${composite} · ${escapeHtml(verdict || '')}</span>
+                </div>
+                <button class="fa-btn primary" type="button" data-action="open" data-symbol="${escapeHtml(f.symbol)}">
+                    <i class="fa-solid fa-chart-line"></i><span>Full breakdown</span>
+                </button>
+            </div>
+        `;
+        const openBtn = target.querySelector('[data-action="open"]');
+        if (openBtn) openBtn.addEventListener('click', () => openDrawer(openBtn.dataset.symbol));
+    }
+
+    // ── drawer ─────────────────────────────────────────────
+    const drawer = $('faDrawer');
+    const backdrop = $('faBackdrop');
+
+    function openDrawer(symbol) {
+        if (!symbol) return;
+        drawer.classList.add('show');
+        backdrop.classList.add('show');
+        drawer.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        $('faDrawerName').textContent = symbol;
+        $('faDrawerMeta').textContent = 'Loading…';
+        $('faDrawerBody').innerHTML =
+            '<div class="fa-loading"><span class="app-spinner me-1" aria-hidden="true"></span>Loading detail…</div>';
+        fetch(`/api/fundamentals/${encodeURIComponent(symbol)}`)
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(renderDrawer)
+            .catch(e => {
+                $('faDrawerBody').innerHTML =
+                    `<div class="fa-empty">Failed: ${escapeHtml(e.message)}</div>`;
+            });
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove('show');
+        backdrop.classList.remove('show');
+        drawer.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    backdrop.addEventListener('click', closeDrawer);
+    $('faDrawerClose').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && drawer.classList.contains('show')) closeDrawer();
+    });
+
+    function renderDrawer(data) {
+        const f = data.fundamentals || {};
+        const m = f.metrics || {};
+        const v = m.valuation || {};
+        const p = m.profitability || {};
+        const g = m.growth || {};
+        const h = m.financial_health || {};
+        const own = m.ownership || {};
+        const inst = own.institutional_sentiment || {};
+        const t = data.targets || {};
+        const score = data.score || {};
+        const pillars = score.pillars || {};
+
+        $('faDrawerName').textContent = f.name || f.symbol || '—';
+        $('faDrawerMeta').textContent =
+            `${f.symbol || '—'} · ${f.sector || '–'} · CMP ${fmtMoney(f.cmp, 2)}`;
+
+        const cls = scoreClass(score.verdict);
+        const flags = Array.isArray(data.red_flags) ? data.red_flags : [];
+        const flagsHtml = flags.length
+            ? `<ul class="fa-flag-list">${flags.map(x =>
+                `<li><i class="fa-solid fa-triangle-exclamation"></i><span>${escapeHtml(x)}</span></li>`
+              ).join('')}</ul>`
+            : '<div class="fa-no-flags">No major red flags detected.</div>';
+
+        const kpi = (label, value) => `
+            <div class="fa-kpi">
+                <div class="fa-kpi-label">${label}</div>
+                <div class="fa-kpi-value">${value}</div>
+            </div>`;
+
+        const pillar = (label, val) => `
+            <div class="fa-pillar">
+                <div class="fa-pillar-label">${label}</div>
+                <div class="fa-pillar-value">${val == null ? '–' : val}</div>
+                <div class="fa-pillar-bar"><div class="fa-pillar-fill" style="width:${val == null ? 0 : Math.max(0, Math.min(100, val))}%"></div></div>
+            </div>`;
+
+        const tgt = (label, val, mean) => `
+            <div class="fa-target${mean ? ' mean' : ''}">
+                <div class="fa-target-label">${label}</div>
+                <div class="fa-target-value">${val == null ? '–' : fmtMoney(val, 0)}</div>
+            </div>`;
+
+        const expCls = gainClass(t.expected_return_1y_pct);
+        const piotroski = score.piotroski;
+
+        $('faDrawerBody').innerHTML = `
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">
+                <span class="fa-score-chip ${cls}" style="font-size:1.05rem;padding:8px 18px">
+                    ${score.composite == null ? '–' : score.composite}/100 · ${escapeHtml(score.verdict || '')}
+                </span>
+                ${piotroski != null ? `<span class="fa-hint">Piotroski F-Score: <strong>${piotroski}/9</strong></span>` : ''}
+            </div>
+
+            <div class="fa-section-title">Pillar scores</div>
+            <div class="fa-pillars">
+                ${pillar('Valuation', pillars.valuation)}
+                ${pillar('Profitability', pillars.profitability)}
+                ${pillar('Growth', pillars.growth)}
+                ${pillar('Safety', pillars.safety)}
+            </div>
+
+            <div class="fa-section-title">Key ratios</div>
+            <div class="fa-kpi-grid">
+                ${kpi('P/E (TTM)', fmtNum(v.pe_trailing, 1))}
+                ${kpi('Forward P/E', fmtNum(v.pe_forward, 1))}
+                ${kpi('P/B', fmtNum(v.pb, 1))}
+                ${kpi('EV/EBITDA', fmtNum(v.ev_ebitda, 1))}
+                ${kpi('PEG', fmtNum(v.peg, 2))}
+                ${kpi('Div Yield', fmtPct(v.div_yield_pct))}
+                ${kpi('ROE', fmtPct(p.roe_pct))}
+                ${kpi('ROCE', fmtPct(p.roce_pct))}
+                ${kpi('Net Margin', fmtPct(p.net_margin_pct))}
+                ${kpi('Op Margin', fmtPct(p.operating_margin_pct))}
+                ${kpi('Revenue CAGR 3Y', fmtPct(g.revenue_cagr_3y_pct))}
+                ${kpi('Revenue YoY', fmtPct(g.revenue_yoy_pct))}
+                ${kpi('EPS YoY', fmtPct(g.eps_yoy_pct))}
+                ${kpi('D/E', fmtNum(h.de, 2))}
+                ${kpi('Interest Coverage', h.interest_coverage == null ? '–' : (fmtNum(h.interest_coverage, 1) + 'x'))}
+                ${kpi('Current Ratio', fmtNum(h.current_ratio, 2))}
+                ${kpi('FCF Yield', fmtPct(h.fcf_yield_pct))}
+            </div>
+
+            <div class="fa-section-title">FII / DII sentiment <span class="note">(institutional flow proxy)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px">
+                ${instChip(inst.flag, inst.signals)}
+                ${own.institutional_holding_pct != null
+                    ? `<span class="fa-hint">Institutional holding: <strong>${fmtPct(own.institutional_holding_pct)}</strong></span>`
+                    : ''}
+                ${own.insider_holding_pct != null
+                    ? `<span class="fa-hint">Promoter/insider: <strong>${fmtPct(own.insider_holding_pct)}</strong></span>`
+                    : ''}
+                ${own.analyst_rec_mean != null
+                    ? `<span class="fa-hint">Analyst rating: <strong>${fmtNum(own.analyst_rec_mean, 1)}/5</strong>${own.analyst_rec_count ? ' (' + own.analyst_rec_count + ' analysts)' : ''}</span>`
+                    : ''}
+            </div>
+            ${(Array.isArray(inst.signals) && inst.signals.length)
+                ? `<ul class="fa-bullet-list">${inst.signals.map(s => '<li>' + escapeHtml(s) + '</li>').join('')}</ul>`
+                : '<div class="fa-hint">No institutional signal data available for this stock.</div>'}
+            <div class="fa-hint" style="margin-top:4px;font-style:italic">
+                Note: Direct FII vs DII split isn't available via free data feeds (it's in quarterly XBRL shareholding patterns on NSE/BSE).
+                This flag aggregates yfinance signals — institutional ownership level, insider buy/sell activity, and broker consensus — as a directional proxy.
+            </div>
+
+            <div class="fa-section-title">1-year price targets <span class="note">(model estimates)</span></div>
+            <div class="fa-targets">
+                ${tgt('DCF', t.dcf)}
+                ${tgt('P/E based', t.pe_based)}
+                ${tgt('Graham', t.graham)}
+                ${tgt('Mean target', t.mean, true)}
+                ${tgt('Low band', t.band_low)}
+                ${tgt('High band', t.band_high)}
+            </div>
+            <div class="fa-expected">
+                Expected 1-year return:
+                <strong class="${expCls}">${fmtPct(t.expected_return_1y_pct)}</strong>
+                <span class="fa-hint">(mean target vs current price)</span>
+            </div>
+
+            <div class="fa-section-title">Red flags</div>
+            ${flagsHtml}
+
+            <div class="fa-section-title">AI thesis</div>
+            <div id="faAiArea">
+                <button class="fa-btn primary" type="button" data-action="ai" data-symbol="${escapeHtml(f.symbol || '')}">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i><span>Generate AI thesis</span>
+                </button>
+                <div class="fa-hint" style="margin-top:6px">Uses 1 of your monthly AI fundamentals quota.</div>
+            </div>
+
+            <div class="fa-disclaimer">
+                Targets are derived from simple DCF / P/E re-rating / Graham models and assume current growth & margins hold.
+                They are not forecasts. This page is informational, not investment advice.
+            </div>
+        `;
+
+        const aiBtn = $('faDrawerBody').querySelector('[data-action="ai"]');
+        if (aiBtn) aiBtn.addEventListener('click', () => loadAiThesis(aiBtn.dataset.symbol));
+    }
+
+    async function loadAiThesis(symbol) {
+        const area = $('faAiArea');
+        if (!area) return;
+        area.innerHTML = '<div class="fa-loading"><span class="app-spinner me-1" aria-hidden="true"></span>Generating thesis…</div>';
+        try {
+            const resp = await fetch('/api/fundamentals/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol }),
+            });
+            const data = await resp.json();
+            if (data.error === 'quota_exceeded' || data.error === 'upgrade_required') {
+                area.innerHTML = `<div class="fa-empty">
+                    ${escapeHtml(data.message || 'Quota exceeded')}
+                    <div style="margin-top:10px"><a href="${escapeHtml(data.upgrade_url || '/billing')}" class="fa-btn primary" style="text-decoration:none"><i class="fa-solid fa-crown"></i><span>Upgrade plan</span></a></div>
+                </div>`;
+                return;
+            }
+            renderAiThesis(area, data);
+        } catch (e) {
+            area.innerHTML = `<div class="fa-empty">Failed: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    function renderAiThesis(area, data) {
+        const drivers = Array.isArray(data.key_drivers) ? data.key_drivers : [];
+        const risks = Array.isArray(data.key_risks) ? data.key_risks : [];
+        const at = data.ai_targets || {};
+        const sources = (Array.isArray(data.sources_used) ? data.sources_used : []).slice(0, 4);
+
+        const driverList = drivers.map(d => `<li>${escapeHtml(d)}</li>`).join('');
+        const riskList = risks.map(d => `<li>${escapeHtml(d)}</li>`).join('');
+        const sourcesList = sources.map(s =>
+            `<li>${escapeHtml(s.title || s.source || s.url || 'source')}</li>`
+        ).join('');
+
+        const bullBear = (data.bull_case || data.bear_case) ? `
+            <div class="fa-bull-bear">
+                <div class="fa-bull">
+                    <strong>Bull case${at.bull ? ' · target ' + fmtMoney(at.bull, 0) : ''}</strong>
+                    ${escapeHtml(data.bull_case || '')}
+                </div>
+                <div class="fa-bear">
+                    <strong>Bear case${at.bear ? ' · target ' + fmtMoney(at.bear, 0) : ''}</strong>
+                    ${escapeHtml(data.bear_case || '')}
+                </div>
+            </div>` : '';
+
+        area.innerHTML = `
+            <div class="fa-prose">${formatMd(data.thesis)}</div>
+            ${bullBear}
+            ${at.base ? `<div class="fa-ai-meta">
+                <strong>AI base case target:</strong> ${fmtMoney(at.base, 0)}
+                ${data.confidence ? ' · ' + escapeHtml(data.confidence) + ' confidence' : ''}
+                ${data.time_horizon ? ' · ' + escapeHtml(data.time_horizon) : ''}
+            </div>` : ''}
+            ${driverList ? `<div class="fa-section-title">Key drivers</div><ul class="fa-bullet-list">${driverList}</ul>` : ''}
+            ${riskList ? `<div class="fa-section-title">Key risks</div><ul class="fa-bullet-list">${riskList}</ul>` : ''}
+            ${sourcesList ? `<div class="fa-section-title">Sources used</div><ul class="fa-sources">${sourcesList}</ul>` : ''}
+        `;
+    }
+
+    // ── screener (Top picks) ───────────────────────────────
+    let screenerCache = null;
+    const screenerSort = { key: 'score', dir: 'desc' };
+
+    async function runScreener(force) {
+        const minScore = parseInt($('faScreenerMin').value, 10) || 80;
+        const target = $('faScreenerContent');
+        const meta = $('faScreenerMeta');
+        target.innerHTML =
+            '<div class="fa-loading"><span class="app-spinner me-1" aria-hidden="true"></span>' +
+            'Scanning universe for stocks with score ≥ ' + minScore + '… ' +
+            (force ? '(forced re-scan, may take a minute)' : '(cached scan if available)') +
+            '</div>';
+        try {
+            const url = `/api/fundamentals/screener?min_score=${minScore}` +
+                        (force ? '&refresh=1' : '');
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            screenerCache = data;
+            if (meta) {
+                meta.textContent = `Found ${data.count} of ${data.universe_size} stocks scoring ≥ ${data.min_score}` +
+                    (data.cached ? ' (cached)' : '') + '.';
+            }
+            renderScreenerTable();
+        } catch (e) {
+            target.innerHTML = `<div class="fa-empty">Failed: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    function renderScreenerTable() {
+        if (!screenerCache || !Array.isArray(screenerCache.items)) return;
+        const target = $('faScreenerContent');
+        const items = screenerCache.items.slice().sort((a, b) => {
+            const k = screenerSort.key;
+            const dir = screenerSort.dir === 'asc' ? 1 : -1;
+            const av = a[k], bv = b[k];
+            const aNull = av == null, bNull = bv == null;
+            if (aNull && bNull) return 0;
+            if (aNull) return 1;
+            if (bNull) return -1;
+            if (typeof av === 'string' || typeof bv === 'string') {
+                return String(av).localeCompare(String(bv)) * dir;
+            }
+            return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+        });
+
+        if (!items.length) {
+            target.innerHTML = `<div class="fa-empty">
+                <i class="fa-solid fa-circle-info icon"></i>
+                No stocks in the universe currently score at or above ${screenerCache.min_score}.
+                Try lowering the threshold.
+            </div>`;
+            return;
+        }
+
+        const arrow = (k) => screenerSort.key === k
+            ? (screenerSort.dir === 'asc' ? '▲' : '▼') : '↕';
+        const activeCls = (k) => screenerSort.key === k ? ' active-sort' : '';
+
+        const rows = items.map(it => {
+            const cls = scoreClass(it.verdict);
+            const upsideCls = gainClass(it.expected_return_1y_pct);
+            const revCls = gainClass(it.revenue_yoy);
+            const scoreLabel = it.score == null ? '–' : it.score;
+            return `<tr data-symbol="${escapeHtml(it.symbol)}">
+                <td>
+                    <div class="stock-name">${escapeHtml(it.name || it.symbol)}</div>
+                    <div class="stock-sub">${escapeHtml(it.symbol)} · ${escapeHtml(it.sector || '–')}</div>
+                </td>
+                <td class="num">${fmtNum(it.cmp)}</td>
+                <td class="num">${fmtNum(it.pe, 1)}</td>
+                <td class="num">${fmtNum(it.pb, 1)}</td>
+                <td class="num">${fmtPct(it.roe)}</td>
+                <td class="num">${fmtNum(it.de, 2)}</td>
+                <td class="num ${revCls}">${fmtPct(it.revenue_yoy)}</td>
+                <td class="num">${fmtNum(it.target_mean, 0)}</td>
+                <td class="num ${upsideCls}">${fmtPct(it.expected_return_1y_pct)}</td>
+                <td>${instChip(it.inst_flag, it.inst_signals)}</td>
+                <td><span class="fa-score-chip ${cls}" title="${escapeHtml(it.verdict || '')}">${scoreLabel}</span></td>
+            </tr>`;
+        }).join('');
+
+        target.innerHTML = `
+            <div class="fa-table-wrap">
+                <div class="fa-table-scroll">
+                    <table class="fa-table" id="faScreenerTable">
+                        <thead><tr>
+                            <th data-sort="name" class="${activeCls('name').trim()}">Stock <span class="sort">${arrow('name')}</span></th>
+                            <th data-sort="cmp" class="num${activeCls('cmp')}">CMP <span class="sort">${arrow('cmp')}</span></th>
+                            <th data-sort="pe" class="num${activeCls('pe')}">P/E <span class="sort">${arrow('pe')}</span></th>
+                            <th data-sort="pb" class="num${activeCls('pb')}">P/B <span class="sort">${arrow('pb')}</span></th>
+                            <th data-sort="roe" class="num${activeCls('roe')}">ROE <span class="sort">${arrow('roe')}</span></th>
+                            <th data-sort="de" class="num${activeCls('de')}">D/E <span class="sort">${arrow('de')}</span></th>
+                            <th data-sort="revenue_yoy" class="num${activeCls('revenue_yoy')}">Rev YoY <span class="sort">${arrow('revenue_yoy')}</span></th>
+                            <th data-sort="target_mean" class="num${activeCls('target_mean')}">1Y Target <span class="sort">${arrow('target_mean')}</span></th>
+                            <th data-sort="expected_return_1y_pct" class="num${activeCls('expected_return_1y_pct')}">Upside <span class="sort">${arrow('expected_return_1y_pct')}</span></th>
+                            <th data-sort="inst_flag" class="${activeCls('inst_flag').trim()}" title="Institutional sentiment proxy">Inst. <span class="sort">${arrow('inst_flag')}</span></th>
+                            <th data-sort="score" class="${activeCls('score').trim()}">Score <span class="sort">${arrow('score')}</span></th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        target.querySelectorAll('#faScreenerTable thead th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const k = th.dataset.sort;
+                if (screenerSort.key === k) {
+                    screenerSort.dir = screenerSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    screenerSort.key = k;
+                    screenerSort.dir = 'desc';
+                }
+                renderScreenerTable();
+            });
+        });
+        target.querySelectorAll('#faScreenerTable tbody tr').forEach(tr => {
+            tr.addEventListener('click', () => openDrawer(tr.dataset.symbol));
+        });
+    }
+
+    // ── wire up ────────────────────────────────────────────
+    $('faLoadPortfolio').addEventListener('click', () => loadPortfolio(false));
+    $('faRefreshPortfolio').addEventListener('click', () => loadPortfolio(true));
+    $('faPortfolioSearch').addEventListener('input', () => {
+        if (portfolioCache) renderPortfolioTable();
+    });
+    $('faRunScreener').addEventListener('click', () => runScreener(false));
+    $('faRefreshScreener').addEventListener('click', () => runScreener(true));
+    $('faLookupGo').addEventListener('click', runLookup);
+    $('faLookupInput').addEventListener('keydown', e => {
+        if (suggestState.open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            moveSuggest(e.key === 'ArrowDown' ? 1 : -1);
+            return;
+        }
+        if (e.key === 'Enter') {
+            if (suggestState.open && suggestState.active >= 0) {
+                e.preventDefault();
+                pickSuggest(suggestState.items[suggestState.active]);
+                return;
+            }
+            runLookup();
+        } else if (e.key === 'Escape') {
+            closeSuggest();
+        }
+    });
+    $('faLookupInput').addEventListener('input', onSuggestInput);
+    $('faLookupInput').addEventListener('focus', () => {
+        if (suggestState.items.length) openSuggest();
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#tab-lookup .fa-search')) closeSuggest();
+    });
+})();
+</script>
+{% endblock %}

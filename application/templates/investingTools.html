@@ -1,0 +1,560 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+.tools-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;overflow-x:auto;margin-bottom:18px;scrollbar-width:thin}
+.tools-tabs::-webkit-scrollbar{height:6px}
+.tools-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tools-tab:hover{background:var(--surface-2);color:var(--text)}
+.tools-tab.active{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.25)}
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+.tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.tool-header h2{font-size:1.35rem;font-weight:700;margin:0}
+.tool-header p{font-size:.85rem;color:var(--text-muted);margin:4px 0 0}
+.tool-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tool-controls select,.tool-controls input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:.82rem}
+.tool-table{width:100%;font-size:.82rem;border-collapse:collapse}
+.tool-table th{background:var(--surface-2);text-align:left;padding:10px;font-weight:600;color:var(--text-muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);position:sticky;top:0}
+.tool-table td{padding:10px;border-bottom:1px solid var(--border)}
+.tool-table tr:hover td{background:var(--surface-2)}
+.tool-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.pill-up{background:rgba(22,163,74,.12);color:#16a34a}
+.pill-dn{background:rgba(220,38,38,.12);color:#dc2626}
+.pill-warn{background:rgba(245,158,11,.15);color:#b45309}
+.pill-neutral{background:rgba(100,116,139,.12);color:var(--text-muted)}
+.gain-pos{color:#16a34a;font-weight:600}
+.gain-neg{color:#dc2626;font-weight:600}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.kpi-box .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.kpi-box .val{font-size:1.3rem;font-weight:700;margin-top:3px;color:var(--text)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+.spinner-wrap{text-align:center;padding:50px}
+.table-scroll{max-height:580px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.strategy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:14px}
+.strategy-btn{padding:14px;background:var(--surface);border:2px solid var(--border);border-radius:10px;text-align:left;cursor:pointer;transition:all .15s}
+.strategy-btn:hover{border-color:#16a34a;transform:translateY(-2px)}
+.strategy-btn.active{border-color:#16a34a;background:linear-gradient(135deg,#f0fdf4,#dcfce7)}
+[data-theme="dark"] .strategy-btn.active{background:rgba(22,163,74,.15)}
+.strategy-btn h5{margin:0;font-size:.92rem;font-weight:700}
+.strategy-btn p{margin:4px 0 0;font-size:.75rem;color:var(--text-muted)}
+.dcf-result{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:12px;padding:18px;margin-top:14px}
+[data-theme="dark"] .dcf-result{background:rgba(22,163,74,.15);border-color:rgba(34,197,94,.3)}
+.dcf-result h3{margin:0 0 4px;font-size:1.6rem;font-weight:800}
+.peer-table th,.peer-table td{text-align:right;padding:8px 6px}
+.peer-table th:first-child,.peer-table td:first-child{text-align:left}
+.peer-table tr.target td{background:linear-gradient(135deg,#fef3c7,#fde68a);font-weight:700}
+[data-theme="dark"] .peer-table tr.target td{background:rgba(245,158,11,.15)}
+.score-bar{display:inline-block;width:90px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.score-bar .fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
+.tag{display:inline-block;font-size:.65rem;background:var(--surface-2);border:1px solid var(--border);padding:1px 7px;border-radius:4px;margin-right:3px;color:var(--text-muted);font-weight:600}
+.qa-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px}
+.qa-context{background:var(--surface-2);border-left:3px solid #4f46e5;padding:10px 12px;margin-top:8px;font-size:.78rem;color:var(--text-muted)}
+.moat-pillar{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.moat-pillar:last-child{border:none}
+.moat-pillar .pillar-name{font-size:.82rem;text-transform:capitalize}
+.moat-pillar .pillar-bar{width:160px;height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden;display:inline-block;vertical-align:middle}
+.moat-pillar .pillar-bar .fill{height:100%;background:linear-gradient(90deg,#16a34a,#84cc16)}
+.health-flag{background:#fef3c7;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:8px;font-size:.85rem;color:#78350f}
+[data-theme="dark"] .health-flag{background:rgba(245,158,11,.15);color:#fcd34d}
+</style>
+
+<div class="page-container">
+    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <div>
+            <h1><i class="fa-solid fa-seedling me-2"></i>Investing Tools</h1>
+            <p>Twelve long-term toolkits: screening, valuation, quality, portfolio health.</p>
+        </div>
+    </header>
+
+    <div class="tools-tabs" role="tablist">
+        <button class="tools-tab active" data-tab="screener"><i class="fa-solid fa-filter"></i>Screener</button>
+        <button class="tools-tab" data-tab="dcf"><i class="fa-solid fa-calculator"></i>DCF Calculator</button>
+        <button class="tools-tab" data-tab="peers"><i class="fa-solid fa-people-group"></i>Peer Comparison</button>
+        <button class="tools-tab" data-tab="earnings"><i class="fa-solid fa-calendar-days"></i>Earnings Calendar</button>
+        <button class="tools-tab" data-tab="shareholding"><i class="fa-solid fa-users"></i>Shareholding</button>
+        <button class="tools-tab" data-tab="corp"><i class="fa-solid fa-handshake"></i>Corporate Actions</button>
+        <button class="tools-tab" data-tab="rag"><i class="fa-solid fa-comments"></i>Annual Report Q&amp;A</button>
+        <button class="tools-tab" data-tab="concall"><i class="fa-solid fa-microphone-lines"></i>Concall Sentiment</button>
+        <button class="tools-tab" data-tab="moat"><i class="fa-solid fa-shield-halved"></i>Moat / Quality</button>
+        <button class="tools-tab" data-tab="health"><i class="fa-solid fa-heart-pulse"></i>Portfolio Health</button>
+        <button class="tools-tab" data-tab="insider"><i class="fa-solid fa-user-secret"></i>Insider Tracker</button>
+        <button class="tools-tab" data-tab="sip"><i class="fa-solid fa-piggy-bank"></i>SIP Simulator</button>
+    </div>
+
+    <!-- Screener -->
+    <section class="tool-panel active" id="panel-screener">
+        <div class="tool-header"><div><h2>Quant Screeners</h2><p>Pre-built filters powered by Greenblatt, Piotroski, quality, value &amp; growth factors.</p></div></div>
+        <div class="strategy-grid" id="strategyGrid">
+            <button class="strategy-btn active" data-strat="magic_formula"><h5>Magic Formula</h5><p>High ROCE × high earnings yield (Greenblatt)</p></button>
+            <button class="strategy-btn" data-strat="piotroski"><h5>Piotroski F ≥ 7</h5><p>9-point financial-strength test</p></button>
+            <button class="strategy-btn" data-strat="quality"><h5>Quality</h5><p>ROE &gt; 15, ROCE &gt; 15, D/E &lt; 0.5</p></button>
+            <button class="strategy-btn" data-strat="value"><h5>Value</h5><p>PE &lt; 20, PB &lt; 3, Div Yield &gt; 1%</p></button>
+            <button class="strategy-btn" data-strat="growth"><h5>Growth</h5><p>Rev &amp; EPS CAGR 3y &gt; 15%</p></button>
+        </div>
+        <div id="screenerContent"></div>
+    </section>
+
+    <!-- DCF -->
+    <section class="tool-panel" id="panel-dcf">
+        <div class="tool-header"><div><h2>DCF Intrinsic Value Calculator</h2><p>10-year free-cash-flow projection with terminal value (Gordon).</p></div></div>
+        <div class="tool-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3"><label class="form-label" style="font-size:.78rem">Symbol</label><input class="form-control form-control-sm" id="dcfSym" placeholder="RELIANCE" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Growth %</label><input class="form-control form-control-sm" id="dcfG" type="number" step="0.5" value="12" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Terminal %</label><input class="form-control form-control-sm" id="dcfT" type="number" step="0.5" value="4" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Discount %</label><input class="form-control form-control-sm" id="dcfD" type="number" step="0.5" value="11" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Years</label><input class="form-control form-control-sm" id="dcfY" type="number" value="10" /></div>
+                <div class="col-md-1"><button class="btn btn-success btn-sm w-100" id="dcfGo">Compute</button></div>
+            </div>
+        </div>
+        <div id="dcfContent"></div>
+    </section>
+
+    <!-- Peers -->
+    <section class="tool-panel" id="panel-peers">
+        <div class="tool-header"><div><h2>Peer Comparison</h2><p>Color-coded valuation/profitability matrix vs sector peers.</p></div>
+            <div class="tool-controls"><input id="peerSym" placeholder="Symbol" /><button class="btn btn-success btn-sm" id="peerGo">Compare</button></div>
+        </div>
+        <div id="peerContent"></div>
+    </section>
+
+    <!-- Earnings -->
+    <section class="tool-panel" id="panel-earnings">
+        <div class="tool-header"><div><h2>Earnings Calendar</h2><p>Upcoming results across the universe (next 60 days).</p></div>
+            <div class="tool-controls"><button class="btn btn-success btn-sm" id="earnScan">Refresh</button></div>
+        </div>
+        <div id="earnKpis" class="kpi-row" hidden></div>
+        <div id="earnContent"></div>
+    </section>
+
+    <!-- Shareholding -->
+    <section class="tool-panel" id="panel-shareholding">
+        <div class="tool-header"><div><h2>Shareholding Pattern</h2><p>Promoter, institutional &amp; insider holdings with institutional sentiment.</p></div>
+            <div class="tool-controls"><input id="shSym" placeholder="Symbol" /><button class="btn btn-success btn-sm" id="shGo">Fetch</button></div>
+        </div>
+        <div id="shContent"></div>
+    </section>
+
+    <!-- Corporate Actions -->
+    <section class="tool-panel" id="panel-corp">
+        <div class="tool-header"><div><h2>Corporate Actions Feed</h2><p>Dividends &amp; splits across your holdings (last 2 years).</p></div>
+            <div class="tool-controls"><button class="btn btn-success btn-sm" id="corpGo">Load my holdings</button></div>
+        </div>
+        <div id="corpContent"></div>
+    </section>
+
+    <!-- RAG Q&A -->
+    <section class="tool-panel" id="panel-rag">
+        <div class="tool-header"><div><h2>Annual Report / News Q&amp;A</h2><p>Ask any question grounded in this stock's filings &amp; news (RAG).</p></div></div>
+        <div class="tool-card">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3"><label class="form-label" style="font-size:.78rem">Symbol</label><input class="form-control form-control-sm" id="ragSym" placeholder="RELIANCE" /></div>
+                <div class="col-md-8"><label class="form-label" style="font-size:.78rem">Question</label><input class="form-control form-control-sm" id="ragQ" placeholder="What is the capex plan for FY26?" /></div>
+                <div class="col-md-1"><button class="btn btn-success btn-sm w-100" id="ragGo">Ask</button></div>
+            </div>
+        </div>
+        <div id="ragContent"></div>
+    </section>
+
+    <!-- Concall -->
+    <section class="tool-panel" id="panel-concall">
+        <div class="tool-header"><div><h2>Concall Sentiment</h2><p>Keyword sentiment on recent filings / news (proxy for management tone).</p></div>
+            <div class="tool-controls"><input id="ccSym" placeholder="Symbol" /><button class="btn btn-success btn-sm" id="ccGo">Analyse</button></div>
+        </div>
+        <div id="ccContent"></div>
+    </section>
+
+    <!-- Moat -->
+    <section class="tool-panel" id="panel-moat">
+        <div class="tool-header"><div><h2>Moat / Quality Composite</h2><p>5-pillar score: profitability, margins, leverage, cash gen, earnings consistency.</p></div>
+            <div class="tool-controls"><input id="moatSym" placeholder="Symbol" /><button class="btn btn-success btn-sm" id="moatGo">Score</button></div>
+        </div>
+        <div id="moatContent"></div>
+    </section>
+
+    <!-- Portfolio Health -->
+    <section class="tool-panel" id="panel-health">
+        <div class="tool-header"><div><h2>Portfolio Health Check</h2><p>Sector concentration, valuation, quality of holdings, red flags.</p></div>
+            <div class="tool-controls"><button class="btn btn-success btn-sm" id="healthGo">Analyse my portfolio</button></div>
+        </div>
+        <div id="healthContent"></div>
+    </section>
+
+    <!-- Insider -->
+    <section class="tool-panel" id="panel-insider">
+        <div class="tool-header"><div><h2>Insider / Promoter Activity</h2><p>Recent insider transactions (best-effort via public data).</p></div>
+            <div class="tool-controls"><input id="insSym" placeholder="Symbol" /><button class="btn btn-success btn-sm" id="insGo">Fetch</button></div>
+        </div>
+        <div id="insContent"></div>
+    </section>
+
+    <!-- SIP -->
+    <section class="tool-panel" id="panel-sip">
+        <div class="tool-header"><div><h2>SIP / Wealth Simulator</h2><p>Project monthly investment with optional annual step-up.</p></div></div>
+        <div class="tool-card">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Monthly (₹)</label><input class="form-control form-control-sm" id="sipM" type="number" value="10000" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Return %</label><input class="form-control form-control-sm" id="sipR" type="number" step="0.5" value="12" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Years</label><input class="form-control form-control-sm" id="sipY" type="number" value="15" /></div>
+                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Step-up %/yr</label><input class="form-control form-control-sm" id="sipS" type="number" step="1" value="10" /></div>
+                <div class="col-md-2"><button class="btn btn-success btn-sm w-100" id="sipGo">Simulate</button></div>
+            </div>
+        </div>
+        <div id="sipContent"></div>
+    </section>
+
+</div>
+
+<script>
+(function(){
+    document.querySelectorAll('.tools-tab').forEach(b=>b.addEventListener('click',()=>{
+        document.querySelectorAll('.tools-tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.tool-panel').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        document.getElementById('panel-'+b.dataset.tab).classList.add('active');
+    }));
+
+    const fmt=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+    const inr=(v)=>v==null||isNaN(v)?'—':'₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:0});
+    const pct=(v)=>v==null?'—':(v>=0?'+':'')+Number(v).toFixed(2)+'%';
+    const cls=(v)=>v>0?'gain-pos':v<0?'gain-neg':'';
+    const setLoading=(id)=>{document.getElementById(id).innerHTML='<div class="spinner-wrap"><div class="app-spinner lg text-primary"></div><p class="mt-2 text-muted">Working…</p></div>';};
+    const setError=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h4>Failed</h4><p>${msg||''}</p></div>`;};
+    const empty=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No data</h4><p>${msg||''}</p></div>`;};
+    function kpi(box, items){
+        const el=document.getElementById(box);
+        el.innerHTML=items.map(i=>`<div class="kpi-box"><div class="lbl">${i.label}</div><div class="val" style="color:${i.color||'var(--text)'}">${i.value}</div></div>`).join('');
+        el.hidden=false;
+    }
+
+    // ============ SCREENER ============
+    let activeStrat='magic_formula';
+    document.querySelectorAll('.strategy-btn').forEach(b=>b.addEventListener('click',()=>{
+        document.querySelectorAll('.strategy-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        activeStrat=b.dataset.strat;
+        loadScreener();
+    }));
+
+    async function loadScreener(){
+        setLoading('screenerContent');
+        try{
+            const r=await fetch(`/api/investing-tools/screener?strategy=${activeStrat}&refresh=1`,{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('screenerContent',d.error);return;}
+            if(!d.stocks||!d.stocks.length){empty('screenerContent',`No stocks match "${activeStrat}" criteria right now.`);return;}
+            const cols=Object.keys(d.stocks[0]).filter(k=>!['symbol','name','sector','market_cap'].includes(k)&&!k.startsWith('_'));
+            let html=`<p class="text-muted mb-2"><strong>${d.matches}</strong> stocks match · screened <strong>${d.total_screened}</strong></p><div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Sector</th>`;
+            cols.forEach(c=>html+=`<th class="num">${c.replace(/_/g,' ')}</th>`);
+            html+='</tr></thead><tbody>';
+            for(const s of d.stocks){
+                html+=`<tr><td><strong>${s.name||s.symbol}</strong><br><small class="text-muted">${s.symbol}</small></td><td><span class="tag">${s.sector||'—'}</span></td>`;
+                cols.forEach(c=>{
+                    const v=s[c];
+                    html+=`<td class="num">${v==null?'—':(typeof v==='number'?fmt(v):v)}</td>`;
+                });
+                html+='</tr>';
+            }
+            html+='</tbody></table></div>';
+            document.getElementById('screenerContent').innerHTML=html;
+        }catch(e){setError('screenerContent',e.message);}
+    }
+
+    // ============ DCF ============
+    document.getElementById('dcfGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('dcfSym').value||'').trim().toUpperCase();
+        if(!sym){return;}
+        setLoading('dcfContent');
+        try{
+            const r=await fetch('/api/investing-tools/dcf',{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({symbol:sym,
+                    growth_pct:+document.getElementById('dcfG').value,
+                    terminal_pct:+document.getElementById('dcfT').value,
+                    discount_pct:+document.getElementById('dcfD').value,
+                    years:+document.getElementById('dcfY').value})
+            });
+            const d=await r.json();
+            if(d.error){setError('dcfContent',d.error);return;}
+            const upColor=d.upside_pct>=0?'#16a34a':'#dc2626';
+            let html=`<div class="dcf-result">
+                <div class="d-flex justify-content-between flex-wrap gap-3">
+                    <div><div class="text-muted" style="font-size:.78rem">CMP</div><h3>${inr(d.cmp)}</h3></div>
+                    <div><div class="text-muted" style="font-size:.78rem">Fair Price</div><h3>${inr(d.fair_price)}</h3></div>
+                    <div><div class="text-muted" style="font-size:.78rem">Upside</div><h3 style="color:${upColor}">${pct(d.upside_pct)}</h3></div>
+                    <div><div class="text-muted" style="font-size:.78rem">Intrinsic EV</div><h3>${inr(d.intrinsic_ev)}</h3></div>
+                </div>
+                <p class="text-muted mt-2 mb-0" style="font-size:.78rem">Assumptions: ${d.assumptions.growth_pct}% growth · ${d.assumptions.terminal_pct}% terminal · ${d.assumptions.discount_pct}% discount · ${d.assumptions.years}y horizon</p>
+            </div>
+            <div class="table-scroll mt-3"><table class="tool-table"><thead><tr><th>Year</th><th class="num">Projected FCF</th><th class="num">Present Value</th></tr></thead><tbody>`;
+            d.projections.forEach(p=>{
+                html+=`<tr><td>Year ${p.year}</td><td class="num">${inr(p.fcf)}</td><td class="num">${inr(p.pv)}</td></tr>`;
+            });
+            html+=`<tr style="font-weight:700;background:var(--surface-2)"><td>Sum PV (explicit)</td><td class="num">—</td><td class="num">${inr(d.pv_explicit)}</td></tr>`;
+            html+=`<tr style="font-weight:700;background:var(--surface-2)"><td>PV of Terminal Value</td><td class="num">—</td><td class="num">${inr(d.pv_terminal)}</td></tr>`;
+            html+='</tbody></table></div>';
+            document.getElementById('dcfContent').innerHTML=html;
+        }catch(e){setError('dcfContent',e.message);}
+    });
+
+    // ============ Peers ============
+    document.getElementById('peerGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('peerSym').value||'').trim().toUpperCase();
+        if(!sym){return;}
+        setLoading('peerContent');
+        try{
+            const r=await fetch(`/api/investing-tools/peers?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('peerContent',d.error);return;}
+            const cols=['pe','pb','ev_ebitda','roe','roce','op_margin','rev_growth_3y','eps_growth_3y','de','div_yield'];
+            const lbl={pe:'PE',pb:'PB',ev_ebitda:'EV/EBITDA',roe:'ROE',roce:'ROCE',op_margin:'Op Mgn',rev_growth_3y:'Rev CAGR 3y',eps_growth_3y:'EPS CAGR 3y',de:'D/E',div_yield:'Div Yield'};
+            let html=`<p class="text-muted mb-2">Sector: <strong>${d.sector||'—'}</strong> · ${d.peers.length} peers</p><div class="table-scroll"><table class="tool-table peer-table"><thead><tr><th>Stock</th><th class="num">CMP</th>`;
+            cols.forEach(c=>html+=`<th class="num">${lbl[c]}</th>`);
+            html+='</tr></thead><tbody>';
+            const renderRow=(s,is_target=false)=>{
+                let row=`<tr class="${is_target?'target':''}"><td><strong>${s.name||s.symbol}</strong></td><td class="num">${inr(s.cmp)}</td>`;
+                cols.forEach(c=>row+=`<td class="num">${s[c]==null?'—':fmt(s[c])}</td>`);
+                return row+'</tr>';
+            };
+            html+=renderRow(d.target,true);
+            d.peers.forEach(p=>html+=renderRow(p));
+            // Averages row
+            html+='<tr style="font-weight:700;background:var(--surface-2)"><td>Peer Avg</td><td class="num">—</td>';
+            cols.forEach(c=>html+=`<td class="num">${d.averages[c]==null?'—':fmt(d.averages[c])}</td>`);
+            html+='</tr></tbody></table></div>';
+            document.getElementById('peerContent').innerHTML=html;
+        }catch(e){setError('peerContent',e.message);}
+    });
+
+    // ============ Earnings ============
+    document.getElementById('earnScan').addEventListener('click',async()=>{
+        setLoading('earnContent');document.getElementById('earnKpis').hidden=true;
+        try{
+            const r=await fetch('/api/investing-tools/earnings?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('earnContent',d.detail);return;}
+            kpi('earnKpis',[
+                {label:'This Week',value:d.this_week||0,color:'#dc2626'},
+                {label:'Next 30 Days',value:d.next_30d||0,color:'#f59e0b'},
+                {label:'Total Upcoming',value:(d.events||[]).length},
+            ]);
+            if(!d.events||!d.events.length){empty('earnContent','No earnings scheduled (yfinance calendar may be sparse for NSE).');return;}
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Earnings Date</th><th class="num">Days Out</th><th class="num">CMP</th><th class="num">Day %</th></tr></thead><tbody>';
+            for(const ev of d.events){
+                const urgency=ev.days_until<=7?'pill-dn':ev.days_until<=14?'pill-warn':'pill-neutral';
+                html+=`<tr><td><strong>${ev.name}</strong></td><td>${ev.earnings_date}</td><td class="num"><span class="pill ${urgency}">${ev.days_until}d</span></td><td class="num">${inr(ev.price)}</td><td class="num ${cls(ev.change_pct)}">${pct(ev.change_pct)}</td></tr>`;
+            }
+            html+='</tbody></table></div>';
+            document.getElementById('earnContent').innerHTML=html;
+        }catch(e){setError('earnContent',e.message);}
+    });
+
+    // ============ Shareholding ============
+    document.getElementById('shGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('shSym').value||'').trim().toUpperCase();
+        if(!sym)return;
+        setLoading('shContent');
+        try{
+            const r=await fetch(`/api/investing-tools/shareholding?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('shContent',d.error);return;}
+            const sent=d.institutional_sentiment||{};
+            const flag=sent.flag||'unknown';
+            const flagColor={bullish:'#16a34a',bearish:'#dc2626',neutral:'#64748b',unknown:'#9ca3af'}[flag];
+            let html=`<div class="tool-card"><h4 style="margin:0 0 12px"><strong>${d.name||d.symbol}</strong> <small class="text-muted">as of ${d.as_of||'—'}</small></h4>
+            <div class="kpi-row">
+                <div class="kpi-box"><div class="lbl">Promoter</div><div class="val">${d.promoter_pct==null?'—':fmt(d.promoter_pct,1)+'%'}</div></div>
+                <div class="kpi-box"><div class="lbl">Institutional</div><div class="val">${d.institutional_pct==null?'—':fmt(d.institutional_pct,1)+'%'}</div></div>
+                <div class="kpi-box"><div class="lbl">Insider</div><div class="val">${d.insider_pct==null?'—':fmt(d.insider_pct,1)+'%'}</div></div>
+                <div class="kpi-box"><div class="lbl">Inst. Sentiment</div><div class="val" style="color:${flagColor};text-transform:capitalize">${flag}</div></div>
+            </div>`;
+            if(sent.signals&&sent.signals.length){
+                html+='<p class="text-muted mb-1" style="font-size:.85rem"><strong>Signals:</strong></p><ul style="font-size:.82rem">';
+                sent.signals.forEach(s=>html+=`<li>${s}</li>`);
+                html+='</ul>';
+            }
+            html+='</div>';
+            document.getElementById('shContent').innerHTML=html;
+        }catch(e){setError('shContent',e.message);}
+    });
+
+    // ============ Corporate Actions ============
+    document.getElementById('corpGo').addEventListener('click',async()=>{
+        setLoading('corpContent');
+        try{
+            const r=await fetch('/api/investing-tools/corporate-actions',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+            const d=await r.json();
+            if(d.error){setError('corpContent',d.error);return;}
+            if(!d.stocks||!d.stocks.length){empty('corpContent','No corporate actions found in last 2 years for your holdings.');return;}
+            let html='';
+            for(const s of d.stocks){
+                html+=`<div class="tool-card"><h4 style="margin:0 0 8px"><strong>${s.name}</strong> <small class="text-muted">${s.symbol}</small></h4><div class="table-scroll" style="max-height:200px"><table class="tool-table"><thead><tr><th>Date</th><th>Type</th><th class="num">Value</th></tr></thead><tbody>`;
+                s.events.forEach(e=>{
+                    html+=`<tr><td>${e.date}</td><td><span class="pill ${e.type==='Dividend'?'pill-up':'pill-info'}">${e.type}</span></td><td class="num">${fmt(e.value,2)}${e.type==='Dividend'?' ₹/sh':' ratio'}</td></tr>`;
+                });
+                html+='</tbody></table></div></div>';
+            }
+            document.getElementById('corpContent').innerHTML=html;
+        }catch(e){setError('corpContent',e.message);}
+    });
+
+    // ============ RAG QA ============
+    document.getElementById('ragGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('ragSym').value||'').trim().toUpperCase();
+        const q=(document.getElementById('ragQ').value||'').trim();
+        if(!sym||!q)return;
+        setLoading('ragContent');
+        try{
+            const r=await fetch('/api/investing-tools/rag-qa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym,question:q})});
+            const d=await r.json();
+            if(d.error){setError('ragContent',d.error);return;}
+            let html=`<div class="qa-box"><div style="font-size:.8rem;color:var(--text-muted)">Question</div><div style="font-weight:600;margin-bottom:10px">${q}</div><div style="font-size:.8rem;color:var(--text-muted)">Answer ${d.model_used?'<span class="pill pill-info">AI</span>':'<span class="pill pill-neutral">No AI</span>'}</div><div style="white-space:pre-wrap;line-height:1.55">${(d.answer||'').replace(/</g,'&lt;')}</div>`;
+            if(d.contexts&&d.contexts.length){
+                html+='<details class="mt-3"><summary style="cursor:pointer;font-size:.85rem;font-weight:600">Source excerpts ('+d.contexts.length+')</summary>';
+                d.contexts.forEach((c,i)=>html+=`<div class="qa-context"><strong>[${i+1}]</strong> ${(c.text||'').slice(0,400).replace(/</g,'&lt;')}…</div>`);
+                html+='</details>';
+            }
+            html+='</div>';
+            document.getElementById('ragContent').innerHTML=html;
+        }catch(e){setError('ragContent',e.message);}
+    });
+
+    // ============ Concall sentiment ============
+    document.getElementById('ccGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('ccSym').value||'').trim().toUpperCase();
+        if(!sym)return;
+        setLoading('ccContent');
+        try{
+            const r=await fetch(`/api/investing-tools/concall-sentiment?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('ccContent',d.error);return;}
+            const verdictColor=d.verdict.includes('bullish')?'#16a34a':d.verdict.includes('bearish')?'#dc2626':'#64748b';
+            let html=`<div class="tool-card"><div class="d-flex justify-content-between align-items-center"><h4 style="margin:0"><strong>${d.symbol}</strong></h4><div><span class="pill" style="background:${verdictColor}22;color:${verdictColor}">${d.verdict.toUpperCase()}</span> · Score ${d.score}</div></div><p class="text-muted mt-2" style="font-size:.8rem">${d.note}</p></div>`;
+            if(d.samples&&d.samples.length){
+                html+='<div class="tool-card"><h5>Evidence snippets</h5>';
+                d.samples.forEach(s=>html+=`<div class="qa-context"><strong>${s.query}</strong> · +${s.pos}/-${s.neg}<br>${s.snippet.replace(/</g,'&lt;')}</div>`);
+                html+='</div>';
+            }
+            document.getElementById('ccContent').innerHTML=html;
+        }catch(e){setError('ccContent',e.message);}
+    });
+
+    // ============ Moat ============
+    document.getElementById('moatGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('moatSym').value||'').trim().toUpperCase();
+        if(!sym)return;
+        setLoading('moatContent');
+        try{
+            const r=await fetch(`/api/investing-tools/moat?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('moatContent',d.error);return;}
+            const cmpColor=d.composite>=75?'#16a34a':d.composite>=60?'#0ea5e9':d.composite>=45?'#f59e0b':'#dc2626';
+            let html=`<div class="tool-card"><div class="d-flex justify-content-between flex-wrap align-items-center"><div><h4 style="margin:0"><strong>${d.name}</strong></h4><div class="text-muted" style="font-size:.85rem">${d.verdict}</div></div><div style="font-size:2.4rem;font-weight:800;color:${cmpColor}">${d.composite}<span style="font-size:1rem;color:var(--text-muted)">/100</span></div></div></div>
+            <div class="tool-card"><h5>Pillar breakdown</h5>`;
+            Object.entries(d.pillars).forEach(([k,v])=>{
+                html+=`<div class="moat-pillar"><span class="pillar-name">${k.replace(/_/g,' ')}</span><span><span class="pillar-bar"><span class="fill" style="width:${v}%"></span></span> <strong>${v}</strong></span></div>`;
+            });
+            html+='</div>';
+            document.getElementById('moatContent').innerHTML=html;
+        }catch(e){setError('moatContent',e.message);}
+    });
+
+    // ============ Portfolio Health ============
+    document.getElementById('healthGo').addEventListener('click',async()=>{
+        setLoading('healthContent');
+        try{
+            const r=await fetch('/api/investing-tools/portfolio-health',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+            const d=await r.json();
+            if(d.error){setError('healthContent',d.error);return;}
+            if(!d.holdings||!d.holdings.length){empty('healthContent','No holdings found. Add stocks to your portfolio first.');return;}
+            const pnlColor=d.total_pnl_pct>=0?'#16a34a':'#dc2626';
+            let html=`<div class="kpi-row">
+                <div class="kpi-box"><div class="lbl">Total Value</div><div class="val">${inr(d.total_value)}</div></div>
+                <div class="kpi-box"><div class="lbl">Invested</div><div class="val">${inr(d.total_invested)}</div></div>
+                <div class="kpi-box"><div class="lbl">Total P&amp;L</div><div class="val" style="color:${pnlColor}">${inr(d.total_pnl)}</div></div>
+                <div class="kpi-box"><div class="lbl">P&amp;L %</div><div class="val" style="color:${pnlColor}">${pct(d.total_pnl_pct)}</div></div>
+                <div class="kpi-box"><div class="lbl">Weighted P/E</div><div class="val">${fmt(d.weighted_pe,1)}</div></div>
+                <div class="kpi-box"><div class="lbl">Positions</div><div class="val">${d.holdings.length}</div></div>
+            </div>`;
+            if(d.flags&&d.flags.length){
+                html+='<h5 class="mt-3">Risk flags</h5>';
+                d.flags.forEach(f=>html+=`<div class="health-flag"><i class="fa-solid fa-triangle-exclamation me-2"></i>${f}</div>`);
+            }
+            html+='<h5 class="mt-3">Sector breakdown</h5><div class="table-scroll" style="max-height:300px"><table class="tool-table"><thead><tr><th>Sector</th><th class="num">Value</th><th class="num">% of Portfolio</th></tr></thead><tbody>';
+            d.sector_breakdown.forEach(s=>{
+                html+=`<tr><td><strong>${s.sector}</strong></td><td class="num">${inr(s.value)}</td><td class="num">${fmt(s.pct,1)}%</td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            html+='<h5 class="mt-3">Holdings</h5><div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Sector</th><th class="num">Qty</th><th class="num">CMP</th><th class="num">Value</th><th class="num">P&amp;L %</th><th class="num">PE</th><th class="num">ROE</th><th>Score</th></tr></thead><tbody>';
+            d.holdings.forEach(h=>{
+                const sc=h.score?`<span class="pill ${h.score>=70?'pill-up':h.score>=50?'pill-warn':'pill-dn'}">${h.score} ${h.verdict||''}</span>`:'—';
+                html+=`<tr><td><strong>${h.name}</strong></td><td><span class="tag">${h.sector}</span></td><td class="num">${fmt(h.qty,0)}</td><td class="num">${inr(h.cmp)}</td><td class="num">${inr(h.value)}</td><td class="num ${cls(h.pnl_pct)}">${pct(h.pnl_pct)}</td><td class="num">${fmt(h.pe,1)}</td><td class="num">${fmt(h.roe,1)}</td><td>${sc}</td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('healthContent').innerHTML=html;
+        }catch(e){setError('healthContent',e.message);}
+    });
+
+    // ============ Insider ============
+    document.getElementById('insGo').addEventListener('click',async()=>{
+        const sym=(document.getElementById('insSym').value||'').trim().toUpperCase();
+        if(!sym)return;
+        setLoading('insContent');
+        try{
+            const r=await fetch(`/api/investing-tools/insider?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('insContent',d.error);return;}
+            let html=`<div class="tool-card"><p class="text-muted mb-2" style="font-size:.85rem">${d.note||''}</p>`;
+            if(!d.rows||!d.rows.length){html+='<p>No insider transactions returned for this symbol.</p>';}
+            else{
+                html+='<div class="table-scroll"><table class="tool-table"><thead><tr>';
+                const keys=Object.keys(d.rows[0]);
+                keys.forEach(k=>html+=`<th>${k}</th>`);
+                html+='</tr></thead><tbody>';
+                d.rows.forEach(row=>{
+                    html+='<tr>';
+                    keys.forEach(k=>html+=`<td>${row[k]||'—'}</td>`);
+                    html+='</tr>';
+                });
+                html+='</tbody></table></div>';
+            }
+            html+='</div>';
+            document.getElementById('insContent').innerHTML=html;
+        }catch(e){setError('insContent',e.message);}
+    });
+
+    // ============ SIP ============
+    document.getElementById('sipGo').addEventListener('click',async()=>{
+        setLoading('sipContent');
+        try{
+            const r=await fetch('/api/investing-tools/sip',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({monthly_amount:+document.getElementById('sipM').value,
+                    expected_return_pct:+document.getElementById('sipR').value,
+                    years:+document.getElementById('sipY').value,
+                    step_up_pct:+document.getElementById('sipS').value})});
+            const d=await r.json();
+            if(d.error){setError('sipContent',d.error);return;}
+            let html=`<div class="kpi-row">
+                <div class="kpi-box"><div class="lbl">Final Corpus</div><div class="val" style="color:#16a34a">${inr(d.final_corpus)}</div></div>
+                <div class="kpi-box"><div class="lbl">Total Invested</div><div class="val">${inr(d.total_invested)}</div></div>
+                <div class="kpi-box"><div class="lbl">Total Gain</div><div class="val" style="color:#16a34a">${inr(d.total_gain)}</div></div>
+                <div class="kpi-box"><div class="lbl">Multiple</div><div class="val">${fmt(d.final_corpus/d.total_invested,2)}×</div></div>
+            </div>
+            <div class="table-scroll"><table class="tool-table"><thead><tr><th>Year</th><th class="num">Monthly</th><th class="num">Invested</th><th class="num">Corpus</th><th class="num">Gain</th></tr></thead><tbody>`;
+            d.yearly.forEach(y=>{
+                html+=`<tr><td>Year ${y.year}</td><td class="num">${inr(y.monthly_contribution)}</td><td class="num">${inr(y.invested_so_far)}</td><td class="num"><strong>${inr(y.corpus)}</strong></td><td class="num gain-pos">${inr(y.gain)}</td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('sipContent').innerHTML=html;
+        }catch(e){setError('sipContent',e.message);}
+    });
+
+    // Initial
+    loadScreener();
+})();
+</script>
+{% endblock %}

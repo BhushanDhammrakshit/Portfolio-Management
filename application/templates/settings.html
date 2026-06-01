@@ -1,0 +1,372 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+.settings-grid{display:grid;grid-template-columns:240px 1fr;gap:0;min-height:60vh}
+@media(max-width:860px){.settings-grid{grid-template-columns:1fr}}
+.settings-nav{border-right:1px solid var(--border);padding:18px 0}
+@media(max-width:860px){.settings-nav{border-right:none;border-bottom:1px solid var(--border);padding:0 0 12px;display:flex;gap:4px;overflow-x:auto}}
+.settings-nav-btn{
+    display:flex;align-items:center;gap:10px;padding:10px 20px;width:100%;border:none;background:none;
+    color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;border-radius:0;
+    border-left:3px solid transparent;transition:all .15s;text-align:left;white-space:nowrap;
+}
+.settings-nav-btn:hover{color:var(--text);background:var(--surface-2)}
+.settings-nav-btn.active{color:var(--primary);border-left-color:var(--primary);background:var(--primary-light)}
+@media(max-width:860px){
+    .settings-nav-btn{border-left:none;border-bottom:3px solid transparent;padding:10px 14px;border-radius:8px 8px 0 0}
+    .settings-nav-btn.active{border-left:none;border-bottom-color:var(--primary)}
+}
+.settings-nav-btn i{width:18px;text-align:center;font-size:.9rem}
+.settings-panel{display:none;padding:24px 28px}
+.settings-panel.active{display:block}
+.settings-section{margin-bottom:28px}
+.settings-section:last-child{margin-bottom:0}
+.settings-section-title{font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.settings-section-title i{color:var(--primary);font-size:.85rem}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap}
+.setting-row:last-child{border-bottom:none}
+.setting-info{flex:1;min-width:200px}
+.setting-label{font-weight:700;font-size:.88rem;color:var(--text);margin-bottom:2px}
+.setting-desc{font-size:.75rem;color:var(--text-muted);line-height:1.4}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked+.toggle-slider{background:var(--primary)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
+/* Dark mode toggle slider */
+[data-theme="dark"] .toggle-slider{background:var(--border-strong)}
+[data-theme="dark"] .toggle-slider::before{background:var(--surface)}
+.setting-select{padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;min-width:140px}
+</style>
+
+<div class="page-narrow">
+    <header class="page-header">
+        <h1><i class="fa-solid fa-gear me-2"></i>Settings</h1>
+        <p class="text-muted">Manage your account, preferences, and security.</p>
+    </header>
+
+    {% if error %}<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>{% endif %}
+    {% if success %}<div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i>{{ success }}</div>{% endif %}
+
+    <div class="surface-card" style="padding:0;overflow:hidden">
+        <div class="settings-grid">
+            {# ── Side nav ─────────────────────────────────── #}
+            <div class="settings-nav" id="settingsNav">
+                <button class="settings-nav-btn active" data-tab="profile"><i class="fa-solid fa-user"></i><span>Profile</span></button>
+                <button class="settings-nav-btn" data-tab="appearance"><i class="fa-solid fa-palette"></i><span>Appearance</span></button>
+                <button class="settings-nav-btn" data-tab="notifications"><i class="fa-solid fa-bell"></i><span>Notifications</span></button>
+                <button class="settings-nav-btn" data-tab="display"><i class="fa-solid fa-table-columns"></i><span>Display</span></button>
+                <button class="settings-nav-btn" data-tab="security"><i class="fa-solid fa-shield-halved"></i><span>Security</span></button>
+                <button class="settings-nav-btn" data-tab="danger"><i class="fa-solid fa-triangle-exclamation"></i><span>Account</span></button>
+            </div>
+
+            {# ── Panels ───────────────────────────────────── #}
+            <div>
+                {# Profile #}
+                <div class="settings-panel active" id="panel-profile">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-id-card"></i>Profile details</h6>
+                        <form method="POST" action="{{ url_for('settings') }}" class="row g-3">
+                            <input type="hidden" name="action" value="profile" />
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input type="text" name="name" class="form-control" value="{{ user.UserName or '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" name="phone" class="form-control" value="{{ user.ContactNo or '' }}" pattern="[0-9]{10}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Gender</label>
+                                <select name="gender" class="form-select">
+                                    {% for g in ['Male','Female','Other'] %}
+                                    <option value="{{ g }}" {% if user.Gender == g %}selected{% endif %}>{{ g }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">City</label>
+                                <input type="text" name="location" class="form-control" value="{{ user.Location or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>Save profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {# Appearance #}
+                <div class="settings-panel" id="panel-appearance">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-palette"></i>Theme</h6>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Dark mode</div>
+                                <div class="setting-desc">Switch the entire interface to a dark colour scheme. Easier on the eyes at night.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingDarkMode" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Compact sidebar</div>
+                                <div class="setting-desc">Collapse the sidebar to icons only by default. You can still expand it anytime.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingCompactSidebar" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {# Notifications #}
+                <div class="settings-panel" id="panel-notifications">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-bell"></i>Alert preferences</h6>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Price alerts</div>
+                                <div class="setting-desc">Show a notification when a stock in your portfolio moves more than 5% in a day.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingPriceAlerts" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">News highlights</div>
+                                <div class="setting-desc">Receive a brief summary of market news when you open the dashboard.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingNewsHighlights" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">AI insight reminders</div>
+                                <div class="setting-desc">Prompt to re-analyse a stock when its last insight is older than 7 days.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingInsightReminders" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {# Display #}
+                <div class="settings-panel" id="panel-display">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-table-columns"></i>Dashboard & tables</h6>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Currency format</div>
+                                <div class="setting-desc">Choose how currency values are displayed throughout the app.</div>
+                            </div>
+                            <select class="setting-select" id="settingCurrency">
+                                <option value="inr">&#8377; INR (Indian Rupee)</option>
+                                <option value="usd">$ USD (US Dollar)</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Number format</div>
+                                <div class="setting-desc">Use the Indian numbering system (lakhs, crores) or international (millions, billions).</div>
+                            </div>
+                            <select class="setting-select" id="settingNumberFormat">
+                                <option value="indian">Indian (1,00,000)</option>
+                                <option value="international">International (100,000)</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Default chart type</div>
+                                <div class="setting-desc">Preferred chart style on the dashboard and analysis pages.</div>
+                            </div>
+                            <select class="setting-select" id="settingChartType">
+                                <option value="line">Line chart</option>
+                                <option value="candle">Candlestick</option>
+                                <option value="area">Area chart</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Show sector tags</div>
+                                <div class="setting-desc">Display a sector badge next to each stock name in portfolio tables.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingSectorTags" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {# Security #}
+                <div class="settings-panel" id="panel-security">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-key"></i>Change password</h6>
+                        <form method="POST" action="{{ url_for('settings') }}" class="row g-3">
+                            <input type="hidden" name="action" value="password" />
+                            <div class="col-md-12">
+                                <label class="form-label">Current password</label>
+                                <input type="password" name="current_password" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">New password</label>
+                                <input type="password" name="new_password" class="form-control" minlength="6" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Confirm new password</label>
+                                <input type="password" name="confirm_password" class="form-control" minlength="6" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-shield-halved me-1"></i>Update password</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-lock"></i>Session</h6>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Auto-logout timeout</div>
+                                <div class="setting-desc">Automatically sign out after a period of inactivity.</div>
+                            </div>
+                            <select class="setting-select" id="settingAutoLogout">
+                                <option value="0">Never</option>
+                                <option value="15">15 minutes</option>
+                                <option value="30">30 minutes</option>
+                                <option value="60">1 hour</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {# Account / Danger zone #}
+                <div class="settings-panel" id="panel-danger">
+                    <div class="settings-section">
+                        <h6 class="settings-section-title"><i class="fa-solid fa-right-from-bracket"></i>Session</h6>
+                        <p class="text-muted mb-3" style="font-size:.85rem">End your current session and return to the login page.</p>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+                    </div>
+                    <div class="settings-section" style="margin-top:20px;padding-top:18px;border-top:1px dashed var(--danger)">
+                        <h6 class="settings-section-title" style="color:var(--danger)"><i class="fa-solid fa-trash" style="color:var(--danger)"></i>Reset preferences</h6>
+                        <p class="text-muted mb-3" style="font-size:.85rem">Clear all local settings (theme, display, notifications) and restore defaults. Your account data is not affected.</p>
+                        <button class="btn btn-outline-danger" id="resetPrefsBtn"><i class="fa-solid fa-rotate-left me-1"></i>Reset all preferences</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    // Tab navigation
+    const nav = document.getElementById('settingsNav');
+    const panels = document.querySelectorAll('.settings-panel');
+    nav.addEventListener('click', e => {
+        const btn = e.target.closest('.settings-nav-btn');
+        if (!btn) return;
+        nav.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        panels.forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('panel-' + btn.dataset.tab);
+        if (target) target.classList.add('active');
+    });
+
+    // --- Preferences store (localStorage) ---
+    const DEFAULTS = {
+        ppTheme: 'light',
+        ppCompactSidebar: false,
+        ppPriceAlerts: true,
+        ppNewsHighlights: true,
+        ppInsightReminders: true,
+        ppCurrency: 'inr',
+        ppNumberFormat: 'indian',
+        ppChartType: 'line',
+        ppSectorTags: true,
+        ppAutoLogout: '0'
+    };
+
+    function getPref(key) {
+        const v = localStorage.getItem(key);
+        if (v === null) return DEFAULTS[key];
+        if (DEFAULTS[key] === true || DEFAULTS[key] === false) return v === 'true';
+        return v;
+    }
+    function setPref(key, val) {
+        localStorage.setItem(key, String(val));
+    }
+
+    // Bind toggles
+    function bindToggle(id, key, onChange) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.checked = getPref(key);
+        el.addEventListener('change', () => {
+            setPref(key, el.checked);
+            if (onChange) onChange(el.checked);
+        });
+    }
+    function bindSelect(id, key, onChange) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = getPref(key);
+        el.addEventListener('change', () => {
+            setPref(key, el.value);
+            if (onChange) onChange(el.value);
+        });
+    }
+
+    // Dark mode
+    bindToggle('settingDarkMode', 'ppTheme', on => {
+        document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+        setPref('ppTheme', on ? 'dark' : 'light');
+    });
+    // Init checkbox from current theme state
+    const dmEl = document.getElementById('settingDarkMode');
+    if (dmEl) dmEl.checked = (getPref('ppTheme') === 'dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Compact sidebar
+    bindToggle('settingCompactSidebar', 'ppCompactSidebar', on => {
+        document.body.classList.toggle('sidebar-collapsed', on);
+        localStorage.setItem('sidebarCollapsed', on ? '1' : '0');
+    });
+    const csEl = document.getElementById('settingCompactSidebar');
+    if (csEl) csEl.checked = localStorage.getItem('sidebarCollapsed') === '1';
+
+    bindToggle('settingPriceAlerts', 'ppPriceAlerts');
+    bindToggle('settingNewsHighlights', 'ppNewsHighlights');
+    bindToggle('settingInsightReminders', 'ppInsightReminders');
+    bindToggle('settingSectorTags', 'ppSectorTags');
+    bindSelect('settingCurrency', 'ppCurrency');
+    bindSelect('settingNumberFormat', 'ppNumberFormat');
+    bindSelect('settingChartType', 'ppChartType');
+    bindSelect('settingAutoLogout', 'ppAutoLogout');
+
+    // Reset
+    document.getElementById('resetPrefsBtn')?.addEventListener('click', () => {
+        if (!confirm('Reset all preferences to defaults?')) return;
+        Object.keys(DEFAULTS).forEach(k => localStorage.removeItem(k));
+        localStorage.removeItem('sidebarCollapsed');
+        document.documentElement.removeAttribute('data-theme');
+        location.reload();
+    });
+
+    // Deep link: open tab from URL hash
+    const hash = location.hash.replace('#','');
+    if (hash) {
+        const btn = nav.querySelector(`[data-tab="${hash}"]`);
+        if (btn) btn.click();
+    }
+})();
+</script>
+{% endblock %}
