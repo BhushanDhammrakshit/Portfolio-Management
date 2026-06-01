@@ -36,6 +36,13 @@ from application.routes.broker_api import broker_api
 from application.routes.billing import billing_bp
 from application.routes.rag_admin import rag_admin_bp
 from application.routes.fundamentals_api import fundamentals_api
+from application.routes.option_chain_api import option_chain_api
+from application.routes.market_pulse_api import market_pulse_api
+from application.routes.intraday_tools_api import intraday_tools_api
+from application.routes.swing_tools_api import swing_tools_api
+from application.routes.investing_tools_api import investing_tools_api
+from application.routes.ai_tools_api import ai_tools_api
+from application.routes.mutual_funds_api import mutual_funds_api
 
 app.register_blueprint(user_blueprint)
 app.register_blueprint(tender_api)
@@ -50,6 +57,13 @@ app.register_blueprint(broker_api)
 app.register_blueprint(billing_bp)
 app.register_blueprint(rag_admin_bp)
 app.register_blueprint(fundamentals_api)
+app.register_blueprint(option_chain_api)
+app.register_blueprint(market_pulse_api)
+app.register_blueprint(intraday_tools_api)
+app.register_blueprint(swing_tools_api)
+app.register_blueprint(investing_tools_api)
+app.register_blueprint(ai_tools_api)
+app.register_blueprint(mutual_funds_api)
 
 # Plain routes registered against the app
 from application.routes import route  # noqa: F401, E402
