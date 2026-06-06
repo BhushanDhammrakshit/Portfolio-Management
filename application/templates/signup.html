@@ -1,0 +1,71 @@
+{% extends "guest_layout.html" %}
+{% block content %}
+<div class="auth-card auth-card-wide">
+    <div class="auth-card-header">
+        <h2>Create your account</h2>
+        <p>Start tracking your investments in minutes</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('signup') }}" class="auth-form" novalidate>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Full name" required />
+                    <label for="name"><i class="fa-solid fa-user me-1"></i> Full name</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]{10}" placeholder="10-digit number" required />
+                    <label for="phone"><i class="fa-solid fa-phone me-1"></i> Phone (10 digits)</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required />
+                    <label for="email"><i class="fa-solid fa-envelope me-1"></i> Email</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="6" required />
+                    <label for="password"><i class="fa-solid fa-lock me-1"></i> Password (min 6 chars)</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select class="form-select" id="gender" name="gender" required>
+                        <option value="" disabled selected>Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <label for="gender"><i class="fa-solid fa-venus-mars me-1"></i> Gender</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="location" name="location" placeholder="City" required />
+                    <label for="location"><i class="fa-solid fa-location-dot me-1"></i> City</label>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary auth-submit mt-3">Create account <i class="fa-solid fa-arrow-right ms-1"></i></button>
+    </form>
+
+    <div class="alert alert-info mt-3 small mb-0" role="alert">
+        <i class="fa-solid fa-envelope-circle-check me-1"></i>
+        We'll email you a 6-digit code to verify your address.
+        <strong>Don't see it?</strong> Please check your <strong>Spam</strong>,
+        <strong>Junk</strong> or <strong>Promotions</strong> folder and mark it as
+        "Not spam" so future emails reach your inbox.
+    </div>
+
+    <div class="auth-divider"><span>Already have an account?</span></div>
+    <a href="{{ url_for('logIn') }}" class="btn btn-outline-primary auth-secondary">Sign in instead</a>
+</div>
+{% endblock %}

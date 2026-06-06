@@ -1,0 +1,194 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+/* ── Token usage bar ────────────────────────────────────────── */
+.token-bar{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 18px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border);
+    font-size:.82rem;font-weight:600;color:var(--text);
+}
+.token-bar-icon{
+    width:28px;height:28px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(37,99,235,.12);color:#4f46e5;font-size:.8rem;
+    flex-shrink:0;
+}
+[data-theme="dark"] .token-bar-icon{background:rgba(99,102,241,.18);color:#818cf8}
+.token-bar-track{
+    flex:1;height:8px;border-radius:999px;
+    background:var(--border);
+    overflow:hidden;position:relative;
+}
+.token-bar-fill{
+    height:100%;border-radius:999px;
+    background:linear-gradient(90deg,#4f46e5,#6366f1);
+    transition:width .4s ease;
+}
+.token-bar-fill.warn{background:linear-gradient(90deg,#d97706,#f59e0b)}
+.token-bar-fill.danger{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.token-bar-label{
+    font-size:.78rem;font-weight:800;color:var(--text);
+    min-width:90px;text-align:right;white-space:nowrap;
+}
+.token-bar-sub{
+    font-size:.68rem;color:var(--text-muted);font-weight:600;
+    white-space:nowrap;
+}
+</style>
+<header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div>
+        <h1><i class="fa-solid fa-robot me-2"></i>Algo Helper</h1>
+        <p>AI-powered stock insights, strategy suggestions, and portfolio advice.</p>
+    </div>
+    {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings in context</span>{% endif %}
+</header>
+
+<div class="algo-grid">
+    <div class="algo-chat-card">
+        <div class="algo-chat-header">
+            <span class="live-dot"></span>
+            <strong>Assistant</strong>
+            <span class="text-muted ms-2 small">Powered by GPT-4</span>
+        </div>
+        <div class="token-bar" id="tokenBar" title="Daily AI token allowance — resets at midnight">
+            <span class="token-bar-icon"><i class="fa-solid fa-bolt"></i></span>
+            <div class="token-bar-track"><div class="token-bar-fill" id="tokenFill" style="width:0%"></div></div>
+            <span class="token-bar-label" id="tokenRemaining">…</span>
+            <span class="token-bar-sub" id="tokenSub"></span>
+        </div>
+        <div class="algo-chat-messages" id="chatMessages">
+            <div class="algo-msg algo-msg-bot">
+                <div class="algo-msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="algo-msg-bubble">
+                    Hi! I'm your AI portfolio assistant. {% if stocks %}I can see your <strong>{{ stocks|length }}</strong> holdings.{% endif %} Ask me anything about stocks, sectors, or trading strategies.
+                </div>
+            </div>
+        </div>
+        <form id="aiInsightForm" class="algo-chat-input" onsubmit="event.preventDefault(); getAIInsight();">
+            <input type="text" class="form-control" id="aiQuery" placeholder="e.g. How is my portfolio diversified? Best sector for 2025?" autocomplete="off">
+            <button type="submit" class="btn btn-primary" id="aiSendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <aside class="algo-side">
+        <div class="algo-side-card">
+            <h5><i class="fa-solid fa-bolt"></i>Quick prompts</h5>
+            <button class="algo-quick-btn" onclick="quickPrompt('Analyze my current portfolio. What is the diversification and risk level?')">
+                <i class="fa-solid fa-chart-pie"></i><span>Analyze my portfolio</span>
+            </button>
+            <button class="algo-quick-btn" onclick="quickPrompt('Which of my holdings should I consider trimming and why?')">
+                <i class="fa-solid fa-scissors"></i><span>What should I trim?</span>
+            </button>
+            <button class="algo-quick-btn" onclick="quickPrompt('Suggest 3 stocks to add for better diversification given my current holdings.')">
+                <i class="fa-solid fa-plus"></i><span>Suggest additions</span>
+            </button>
+            <button class="algo-quick-btn" onclick="quickPrompt('What are the best sectors to invest in for the next 12 months?')">
+                <i class="fa-solid fa-chart-line"></i><span>Best sectors now</span>
+            </button>
+            <button class="algo-quick-btn" onclick="quickPrompt('Explain swing trading strategy for Indian markets in simple terms.')">
+                <i class="fa-solid fa-arrows-rotate"></i><span>Swing trading basics</span>
+            </button>
+        </div>
+        <div class="algo-side-card">
+            <h5><i class="fa-solid fa-shield-halved"></i>Disclaimer</h5>
+            <p class="text-muted small mb-0">AI-generated insights are educational and not financial advice. Always do your own research and consult a SEBI-registered advisor before investing.</p>
+        </div>
+    </aside>
+</div>
+
+<script>
+const portfolioStocks = {{ stocks|tojson }};
+
+function updateTokenMeter(used, limit) {
+    const fill = document.getElementById('tokenFill');
+    const label = document.getElementById('tokenRemaining');
+    const sub = document.getElementById('tokenSub');
+    if (!fill || !label || used == null || limit == null) return;
+    const remaining = Math.max(0, limit - used);
+    const pct = Math.min(100, Math.round((used / limit) * 100));
+    fill.style.width = pct + '%';
+    fill.classList.remove('warn', 'danger');
+    if (pct >= 100) fill.classList.add('danger');
+    else if (pct >= 80) fill.classList.add('warn');
+    label.textContent = remaining.toLocaleString() + ' left';
+    sub.textContent = used.toLocaleString() + ' / ' + limit.toLocaleString() + ' used';
+}
+
+async function refreshTokenUsage() {
+    try {
+        const r = await fetch('/api/ai_portfolio_insight/usage');
+        if (!r.ok) return;
+        const d = await r.json();
+        updateTokenMeter(d.used, d.limit);
+    } catch (e) { /* silent */ }
+}
+refreshTokenUsage();
+
+function appendMessage(role, text) {
+    const container = document.getElementById('chatMessages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'algo-msg ' + (role === 'bot' ? 'algo-msg-bot' : 'algo-msg-user');
+    const avatar = role === 'bot'
+        ? '<div class="algo-msg-avatar"><i class="fa-solid fa-robot"></i></div>'
+        : '<div class="algo-msg-avatar"><i class="fa-solid fa-user"></i></div>';
+    const formatted = text
+        .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
+        .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    msgDiv.innerHTML = avatar + '<div class="algo-msg-bubble">' + formatted + '</div>';
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+function showTyping() {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'algo-msg algo-msg-bot';
+    div.id = 'typingIndicator';
+    div.innerHTML = '<div class="algo-msg-avatar"><i class="fa-solid fa-robot"></i></div><div class="algo-msg-bubble algo-typing"><span></span><span></span><span></span></div>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+function removeTyping() { const el = document.getElementById('typingIndicator'); if (el) el.remove(); }
+
+async function getAIInsight() {
+    const input = document.getElementById('aiQuery');
+    const query = input.value.trim();
+    if (!query) return;
+    appendMessage('user', query);
+    input.value = '';
+    document.getElementById('aiSendBtn').disabled = true;
+    showTyping();
+    try {
+        const response = await fetch('/api/ai_portfolio_insight', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, stocks: portfolioStocks })
+        });
+        const data = await response.json();
+        removeTyping();
+        if (response.status === 429 || data.error === 'daily_limit_reached') {
+            updateTokenMeter(data.used, data.limit);
+            appendMessage('bot',
+                '⚠️ **Daily AI limit reached**\n\n' +
+                (data.message || `You’ve used your ${data.limit||10000} token allowance for today. It will reset automatically tomorrow.`)
+            );
+            document.getElementById('aiSendBtn').disabled = false;
+            document.getElementById('aiQuery').disabled = true;
+            return;
+        }
+        if (data.used != null) updateTokenMeter(data.used, data.limit);
+        if (data.insight) appendMessage('bot', data.insight);
+        else if (data.error) appendMessage('bot', 'Sorry, an error occurred: ' + data.error);
+        else appendMessage('bot', 'Sorry, I could not generate a response. Please try again.');
+    } catch (e) {
+        removeTyping();
+        appendMessage('bot', 'Connection error. Please check your network and try again.');
+    }
+    document.getElementById('aiSendBtn').disabled = false;
+}
+function quickPrompt(text) { document.getElementById('aiQuery').value = text; getAIInsight(); }
+</script>
+{% endblock %}

@@ -1,0 +1,595 @@
+﻿{% extends "layout.html" %}
+{% block content %}
+<style>
+/* ── Page header ───────────────────────────────────────────── */
+.pa-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.pa-toolbar .pa-search{flex:1;max-width:340px;position:relative}
+.pa-search input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.88rem}
+.pa-search i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.85rem}
+
+/* ── Summary strip ─────────────────────────────────────────── */
+.pa-summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;flex-wrap:wrap;align-items:center;gap:14px}
+.pa-summary.show{display:flex}
+.pa-summary-title{font-weight:700;color:var(--text);font-size:.92rem;margin:0;display:flex;align-items:center;gap:6px}
+.pa-summary-pills{display:flex;gap:8px;flex-wrap:wrap;flex:1}
+.pa-summary-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:.78rem;font-weight:700;color:#fff}
+.pa-pill-buy{background:#16a34a}
+.pa-pill-accumulate{background:#2563eb}
+.pa-pill-hold{background:#d97706}
+.pa-pill-book-profit{background:#b45309}
+.pa-pill-reduce{background:#ea580c}
+.pa-pill-sell{background:#dc2626}
+.pa-pill-strong-buy{background:#15803d}
+.pa-pill-strong-sell{background:#991b1b}
+.pa-pill-pending{background:var(--text-muted)}
+
+/* ── Stock cards (simplified) ──────────────────────────────── */
+.pa-cards{display:flex;flex-direction:column;gap:10px}
+.pa-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.pa-card:hover{border-color:var(--primary);box-shadow:0 2px 12px rgba(0,0,0,.04)}
+
+/* Card header (always visible) */
+.pa-card-header{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;flex-wrap:wrap}
+.pa-card-checkbox{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+.pa-card-action{flex-shrink:0;min-width:130px;text-align:center}
+.pa-action-pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;font-weight:800;font-size:.82rem;color:#fff;letter-spacing:.04em;text-transform:uppercase;width:100%}
+.pa-action-pill.pa-pending{background:var(--surface-2);color:var(--text-muted);border:1px dashed var(--border);font-weight:600}
+.pa-card-stock{flex:1;min-width:160px}
+.pa-card-name{font-weight:800;font-size:1rem;color:var(--text);line-height:1.2}
+.pa-card-meta{font-size:.78rem;color:var(--text-muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.pa-card-meta .symbol-pill{background:var(--surface-2);padding:1px 8px;border-radius:999px;font-weight:600;color:var(--primary);font-size:.72rem}
+.pa-card-pl{flex-shrink:0;text-align:right;min-width:120px}
+.pa-card-pl-value{font-size:1rem;font-weight:800}
+.pa-card-pl-pct{font-size:.78rem;font-weight:600;margin-top:2px}
+.gain-positive{color:#16a34a}
+.gain-negative{color:#dc2626}
+.pa-card-toggle{flex-shrink:0;color:var(--text-muted);font-size:.9rem;transition:transform .2s;width:28px;text-align:center}
+.pa-card.open .pa-card-toggle{transform:rotate(90deg);color:var(--primary)}
+
+/* Card body (expanded) */
+.pa-card-body{display:none;padding:0 18px 18px 18px;border-top:1px solid var(--border);margin-top:0}
+.pa-card.open .pa-card-body{display:block}
+
+.pa-action-message{margin:14px 0;padding:12px 16px;border-radius:8px;font-size:.88rem;font-weight:600;color:var(--text);background:var(--surface-2);border-left:4px solid var(--primary)}
+.pa-action-message strong{color:var(--text)}
+
+/* KPI grid (compact) */
+.pa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
+.pa-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center}
+.pa-kpi-label{font-size:.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.pa-kpi-value{font-size:.88rem;font-weight:800;color:var(--text)}
+.pa-kpi-value.lvl-high{color:#16a34a}
+.pa-kpi-value.lvl-med{color:#d97706}
+.pa-kpi-value.lvl-low{color:#64748b}
+.pa-kpi-value.risk-high{color:#dc2626}
+.pa-kpi-value.risk-med{color:#d97706}
+.pa-kpi-value.risk-low{color:#16a34a}
+
+/* Drivers + Risks side-by-side */
+.pa-dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media (max-width:640px){.pa-dr-grid{grid-template-columns:1fr}}
+.pa-dr-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.pa-dr-card h6{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.pa-dr-card ul{margin:0;padding-left:18px;font-size:.84rem;color:var(--text);line-height:1.6}
+.pa-dr-card li{margin-bottom:3px}
+.pa-drivers h6{color:#16a34a}
+.pa-risks h6{color:#dc2626}
+
+/* Holding mini-stats inside expanded card */
+.pa-mini-stats{display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;background:var(--surface-2);border-radius:8px;margin-bottom:12px;font-size:.82rem;color:var(--text-muted)}
+.pa-mini-stats span strong{color:var(--text);font-weight:700}
+
+/* Full analysis */
+.pa-full-toggle{margin-top:8px}
+.pa-full-toggle summary{cursor:pointer;font-weight:700;color:var(--primary);font-size:.84rem;padding:6px 0;list-style:none;outline:none}
+.pa-full-toggle summary::-webkit-details-marker{display:none}
+.pa-full-toggle summary::before{content:'\25B8 ';display:inline-block;transition:transform .15s;margin-right:4px}
+.pa-full-toggle[open] summary::before{transform:rotate(90deg)}
+.pa-full-body{padding:10px 4px 4px;font-size:.86rem;color:var(--text);line-height:1.7}
+.pa-full-body p{margin-bottom:8px}
+.pa-full-body strong{color:var(--text)}
+.pa-source{font-size:.7rem;color:var(--text-muted);margin-top:8px}
+
+/* Empty / loading */
+.pa-empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.pa-empty i{font-size:2rem;margin-bottom:10px;opacity:.5}
+.pa-loading{text-align:center;padding:18px;color:var(--text-muted);font-size:.88rem}
+.pa-loading .spinner-border{width:1rem;height:1rem;border-width:.18em}
+
+/* Bulk progress overlay */
+.pa-progress{display:flex;align-items:center;gap:10px;background:var(--primary-light);border:1px solid var(--primary);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.85rem;font-weight:600;color:var(--primary)}
+.pa-progress .spinner-border{width:1rem;height:1rem;border-width:.18em}
+
+/* Action filter chips */
+.pa-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pa-filter-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s}
+.pa-filter-chip:hover{border-color:var(--primary)}
+.pa-filter-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pa-filter-chip .count{opacity:.75;margin-left:4px}
+
+/* Dark mode tweaks */
+[data-theme="dark"] .pa-action-pill.pa-pending{background:var(--surface-2);color:var(--text-muted)}
+[data-theme="dark"] .pa-drivers h6{color:#22c55e}
+[data-theme="dark"] .pa-risks h6{color:#ef4444}
+[data-theme="dark"] .gain-positive{color:#22c55e}
+[data-theme="dark"] .gain-negative{color:#ef4444}
+
+/* RAG sources block + disclaimer */
+.pa-sources-block{margin-top:14px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px}
+.pa-sources-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.pa-sources-count{color:var(--text-muted);font-weight:500;margin-left:4px}
+.pa-sources-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.pa-sources-list li{font-size:.82rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--text)}
+.pa-sources-list a{color:var(--primary);text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pa-sources-list a:hover{text-decoration:underline}
+.pa-src-badge{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.04em}
+.pa-src-badge.news{background:#dbeafe;color:#1e40af}
+.pa-src-badge.filing{background:#fef3c7;color:#92400e}
+.pa-src-meta{font-size:.72rem;color:var(--text-muted);font-weight:500}
+.pa-disclaimer{margin-top:10px;padding:8px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;font-size:.75rem;color:#713f12;text-align:center;font-weight:500}
+[data-theme="dark"] .pa-disclaimer{background:#3f2d04;border-color:#854d0e;color:#fef3c7}
+[data-theme="dark"] .pa-src-badge.news{background:#1e3a8a;color:#bfdbfe}
+[data-theme="dark"] .pa-src-badge.filing{background:#78350f;color:#fde68a}
+</style>
+
+<header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div>
+        <h1><i class="fa-solid fa-magnifying-glass-chart me-2"></i>Portfolio analysis</h1>
+        <p>AI-powered Buy / Hold / Sell signals for every stock you own.</p>
+    </div>
+    {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings</span>{% endif %}
+</header>
+
+{% if not stocks %}
+<div class="surface-card">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+        <h4>No stocks to analyze</h4>
+        <p>Add stocks first to see AI-driven signals here.</p>
+        <a href="{{ url_for('portfolioMaker') }}" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i>Add a stock</a>
+    </div>
+</div>
+{% else %}
+
+<!-- Toolbar: search, select-all, primary action button -->
+<div class="pa-toolbar">
+    <div class="pa-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="paSearch" placeholder="Search your stocks…">
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="paSelectAllBtn">
+        <i class="fa-regular fa-square-check me-1"></i><span id="paSelectAllText">Select all</span>
+    </button>
+    <button type="button" class="btn btn-primary{% if current_plan and current_plan.id == 'free' %} feature-locked{% endif %}" id="paAnalyzeBtn"
+            {% if current_plan and current_plan.id == 'free' %}data-locked="pro" title="Bulk analysis is a Pro feature"{% endif %}>
+        <i class="fa-solid fa-wand-magic-sparkles me-1"></i><span id="paAnalyzeBtnText">Analyze all stocks</span>
+        {% if current_plan and current_plan.id == 'free' %}<span class="lock-badge"><i class="fa-solid fa-crown"></i>PRO</span>{% endif %}
+    </button>
+</div>
+
+<!-- Bulk progress -->
+<div class="pa-progress" id="paProgress" hidden>
+    <div class="app-spinner" role="status" aria-label="Analyzing"></div>
+    <span>Analyzing your stocks… this may take a few seconds.</span>
+</div>
+
+<!-- Summary strip (shown after bulk analysis) -->
+<div class="pa-summary" id="paSummary">
+    <h6 class="pa-summary-title"><i class="fa-solid fa-chart-pie text-primary"></i>Portfolio signals:</h6>
+    <div class="pa-summary-pills" id="paSummaryPills"></div>
+</div>
+
+<!-- Action filter chips (shown after bulk analysis) -->
+<div class="pa-filters" id="paFilters" hidden></div>
+
+<!-- Stock cards -->
+<div class="pa-cards" id="paCards"></div>
+
+<script>
+const stocks = {{ stocks|tojson }};
+const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+const cache = {}; // stockName -> insight data
+const selected = new Set();
+let activeFilter = null; // 'BUY' | 'HOLD' | etc, or null = all
+
+const ACTION_META = {
+    'STRONG BUY':  { cls: 'pa-pill-strong-buy',  icon: 'fa-rocket' },
+    'BUY':         { cls: 'pa-pill-buy',         icon: 'fa-arrow-up' },
+    'ACCUMULATE':  { cls: 'pa-pill-accumulate',  icon: 'fa-cart-plus' },
+    'HOLD':        { cls: 'pa-pill-hold',        icon: 'fa-hand' },
+    'BOOK PROFIT': { cls: 'pa-pill-book-profit', icon: 'fa-coins' },
+    'REDUCE':      { cls: 'pa-pill-reduce',      icon: 'fa-arrow-down' },
+    'SELL':        { cls: 'pa-pill-sell',        icon: 'fa-circle-minus' },
+    'STRONG SELL': { cls: 'pa-pill-strong-sell', icon: 'fa-circle-xmark' },
+};
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function badgeClass(level, type) {
+    const v = (level || '').toLowerCase();
+    if (type === 'risk') {
+        if (v.includes('high')) return 'risk-high';
+        if (v.includes('low')) return 'risk-low';
+        return 'risk-med';
+    }
+    if (v.includes('high')) return 'lvl-high';
+    if (v.includes('low')) return 'lvl-low';
+    return 'lvl-med';
+}
+
+function renderActionPill(action) {
+    if (!action) {
+        return `<div class="pa-action-pill pa-pending"><i class="fa-regular fa-clock"></i> Not analyzed</div>`;
+    }
+    const meta = ACTION_META[action] || ACTION_META['HOLD'];
+    return `<div class="pa-action-pill ${meta.cls}"><i class="fa-solid ${meta.icon}"></i> ${action}</div>`;
+}
+
+function renderCardBody(stock, data) {
+    const qty = stock.Quantity || 0;
+    const pp = stock.PurchasePrice || 0;
+    const cp = stock.CurrentPrice || pp;
+    const invested = qty * pp;
+    const current = qty * cp;
+
+    if (!data) {
+        return `
+            <div class="pa-mini-stats">
+                <span><strong>Qty:</strong> ${qty}</span>
+                <span><strong>Buy:</strong> ${fmt(pp)}</span>
+                <span><strong>Now:</strong> ${fmt(cp)}</span>
+                <span><strong>Invested:</strong> ${fmt(invested)}</span>
+                <span><strong>Value:</strong> ${fmt(current)}</span>
+                <span><strong>Sector:</strong> ${escapeHtml(stock.Sector || 'N/A')}</span>
+            </div>
+            <div class="text-center py-3">
+                <button type="button" class="btn btn-primary btn-sm pa-single-analyze" data-stock="${escapeHtml(stock.StockName)}">
+                    <i class="fa-solid fa-sparkles me-1"></i>Generate AI signal for this stock
+                </button>
+            </div>
+        `;
+    }
+
+    const upsideCls = (data.upside_pct || 0) >= 0 ? 'gain-positive' : 'gain-negative';
+    const upsideSign = (data.upside_pct || 0) >= 0 ? '+' : '';
+    const drivers = (data.key_drivers || []).map(d => `<li>${escapeHtml(d)}</li>`).join('') || '<li class="text-muted">N/A</li>';
+    const risks = (data.key_risks || []).map(d => `<li>${escapeHtml(d)}</li>`).join('') || '<li class="text-muted">N/A</li>';
+
+    return `
+        <div class="pa-action-message"><strong>${escapeHtml(data.action)}:</strong> ${escapeHtml(data.what_to_do || '')}</div>
+        <div class="pa-mini-stats">
+            <span><strong>Qty:</strong> ${qty}</span>
+            <span><strong>Buy:</strong> ${fmt(pp)}</span>
+            <span><strong>Now:</strong> ${fmt(cp)}</span>
+            <span><strong>Invested:</strong> ${fmt(invested)}</span>
+            <span><strong>Value:</strong> ${fmt(current)}</span>
+            <span><strong>Sector:</strong> ${escapeHtml(stock.Sector || 'N/A')}</span>
+        </div>
+        <div class="pa-kpis">
+            <div class="pa-kpi"><div class="pa-kpi-label">Confidence</div><div class="pa-kpi-value ${badgeClass(data.confidence,'lvl')}">${escapeHtml(data.confidence)}</div></div>
+            <div class="pa-kpi"><div class="pa-kpi-label">Horizon</div><div class="pa-kpi-value">${escapeHtml(data.horizon)}</div></div>
+            <div class="pa-kpi"><div class="pa-kpi-label">Risk</div><div class="pa-kpi-value ${badgeClass(data.risk,'risk')}">${escapeHtml(data.risk)}</div></div>
+            <div class="pa-kpi"><div class="pa-kpi-label">12M Target</div><div class="pa-kpi-value">${fmt(data.target_price)}</div></div>
+            <div class="pa-kpi"><div class="pa-kpi-label">Stop-loss</div><div class="pa-kpi-value">${fmt(data.stop_loss)}</div></div>
+            <div class="pa-kpi"><div class="pa-kpi-label">Upside</div><div class="pa-kpi-value ${upsideCls}">${upsideSign}${(data.upside_pct||0).toFixed(2)}%</div></div>
+        </div>
+        <div class="pa-dr-grid">
+            <div class="pa-dr-card pa-drivers">
+                <h6><i class="fa-solid fa-circle-check me-1"></i>Key drivers</h6>
+                <ul>${drivers}</ul>
+            </div>
+            <div class="pa-dr-card pa-risks">
+                <h6><i class="fa-solid fa-triangle-exclamation me-1"></i>Key risks</h6>
+                <ul>${risks}</ul>
+            </div>
+        </div>
+        <details class="pa-full-toggle">
+            <summary>Read full analysis</summary>
+            <div class="pa-full-body">${formatMd(data.summary || '')}</div>
+            ${data.source ? `<div class="pa-source"><i class="fa-solid fa-circle-info me-1"></i>Source: ${escapeHtml(data.source)}</div>` : ''}
+        </details>
+        ${renderSources(data.sources_used)}
+        <div class="pa-disclaimer"><i class="fa-solid fa-triangle-exclamation me-1"></i>AI-generated educational content. Not investment advice. Not SEBI registered.</div>
+    `;
+}
+
+function renderSources(sources) {
+    if (!sources || !sources.length) return '';
+    const items = sources.map(s => {
+        const link = s.url
+            ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || '(untitled)')}</a>`
+            : escapeHtml(s.title || '(untitled)');
+        const badge = s.doc_type === 'filing'
+            ? '<span class="pa-src-badge filing">Filing</span>'
+            : '<span class="pa-src-badge news">News</span>';
+        return `<li>${badge}<span class="pa-src-meta">[${s.n}] ${escapeHtml(s.source || '')} \u00b7 ${escapeHtml(s.age || '')}</span>${link}</li>`;
+    }).join('');
+    return `
+        <div class="pa-sources-block">
+            <div class="pa-sources-title"><i class="fa-solid fa-book-open-reader me-1"></i>Sources used by AI <span class="pa-sources-count">(${sources.length})</span></div>
+            <ul class="pa-sources-list">${items}</ul>
+        </div>
+    `;
+}
+
+function formatMd(text) {
+    // Defensive: if the AI dumped its full JSON envelope into the summary
+    // field (older cached responses), strip out the JSON and surface only
+    // the narrative. The KPI tiles above already render the structured
+    // fields, so the user shouldn't see them as raw JSON here.
+    let s = String(text || '').trim();
+    if (s.startsWith('```')) {
+        s = s.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
+    }
+    if (s.startsWith('{') && s.endsWith('}')) {
+        try {
+            const parsed = JSON.parse(s);
+            if (parsed && typeof parsed === 'object') {
+                if (typeof parsed.summary === 'string' && parsed.summary.trim()) {
+                    s = parsed.summary.trim();
+                } else {
+                    const parts = [];
+                    if (parsed.what_to_do) parts.push(`**Next action:** ${parsed.what_to_do}`);
+                    if (Array.isArray(parsed.key_drivers) && parsed.key_drivers.length)
+                        parts.push('**Key drivers:** ' + parsed.key_drivers.join('; '));
+                    if (Array.isArray(parsed.key_risks) && parsed.key_risks.length)
+                        parts.push('**Key risks:** ' + parsed.key_risks.join('; '));
+                    s = parts.join('\n\n') || s;
+                }
+            }
+        } catch (e) { /* not valid JSON — render as-is */ }
+    }
+    return s
+        .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
+        .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/^/, '<p>') + '</p>';
+}
+
+function renderCards() {
+    const container = document.getElementById('paCards');
+    container.innerHTML = '';
+    const filter = (document.getElementById('paSearch').value || '').toLowerCase().trim();
+
+    let visibleCount = 0;
+    stocks.forEach((s, i) => {
+        const name = (s.StockName || '').toLowerCase();
+        if (filter && !name.includes(filter)) return;
+
+        const data = cache[s.StockName];
+        if (activeFilter && (!data || data.action !== activeFilter)) return;
+        visibleCount++;
+
+        const qty = s.Quantity || 0;
+        const pp = s.PurchasePrice || 0;
+        const cp = s.CurrentPrice || pp;
+        const invested = qty * pp;
+        const current = qty * cp;
+        const gain = current - invested;
+        const gainPct = invested > 0 ? (gain / invested * 100) : 0;
+        const isOpen = s._open;
+
+        const card = document.createElement('div');
+        card.className = 'pa-card' + (isOpen ? ' open' : '');
+        card.dataset.idx = i;
+        card.innerHTML = `
+            <div class="pa-card-header">
+                <input type="checkbox" class="pa-card-checkbox" data-idx="${i}" ${selected.has(i) ? 'checked' : ''} title="Select">
+                <div class="pa-card-action">${renderActionPill(data ? data.action : null)}</div>
+                <div class="pa-card-stock">
+                    <div class="pa-card-name">${escapeHtml(s.StockName)}</div>
+                    <div class="pa-card-meta">
+                        ${s.Symbol ? `<span class="symbol-pill">${escapeHtml(s.Symbol)}</span>` : ''}
+                        <span>${escapeHtml(s.Sector || 'Other')}</span>
+                        <span>${qty} shares</span>
+                    </div>
+                </div>
+                <div class="pa-card-pl">
+                    <div class="pa-card-pl-value ${gain>=0?'gain-positive':'gain-negative'}">${gain>=0?'+':''}${fmt(gain)}</div>
+                    <div class="pa-card-pl-pct ${gain>=0?'gain-positive':'gain-negative'}">${gain>=0?'+':''}${gainPct.toFixed(2)}%</div>
+                </div>
+                <div class="pa-card-toggle"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+            <div class="pa-card-body">${isOpen ? renderCardBody(s, data) : ''}</div>
+        `;
+        container.appendChild(card);
+    });
+
+    if (visibleCount === 0) {
+        container.innerHTML = '<div class="pa-empty"><i class="fa-solid fa-filter"></i><div>No stocks match the current filter.</div></div>';
+    }
+    updateAnalyzeBtn();
+}
+
+function updateAnalyzeBtn() {
+    const txt = document.getElementById('paAnalyzeBtnText');
+    if (!txt) return;
+    if (selected.size > 0) txt.textContent = `Analyze ${selected.size} selected`;
+    else txt.textContent = 'Analyze all stocks';
+
+    const allSel = document.getElementById('paSelectAllText');
+    if (allSel) allSel.textContent = (selected.size === stocks.length && stocks.length > 0) ? 'Clear all' : 'Select all';
+}
+
+function renderSummary() {
+    const counts = {};
+    Object.values(cache).forEach(d => { counts[d.action] = (counts[d.action] || 0) + 1; });
+    const summary = document.getElementById('paSummary');
+    const pills = document.getElementById('paSummaryPills');
+    const filters = document.getElementById('paFilters');
+
+    if (Object.keys(counts).length === 0) {
+        summary.classList.remove('show');
+        filters.hidden = true;
+        return;
+    }
+
+    pills.innerHTML = Object.entries(counts).map(([action, count]) => {
+        const meta = ACTION_META[action] || { cls: 'pa-pill-hold' };
+        return `<span class="pa-summary-pill ${meta.cls}">${action}: ${count}</span>`;
+    }).join('');
+    summary.classList.add('show');
+
+    // Filter chips
+    const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
+    let chips = `<button type="button" class="pa-filter-chip ${activeFilter === null ? 'active' : ''}" data-filter="">All <span class="count">(${allCount})</span></button>`;
+    Object.entries(counts).forEach(([action, count]) => {
+        chips += `<button type="button" class="pa-filter-chip ${activeFilter === action ? 'active' : ''}" data-filter="${action}">${action} <span class="count">(${count})</span></button>`;
+    });
+    filters.innerHTML = chips;
+    filters.hidden = false;
+}
+
+// ── Event handlers ───────────────────────────────────────────
+document.getElementById('paSearch').addEventListener('input', renderCards);
+
+document.getElementById('paCards').addEventListener('click', async (e) => {
+    // Checkbox
+    const cb = e.target.closest('.pa-card-checkbox');
+    if (cb) {
+        e.stopPropagation();
+        const idx = parseInt(cb.dataset.idx);
+        if (cb.checked) selected.add(idx);
+        else selected.delete(idx);
+        updateAnalyzeBtn();
+        return;
+    }
+
+    // Single-stock analyze button
+    const singleBtn = e.target.closest('.pa-single-analyze');
+    if (singleBtn) {
+        e.stopPropagation();
+        const stockName = singleBtn.dataset.stock;
+        const stock = stocks.find(s => s.StockName === stockName);
+        if (!stock) return;
+        const card = singleBtn.closest('.pa-card');
+        const body = card.querySelector('.pa-card-body');
+        body.innerHTML = '<div class="pa-loading"><div class="app-spinner text-primary me-1"></div>Analyzing…</div>';
+        try {
+            const r = await fetch('/api/stock_analysis', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ stock })
+            });
+            const data = await r.json();
+            if (r.status === 402) {
+                body.innerHTML = `<div class="text-center py-3">
+                    <div class="text-warning mb-2"><i class="fa-solid fa-crown me-1"></i><strong>${data.message || 'Upgrade required'}</strong></div>
+                    <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="window.appUpgrade({title:'Monthly AI limit reached', message:'${(data.message||'').replace(/'/g,"\\'")}', requiredPlan:'${data.required_plan||"pro"}'})">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>View plans
+                    </button>
+                </div>`;
+            } else if (data && data.action) {
+                cache[stockName] = data;
+                renderSummary();
+                renderCards();
+                // Re-open this card
+                const newCard = document.querySelector(`.pa-card[data-idx="${stocks.indexOf(stock)}"]`);
+                if (newCard) {
+                    stock._open = true;
+                    newCard.classList.add('open');
+                    newCard.querySelector('.pa-card-body').innerHTML = renderCardBody(stock, data);
+                }
+            } else {
+                body.innerHTML = '<div class="text-danger py-2">Could not generate analysis.</div>';
+            }
+        } catch(err) {
+            body.innerHTML = '<div class="text-danger py-2">Network error.</div>';
+        }
+        return;
+    }
+
+    // Header click → toggle expand
+    const header = e.target.closest('.pa-card-header');
+    if (header) {
+        const card = header.closest('.pa-card');
+        const idx = parseInt(card.dataset.idx);
+        const stock = stocks[idx];
+        stock._open = !stock._open;
+        card.classList.toggle('open');
+        const body = card.querySelector('.pa-card-body');
+        if (stock._open) body.innerHTML = renderCardBody(stock, cache[stock.StockName]);
+        else body.innerHTML = '';
+    }
+});
+
+document.getElementById('paSelectAllBtn').addEventListener('click', () => {
+    if (selected.size === stocks.length) {
+        selected.clear();
+    } else {
+        stocks.forEach((_, i) => selected.add(i));
+    }
+    renderCards();
+});
+
+document.getElementById('paFilters').addEventListener('click', (e) => {
+    const chip = e.target.closest('.pa-filter-chip');
+    if (!chip) return;
+    activeFilter = chip.dataset.filter || null;
+    renderSummary();
+    renderCards();
+});
+
+document.getElementById('paAnalyzeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('paAnalyzeBtn');
+    // Hard-lock for Free plan: do not even hit the API
+    if (btn.dataset.locked === 'pro' || !window.planAllows('pro')) {
+        window.appUpgrade({
+            title: 'Bulk Analyze is a Pro feature',
+            message: 'Run AI analysis on your <strong>entire portfolio</strong> in one click — available on Pro and Elite plans.',
+            requiredPlan: 'pro',
+            perks: [
+                'Analyze up to 10 portfolios per month (Pro)',
+                '100 individual AI analyses per month',
+                'Higher AI chat quota and connect up to 5 brokers'
+            ]
+        });
+        return;
+    }
+    const indices = selected.size > 0 ? Array.from(selected) : stocks.map((_, i) => i);
+    const toAnalyze = indices.map(i => stocks[i]);
+    const progress = document.getElementById('paProgress');
+
+    btn.disabled = true;
+    progress.hidden = false;
+
+    try {
+        const r = await fetch('/api/stock_analysis/bulk', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ stocks: toAnalyze })
+        });
+        const data = await r.json();
+        if (r.status === 402) {
+            window.appUpgrade({
+                title: data.error === 'quota_exceeded' ? 'Monthly limit reached' : 'Upgrade required',
+                message: data.message || 'You’ve hit your bulk-analysis limit for this month.',
+                requiredPlan: data.required_plan || 'pro',
+                ctaUrl: data.upgrade_url || '/billing'
+            });
+        } else if (data.results) {
+            data.results.forEach(res => {
+                if (res.stock_name) cache[res.stock_name] = res;
+            });
+            renderSummary();
+            renderCards();
+        } else if (data.error) {
+            appAlert(data.message || data.error, 'danger');
+        }
+    } catch(e) {
+        appAlert('Network error. Please try again.', 'danger');
+    }
+    btn.disabled = false;
+    progress.hidden = true;
+});
+
+// Initial render
+renderCards();
+</script>
+{% endif %}
+{% endblock %}

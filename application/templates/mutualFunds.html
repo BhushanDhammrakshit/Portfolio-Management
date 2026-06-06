@@ -1,0 +1,1147 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+.mf-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;overflow-x:auto;margin-bottom:18px;scrollbar-width:thin}
+.mf-tabs::-webkit-scrollbar{height:6px}
+.mf-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.mf-tab:hover{background:var(--surface-2);color:var(--text)}
+.mf-tab.active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+.mf-panel{display:none}
+.mf-panel.active{display:block}
+.mf-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+.mf-card h3{font-size:1.05rem;font-weight:700;margin:0 0 10px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.kpi-box .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.kpi-box .val{font-size:1.3rem;font-weight:700;margin-top:3px;color:var(--text)}
+.mf-table{width:100%;font-size:.83rem;border-collapse:collapse}
+.mf-table th{background:var(--surface-2);text-align:left;padding:10px;font-weight:600;color:var(--text-muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
+.mf-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+.mf-table tr:hover td{background:var(--surface-2)}
+.mf-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+.gain-pos{color:#16a34a;font-weight:600}
+.gain-neg{color:#dc2626;font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.pill-low{background:rgba(22,163,74,.12);color:#16a34a}
+.pill-med{background:rgba(245,158,11,.15);color:#b45309}
+.pill-high{background:rgba(220,38,38,.12);color:#dc2626}
+.pill-neutral{background:rgba(100,116,139,.12);color:var(--text-muted)}
+.search-box{position:relative}
+.search-box input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.88rem}
+.search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:320px;overflow-y:auto;z-index:1080;display:none;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.search-results.open{display:block}
+.search-results .res-row{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.84rem}
+.search-results .res-row:hover{background:var(--surface-2)}
+.search-results .res-row .res-code{font-size:.7rem;color:var(--text-muted)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+.spinner-wrap{text-align:center;padding:40px}
+.compare-chip{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border:1px solid #c4b5fd;color:#5b21b6;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:600;margin:3px}
+[data-theme="dark"] .compare-chip{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:#c4b5fd}
+.compare-chip button{background:transparent;border:0;color:inherit;font-weight:800;cursor:pointer;padding:0 0 0 4px}
+.overlap-cell{text-align:center;padding:10px;font-weight:700;border:1px solid var(--border)}
+.matrix-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.matrix-table th{background:var(--surface-2);padding:8px;font-size:.72rem}
+.heat{padding:10px;text-align:center;border-radius:4px}
+.ai-block{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #d8b4fe;border-radius:12px;padding:16px}
+[data-theme="dark"] .ai-block{background:rgba(124,58,237,.1);border-color:rgba(168,85,247,.3)}
+.ai-issue{padding:10px 12px;border-left:4px solid #f59e0b;background:var(--surface);border-radius:6px;margin-bottom:8px}
+.ai-issue.high{border-color:#dc2626}
+.ai-issue.low{border-color:#16a34a}
+.nav-chart{width:100%;height:240px}
+.alloc-bar{height:24px;border-radius:6px;overflow:hidden;display:flex;font-size:.7rem;color:#fff;font-weight:700}
+.alloc-bar > div{display:flex;align-items:center;justify-content:center;min-width:40px}
+</style>
+
+<div class="page-container">
+    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <div>
+            <h1><i class="fa-solid fa-piggy-bank me-2"></i>Mutual Funds</h1>
+            <p>Track holdings, compare funds for stock overlap, and get AI-driven analysis.</p>
+        </div>
+    </header>
+
+    <div class="mf-tabs" role="tablist">
+        <button class="mf-tab active" data-tab="portfolio"><i class="fa-solid fa-briefcase"></i>My Portfolio</button>
+        <button class="mf-tab" data-tab="discover"><i class="fa-solid fa-magnifying-glass"></i>Discover</button>
+        <button class="mf-tab" data-tab="compare"><i class="fa-solid fa-scale-balanced"></i>Compare &amp; Overlap</button>
+        <button class="mf-tab" data-tab="calc"><i class="fa-solid fa-calculator"></i>Calculators</button>
+        <button class="mf-tab" data-tab="advisor"><i class="fa-solid fa-robot"></i>AI Advisor</button>
+    </div>
+
+    <!-- ==================== PORTFOLIO ==================== -->
+    <section class="mf-panel active" id="panel-portfolio">
+        <div class="kpi-row" id="kpiRow"></div>
+        <div class="mf-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3>Your MF Holdings</h3>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMfModal">
+                    <i class="fa-solid fa-plus me-1"></i> Add Holding
+                </button>
+            </div>
+            <div id="holdingsContainer"><div class="spinner-wrap"><div class="spinner-border text-primary"></div></div></div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="mf-card"><h3>Allocation by Category</h3><div id="allocCategory"></div></div>
+            </div>
+            <div class="col-md-6">
+                <div class="mf-card"><h3>Allocation by AMC</h3><div id="allocAmc"></div></div>
+            </div>
+        </div>
+        <div class="mf-card">
+            <h3><i class="fa-solid fa-arrows-cross me-2"></i>Stock Overlap with Direct Holdings</h3>
+            <p class="text-muted" style="font-size:.8rem">Stocks you own directly that are also held inside your MFs.</p>
+            <div id="stockOverlapContainer"></div>
+        </div>
+    </section>
+
+    <!-- ==================== DISCOVER ==================== -->
+    <section class="mf-panel" id="panel-discover">
+        <div class="mf-card">
+            <h3>Search Schemes</h3>
+            <div class="search-box">
+                <input id="discoverSearch" placeholder="Search e.g. HDFC Top 100, Parag Parikh Flexi Cap…" autocomplete="off"/>
+                <div class="search-results" id="discoverResults"></div>
+            </div>
+        </div>
+        <div id="schemeDetail"></div>
+    </section>
+
+    <!-- ==================== COMPARE / OVERLAP ==================== -->
+    <section class="mf-panel" id="panel-compare">
+        <div class="mf-card">
+            <h3><i class="fa-solid fa-scale-balanced me-2"></i>Compare up to 5 Funds</h3>
+            <p class="text-muted" style="font-size:.8rem">Add funds below to see returns side-by-side, holdings overlap (% of portfolio shared), and a similarity verdict — useful to detect when "two different funds" are actually nearly identical.</p>
+            <div class="search-box" style="max-width:520px">
+                <input id="compareSearch" placeholder="Add a fund to compare…" autocomplete="off"/>
+                <div class="search-results" id="compareResults"></div>
+            </div>
+            <div id="compareChips" style="margin-top:10px"></div>
+            <div class="mt-2">
+                <button class="btn btn-primary btn-sm" id="compareRun"><i class="fa-solid fa-bolt me-1"></i> Compare</button>
+                <button class="btn btn-outline-secondary btn-sm" id="compareClear">Clear</button>
+                <span class="text-muted ms-2" style="font-size:.78rem" id="compareHint"></span>
+            </div>
+        </div>
+        <div id="compareResult"></div>
+    </section>
+
+    <!-- ==================== CALCULATORS (Groww-style) ==================== -->
+    <section class="mf-panel" id="panel-calc">
+      <style>
+        .calc-shell{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:0;overflow:hidden}
+        .calc-subtabs{display:flex;gap:0;background:var(--surface-2);border-bottom:1px solid var(--border);padding:6px 10px;overflow-x:auto}
+        .calc-subtab{flex:0 0 auto;padding:10px 18px;border:0;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;border-radius:8px;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s}
+        .calc-subtab:hover{color:var(--text)}
+        .calc-subtab.active{background:var(--surface);color:#7c3aed;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+        .calc-body{display:grid;grid-template-columns:1.1fr 1fr;gap:0}
+        @media(max-width:900px){.calc-body{grid-template-columns:1fr}}
+        .calc-inputs{padding:24px 28px}
+        .calc-result{padding:24px 28px;background:linear-gradient(180deg,rgba(124,58,237,.04),rgba(124,58,237,.02));border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+        @media(max-width:900px){.calc-result{border-left:0;border-top:1px solid var(--border)}}
+        .calc-field{margin-bottom:20px}
+        .calc-field-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .calc-field-head label{font-size:.85rem;font-weight:600;color:var(--text);margin:0}
+        .calc-pill-input{display:inline-flex;align-items:center;background:#ede9fe;border:1.5px solid transparent;border-radius:8px;padding:0 10px;color:#5b21b6;font-weight:700;font-size:.95rem;min-width:120px;justify-content:flex-end;transition:border-color .15s}
+        .calc-pill-input:focus-within{border-color:#7c3aed;background:#fff}
+        [data-theme="dark"] .calc-pill-input{background:rgba(124,58,237,.15);color:#c4b5fd}
+        [data-theme="dark"] .calc-pill-input:focus-within{background:var(--surface)}
+        .calc-pill-input .prefix{font-size:.85rem;color:var(--text-muted);margin-right:2px;font-weight:500}
+        .calc-pill-input input{border:0;background:transparent;text-align:right;width:100px;font-weight:700;color:inherit;outline:none;font-size:.95rem;padding:6px 0;-moz-appearance:textfield}
+        .calc-pill-input input::-webkit-outer-spin-button,.calc-pill-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+        .calc-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#7c3aed 0%,#7c3aed var(--pct,30%),var(--surface-2) var(--pct,30%),var(--surface-2) 100%);outline:none}
+        .calc-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #7c3aed;cursor:pointer;box-shadow:0 2px 6px rgba(124,58,237,.35);transition:transform .1s}
+        .calc-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
+        .calc-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #7c3aed;cursor:pointer;box-shadow:0 2px 6px rgba(124,58,237,.35)}
+        .calc-range-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted);margin-top:4px;font-weight:500}
+        .calc-donut{position:relative;width:200px;height:200px}
+        .calc-donut .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+        .calc-donut .center .lbl{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;letter-spacing:.3px}
+        .calc-donut .center .val{font-size:1.4rem;font-weight:800;color:var(--text);margin-top:2px;font-variant-numeric:tabular-nums}
+        .calc-legend{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px}
+        .calc-legend .row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border)}
+        .calc-legend .row .left{display:flex;align-items:center;gap:10px;font-size:.83rem;color:var(--text-muted);font-weight:600}
+        .calc-legend .row .left .dot{width:10px;height:10px;border-radius:50%}
+        .calc-legend .row .val{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;font-size:.95rem}
+        .calc-legend .row.total{background:linear-gradient(135deg,#7c3aed,#5b21b6);border:0;color:#fff}
+        .calc-legend .row.total .left,.calc-legend .row.total .val{color:#fff}
+        .calc-cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;width:100%;max-width:300px}
+        .calc-cta button{flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:.78rem;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s}
+        .calc-cta button:hover{border-color:#7c3aed;color:#7c3aed}
+        .calc-breakdown{margin-top:18px;border-top:1px solid var(--border);padding:18px 28px;display:none}
+        .calc-breakdown.open{display:block}
+        .calc-breakdown table{width:100%;font-size:.82rem;border-collapse:collapse}
+        .calc-breakdown th{text-align:left;padding:8px 10px;background:var(--surface-2);font-size:.7rem;text-transform:uppercase;color:var(--text-muted);font-weight:600;position:sticky;top:0}
+        .calc-breakdown td{padding:8px 10px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+        .calc-breakdown td.num{text-align:right}
+        .calc-breakdown .scroll{max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+        .calc-pane{display:none}
+        .calc-pane.active{display:block}
+      </style>
+
+      <div class="calc-shell">
+        <div class="calc-subtabs" role="tablist">
+          <button class="calc-subtab active" data-pane="sip"><i class="fa-solid fa-rotate"></i>SIP</button>
+          <button class="calc-subtab" data-pane="lump"><i class="fa-solid fa-coins"></i>Lumpsum</button>
+          <button class="calc-subtab" data-pane="step"><i class="fa-solid fa-stairs"></i>Step-up SIP</button>
+          <button class="calc-subtab" data-pane="goal"><i class="fa-solid fa-bullseye"></i>Goal SIP</button>
+        </div>
+
+        <!-- SIP pane -->
+        <div class="calc-pane active" data-pane="sip">
+          <div class="calc-body">
+            <div class="calc-inputs">
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Monthly investment</label>
+                  <span class="calc-pill-input"><span class="prefix">₹</span><input type="number" data-num="sip_monthly" min="500" max="500000"/></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="sip_monthly" min="500" max="200000" step="500"/>
+                <div class="calc-range-labels"><span>₹500</span><span>₹2,00,000</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Time period</label>
+                  <span class="calc-pill-input"><input type="number" data-num="sip_years" min="1" max="50"/><span class="prefix" style="margin:0 0 0 4px">Yr</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="sip_years" min="1" max="40" step="1"/>
+                <div class="calc-range-labels"><span>1 yr</span><span>40 yr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Expected return rate (p.a.)</label>
+                  <span class="calc-pill-input"><input type="number" data-num="sip_return" min="1" max="30" step="0.5"/><span class="prefix" style="margin:0 0 0 4px">%</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="sip_return" min="1" max="30" step="0.5"/>
+                <div class="calc-range-labels"><span>1%</span><span>30%</span></div>
+              </div>
+            </div>
+            <div class="calc-result">
+              <div class="calc-donut"><svg viewBox="0 0 36 36" width="200" height="200">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--surface-2)" stroke-width="3.5"/>
+                <circle data-donut="sip" cx="18" cy="18" r="15.9" fill="none" stroke="#7c3aed" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 18 18)" stroke-linecap="round" style="transition:stroke-dasharray .3s"/>
+              </svg>
+                <div class="center"><div class="lbl">Total Value</div><div class="val" data-out="sip_total">₹0</div></div>
+              </div>
+              <div class="calc-legend">
+                <div class="row"><div class="left"><span class="dot" style="background:#cbd5e1"></span>Invested</div><div class="val" data-out="sip_invested">₹0</div></div>
+                <div class="row"><div class="left"><span class="dot" style="background:#7c3aed"></span>Est. returns</div><div class="val" data-out="sip_gains">₹0</div></div>
+                <div class="row total"><div class="left">Total</div><div class="val" data-out="sip_total2">₹0</div></div>
+              </div>
+              <div class="calc-cta"><button data-toggle-breakdown="sip"><i class="fa-solid fa-table me-1"></i>Year-by-year</button><button data-invest>Start a SIP</button></div>
+            </div>
+          </div>
+          <div class="calc-breakdown" data-breakdown="sip"></div>
+        </div>
+
+        <!-- Lumpsum pane -->
+        <div class="calc-pane" data-pane="lump">
+          <div class="calc-body">
+            <div class="calc-inputs">
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Total investment</label>
+                  <span class="calc-pill-input"><span class="prefix">₹</span><input type="number" data-num="lump_amt" min="1000" max="100000000"/></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="lump_amt" min="10000" max="10000000" step="5000"/>
+                <div class="calc-range-labels"><span>₹10,000</span><span>₹1 Cr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Time period</label>
+                  <span class="calc-pill-input"><input type="number" data-num="lump_years" min="1" max="50"/><span class="prefix" style="margin:0 0 0 4px">Yr</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="lump_years" min="1" max="40" step="1"/>
+                <div class="calc-range-labels"><span>1 yr</span><span>40 yr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Expected return rate (p.a.)</label>
+                  <span class="calc-pill-input"><input type="number" data-num="lump_return" min="1" max="30" step="0.5"/><span class="prefix" style="margin:0 0 0 4px">%</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="lump_return" min="1" max="30" step="0.5"/>
+                <div class="calc-range-labels"><span>1%</span><span>30%</span></div>
+              </div>
+            </div>
+            <div class="calc-result">
+              <div class="calc-donut"><svg viewBox="0 0 36 36" width="200" height="200">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--surface-2)" stroke-width="3.5"/>
+                <circle data-donut="lump" cx="18" cy="18" r="15.9" fill="none" stroke="#7c3aed" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 18 18)" stroke-linecap="round" style="transition:stroke-dasharray .3s"/>
+              </svg>
+                <div class="center"><div class="lbl">Total Value</div><div class="val" data-out="lump_total">₹0</div></div>
+              </div>
+              <div class="calc-legend">
+                <div class="row"><div class="left"><span class="dot" style="background:#cbd5e1"></span>Invested</div><div class="val" data-out="lump_invested">₹0</div></div>
+                <div class="row"><div class="left"><span class="dot" style="background:#7c3aed"></span>Est. returns</div><div class="val" data-out="lump_gains">₹0</div></div>
+                <div class="row total"><div class="left">Total</div><div class="val" data-out="lump_total2">₹0</div></div>
+              </div>
+              <div class="calc-cta"><button data-toggle-breakdown="lump"><i class="fa-solid fa-table me-1"></i>Year-by-year</button><button data-invest>Invest now</button></div>
+            </div>
+          </div>
+          <div class="calc-breakdown" data-breakdown="lump"></div>
+        </div>
+
+        <!-- Step-up SIP pane -->
+        <div class="calc-pane" data-pane="step">
+          <div class="calc-body">
+            <div class="calc-inputs">
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Initial monthly SIP</label>
+                  <span class="calc-pill-input"><span class="prefix">₹</span><input type="number" data-num="step_monthly" min="500" max="500000"/></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="step_monthly" min="500" max="200000" step="500"/>
+                <div class="calc-range-labels"><span>₹500</span><span>₹2,00,000</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Annual step-up</label>
+                  <span class="calc-pill-input"><input type="number" data-num="step_pct" min="0" max="50" step="1"/><span class="prefix" style="margin:0 0 0 4px">%</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="step_pct" min="0" max="30" step="1"/>
+                <div class="calc-range-labels"><span>0%</span><span>30%</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Time period</label>
+                  <span class="calc-pill-input"><input type="number" data-num="step_years" min="1" max="50"/><span class="prefix" style="margin:0 0 0 4px">Yr</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="step_years" min="1" max="40" step="1"/>
+                <div class="calc-range-labels"><span>1 yr</span><span>40 yr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Expected return rate (p.a.)</label>
+                  <span class="calc-pill-input"><input type="number" data-num="step_return" min="1" max="30" step="0.5"/><span class="prefix" style="margin:0 0 0 4px">%</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="step_return" min="1" max="30" step="0.5"/>
+                <div class="calc-range-labels"><span>1%</span><span>30%</span></div>
+              </div>
+            </div>
+            <div class="calc-result">
+              <div class="calc-donut"><svg viewBox="0 0 36 36" width="200" height="200">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--surface-2)" stroke-width="3.5"/>
+                <circle data-donut="step" cx="18" cy="18" r="15.9" fill="none" stroke="#7c3aed" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 18 18)" stroke-linecap="round" style="transition:stroke-dasharray .3s"/>
+              </svg>
+                <div class="center"><div class="lbl">Total Value</div><div class="val" data-out="step_total">₹0</div></div>
+              </div>
+              <div class="calc-legend">
+                <div class="row"><div class="left"><span class="dot" style="background:#cbd5e1"></span>Invested</div><div class="val" data-out="step_invested">₹0</div></div>
+                <div class="row"><div class="left"><span class="dot" style="background:#7c3aed"></span>Est. returns</div><div class="val" data-out="step_gains">₹0</div></div>
+                <div class="row total"><div class="left">Total</div><div class="val" data-out="step_total2">₹0</div></div>
+              </div>
+              <div class="calc-cta"><button data-toggle-breakdown="step"><i class="fa-solid fa-table me-1"></i>Year-by-year</button><button data-invest>Start a SIP</button></div>
+            </div>
+          </div>
+          <div class="calc-breakdown" data-breakdown="step"></div>
+        </div>
+
+        <!-- Goal SIP pane -->
+        <div class="calc-pane" data-pane="goal">
+          <div class="calc-body">
+            <div class="calc-inputs">
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Target corpus</label>
+                  <span class="calc-pill-input"><span class="prefix">₹</span><input type="number" data-num="goal_target" min="10000" max="1000000000"/></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="goal_target" min="100000" max="100000000" step="50000"/>
+                <div class="calc-range-labels"><span>₹1 L</span><span>₹10 Cr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Time period</label>
+                  <span class="calc-pill-input"><input type="number" data-num="goal_years" min="1" max="50"/><span class="prefix" style="margin:0 0 0 4px">Yr</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="goal_years" min="1" max="40" step="1"/>
+                <div class="calc-range-labels"><span>1 yr</span><span>40 yr</span></div>
+              </div>
+              <div class="calc-field">
+                <div class="calc-field-head"><label>Expected return rate (p.a.)</label>
+                  <span class="calc-pill-input"><input type="number" data-num="goal_return" min="1" max="30" step="0.5"/><span class="prefix" style="margin:0 0 0 4px">%</span></span>
+                </div>
+                <input type="range" class="calc-slider" data-rng="goal_return" min="1" max="30" step="0.5"/>
+                <div class="calc-range-labels"><span>1%</span><span>30%</span></div>
+              </div>
+            </div>
+            <div class="calc-result">
+              <div class="calc-donut"><svg viewBox="0 0 36 36" width="200" height="200">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--surface-2)" stroke-width="3.5"/>
+                <circle data-donut="goal" cx="18" cy="18" r="15.9" fill="none" stroke="#7c3aed" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="25" transform="rotate(-90 18 18)" stroke-linecap="round" style="transition:stroke-dasharray .3s"/>
+              </svg>
+                <div class="center"><div class="lbl">Monthly SIP</div><div class="val" data-out="goal_monthly">₹0</div></div>
+              </div>
+              <div class="calc-legend">
+                <div class="row"><div class="left"><span class="dot" style="background:#cbd5e1"></span>You invest</div><div class="val" data-out="goal_invested">₹0</div></div>
+                <div class="row"><div class="left"><span class="dot" style="background:#7c3aed"></span>Returns earn</div><div class="val" data-out="goal_gains">₹0</div></div>
+                <div class="row total"><div class="left">Goal corpus</div><div class="val" data-out="goal_total">₹0</div></div>
+              </div>
+              <div class="calc-cta"><button data-toggle-breakdown="goal"><i class="fa-solid fa-table me-1"></i>Year-by-year</button><button data-invest>Start a SIP</button></div>
+            </div>
+          </div>
+          <div class="calc-breakdown" data-breakdown="goal"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== AI ADVISOR ==================== -->
+    <section class="mf-panel" id="panel-advisor">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="mf-card">
+                    <h3><i class="fa-solid fa-robot me-2"></i>Analyse My MF Portfolio</h3>
+                    <p class="text-muted" style="font-size:.82rem">AI inspects your holdings for over-concentration, duplicate large-cap exposure, sector skew and overlap with your direct stocks.</p>
+                    <button class="btn btn-primary" id="aiAnalyze"><i class="fa-solid fa-sparkles me-1"></i> Analyse Portfolio</button>
+                    <div id="aiAnalyzeOut" class="mt-3"></div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="mf-card">
+                    <h3><i class="fa-solid fa-bullseye me-2"></i>Recommend for a Goal</h3>
+                    <div class="mb-2"><label class="form-label" style="font-size:.78rem">Goal</label><input class="form-control form-control-sm" id="recGoal" placeholder="Retirement / House / Child education" value="Retirement"/></div>
+                    <div class="row g-2">
+                        <div class="col-6"><label class="form-label" style="font-size:.78rem">Years</label><input class="form-control form-control-sm" id="recYears" type="number" value="20"/></div>
+                        <div class="col-6"><label class="form-label" style="font-size:.78rem">Monthly (₹)</label><input class="form-control form-control-sm" id="recMonthly" type="number" value="15000"/></div>
+                    </div>
+                    <div class="mb-2 mt-2"><label class="form-label" style="font-size:.78rem">Risk</label>
+                        <select class="form-select form-select-sm" id="recRisk">
+                            <option>conservative</option><option selected>moderate</option><option>aggressive</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" id="recGo">Recommend</button>
+                    <div id="recOut" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Add MF Modal -->
+<div class="modal fade" id="addMfModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Add MF Holding</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2 search-box">
+            <label class="form-label" style="font-size:.78rem">Scheme</label>
+            <input id="addSearch" class="form-control form-control-sm" placeholder="Search scheme…" autocomplete="off"/>
+            <div class="search-results" id="addResults"></div>
+            <div id="addPicked" class="mt-1" style="font-size:.78rem;color:var(--text-muted)"></div>
+        </div>
+        <div class="row g-2">
+            <div class="col-6"><label class="form-label" style="font-size:.78rem">Units</label><input class="form-control form-control-sm" id="addUnits" type="number" step="0.001"/></div>
+            <div class="col-6"><label class="form-label" style="font-size:.78rem">NAV at purchase</label><input class="form-control form-control-sm" id="addNav" type="number" step="0.0001"/></div>
+            <div class="col-6"><label class="form-label" style="font-size:.78rem">Purchase date</label><input class="form-control form-control-sm" id="addDate" type="date"/></div>
+            <div class="col-6"><label class="form-label" style="font-size:.78rem">Monthly SIP (₹, optional)</label><input class="form-control form-control-sm" id="addSip" type="number" value="0"/></div>
+            <div class="col-12"><label class="form-label" style="font-size:.78rem">Folio (optional)</label><input class="form-control form-control-sm" id="addFolio"/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="addSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+    const inr = n => '₹' + (Number(n)||0).toLocaleString('en-IN', {maximumFractionDigits:0});
+    const pct = n => (n==null) ? '—' : (Number(n).toFixed(2) + '%');
+    const cls = n => (Number(n)>=0) ? 'gain-pos' : 'gain-neg';
+    const $ = id => document.getElementById(id);
+
+    // ── Tab switching ─────────────────────────────────────
+    document.querySelectorAll('.mf-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mf-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const t = btn.dataset.tab;
+            document.querySelectorAll('.mf-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+t));
+            if (t === 'portfolio') loadPortfolio();
+        });
+    });
+
+    // ── Reusable search dropdown ──────────────────────────
+    function bindSearch(inputId, resultsId, onPick){
+        const inp = $(inputId), res = $(resultsId);
+        let t = null;
+        inp.addEventListener('input', () => {
+            clearTimeout(t);
+            const q = inp.value.trim();
+            if (q.length < 3){ res.classList.remove('open'); res.innerHTML=''; return; }
+            t = setTimeout(async () => {
+                const r = await fetch('/api/mutual-funds/search?q=' + encodeURIComponent(q) + '&limit=15');
+                const j = await r.json();
+                res.innerHTML = (j.results||[]).map(s =>
+                    `<div class="res-row" data-code="${s.schemeCode}" data-name="${(s.schemeName||'').replace(/"/g,'&quot;')}">
+                        <div>${s.schemeName}</div>
+                        <div class="res-code">Code: ${s.schemeCode}</div>
+                     </div>`).join('') || '<div class="res-row text-muted">No matches</div>';
+                res.classList.add('open');
+                res.querySelectorAll('.res-row[data-code]').forEach(row => {
+                    row.addEventListener('click', () => {
+                        onPick(row.dataset.code, row.dataset.name);
+                        res.classList.remove('open');
+                        inp.value = row.dataset.name;
+                    });
+                });
+            }, 250);
+        });
+        document.addEventListener('click', e => {
+            if (!res.contains(e.target) && e.target !== inp) res.classList.remove('open');
+        });
+    }
+
+    // ── PORTFOLIO ─────────────────────────────────────────
+    async function loadPortfolio(){
+        const r = await fetch('/api/mutual-funds/portfolio');
+        const data = await r.json();
+        renderKpis(data.totals||{});
+        renderHoldings(data.holdings||[]);
+        renderAlloc('allocCategory', data.allocation_by_category||[]);
+        renderAlloc('allocAmc', data.allocation_by_amc||[]);
+        loadStockOverlap();
+    }
+    function renderKpis(t){
+        const pnlCls = (t.pnl||0)>=0 ? 'gain-pos' : 'gain-neg';
+        $('kpiRow').innerHTML = `
+            <div class="kpi-box"><div class="lbl">Holdings</div><div class="val">${t.count||0}</div></div>
+            <div class="kpi-box"><div class="lbl">Invested</div><div class="val">${inr(t.invested)}</div></div>
+            <div class="kpi-box"><div class="lbl">Current Value</div><div class="val">${inr(t.current_value)}</div></div>
+            <div class="kpi-box"><div class="lbl">P&amp;L</div><div class="val ${pnlCls}">${inr(t.pnl)} <span style="font-size:.7rem">(${pct(t.pnl_pct)})</span></div></div>`;
+    }
+    function renderHoldings(rows){
+        if (!rows.length){ $('holdingsContainer').innerHTML = '<div class="empty-state"><i class="fa-solid fa-folder-open"></i><div>No MF holdings yet. Click <strong>Add Holding</strong> to start.</div></div>'; return; }
+        $('holdingsContainer').innerHTML = `<div style="overflow-x:auto"><table class="mf-table">
+            <thead><tr><th>Scheme</th><th>Category</th><th class="num">Units</th><th class="num">Avg NAV</th><th class="num">Current NAV</th><th class="num">Invested</th><th class="num">Current</th><th class="num">P&amp;L</th><th class="num">CAGR</th><th></th></tr></thead>
+            <tbody>${rows.map(h => `
+                <tr>
+                    <td><strong>${h.scheme_name||'—'}</strong><div style="font-size:.7rem;color:var(--text-muted)">${h.fund_house||''}</div></td>
+                    <td><span class="pill pill-neutral">${h.category||'—'}</span></td>
+                    <td class="num">${(h.units||0).toFixed(3)}</td>
+                    <td class="num">${(h.nav_at_purchase||0).toFixed(4)}</td>
+                    <td class="num">${(h.current_nav||0).toFixed(4)}</td>
+                    <td class="num">${inr(h.invested)}</td>
+                    <td class="num">${inr(h.current_value)}</td>
+                    <td class="num ${cls(h.pnl)}">${inr(h.pnl)}<div style="font-size:.7rem">${pct(h.pnl_pct)}</div></td>
+                    <td class="num">${pct(h.cagr_pct)}</td>
+                    <td><button class="btn btn-sm btn-outline-danger" data-del="${h.id}"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`).join('')}</tbody></table></div>`;
+        $('holdingsContainer').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+            if (!confirm('Delete this holding?')) return;
+            await fetch('/api/mutual-funds/holding/' + b.dataset.del, {method:'DELETE'});
+            loadPortfolio();
+        }));
+    }
+    function renderAlloc(targetId, rows){
+        if (!rows.length){ $(targetId).innerHTML = '<p class="text-muted" style="font-size:.8rem">No data</p>'; return; }
+        const total = rows.reduce((s,r) => s + r.value, 0) || 1;
+        const palette = ['#7c3aed','#ec4899','#f59e0b','#16a34a','#0ea5e9','#dc2626','#64748b','#84cc16'];
+        $(targetId).innerHTML = `
+            <div class="alloc-bar mb-2">${rows.map((r,i) => `<div style="flex:${r.value};background:${palette[i%palette.length]}" title="${r.label}: ${pct(r.value/total*100)}">${(r.value/total*100).toFixed(0)}%</div>`).join('')}</div>
+            <table class="mf-table"><tbody>${rows.map((r,i) => `
+                <tr><td><span style="display:inline-block;width:10px;height:10px;background:${palette[i%palette.length]};border-radius:2px;margin-right:6px"></span>${r.label}</td>
+                <td class="num">${inr(r.value)}</td>
+                <td class="num">${(r.value/total*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+    }
+    async function loadStockOverlap(){
+        const r = await fetch('/api/mutual-funds/stock-overlap');
+        const j = await r.json();
+        if (!(j.overlaps||[]).length){
+            $('stockOverlapContainer').innerHTML = '<p class="text-muted" style="font-size:.85rem">No overlapping stocks found. (Requires both MF holdings with known stock composition and direct stock holdings.)</p>'; return;
+        }
+        $('stockOverlapContainer').innerHTML = `<div style="overflow-x:auto"><table class="mf-table">
+            <thead><tr><th>Stock</th><th class="num">Direct ₹</th><th class="num">Via MFs ₹</th><th class="num">Total Exposure</th><th>Via Funds</th></tr></thead>
+            <tbody>${j.overlaps.map(o => `
+                <tr><td><strong>${o.symbol}</strong></td>
+                <td class="num">${inr(o.direct_value)}</td>
+                <td class="num">${inr(o.indirect_value_via_funds)}</td>
+                <td class="num"><strong>${inr(o.total_exposure)}</strong></td>
+                <td>${(o.funds||[]).map(f => `<div style="font-size:.75rem">${f.fund_name} <span class="text-muted">(${f.weight_pct}%)</span></div>`).join('')}</td>
+                </tr>`).join('')}</tbody></table></div>`;
+    }
+
+    // ── DISCOVER ──────────────────────────────────────────
+    bindSearch('discoverSearch', 'discoverResults', async (code, name) => {
+        $('schemeDetail').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-primary"></div></div>';
+        let r, j;
+        try {
+            r = await fetch('/api/mutual-funds/scheme/' + code);
+            j = await r.json();
+        } catch (e) {
+            $('schemeDetail').innerHTML = `<div class="mf-card text-danger">Network error: ${e.message||e}</div>`; return;
+        }
+        if (j.error){ $('schemeDetail').innerHTML = `<div class="mf-card text-danger">Failed to load scheme: ${j.detail||j.error}</div>`; return; }
+        renderSchemeDetail(code, name, j);
+    });
+
+    function renderSchemeDetail(code, name, j){
+        const m = j.meta||{}, ret = j.returns||{}, ana = j.analytics||{}, hd = j.holdings;
+        const riskCls = (lbl) => {
+            if (!lbl) return 'pill-neutral';
+            const x = lbl.toLowerCase();
+            if (x.includes('very high') || x === 'high') return 'pill-high';
+            if (x.includes('moderate')) return 'pill-med';
+            return 'pill-low';
+        };
+        const fmt = (v, suf='%') => (v === null || v === undefined) ? '—' : `${v}${suf}`;
+        const sectorMix = sectorBreakdown(hd);
+        $('schemeDetail').innerHTML = `
+            <div class="mf-card">
+                <div class="d-flex justify-content-between flex-wrap align-items-start">
+                    <div>
+                        <h3 class="mb-1">${m.scheme_name||name}</h3>
+                        <div class="text-muted" style="font-size:.8rem">${m.fund_house||''} · ${m.scheme_category||''} · ${m.scheme_type||''}</div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        ${ana.risk_label ? `<span class="pill ${riskCls(ana.risk_label)}">Risk: ${ana.risk_label}</span>` : ''}
+                        ${ana.history_years ? `<span class="pill pill-neutral">${ana.history_years} yr history</span>` : ''}
+                        <button class="btn btn-sm btn-outline-primary" id="addFromDiscover"><i class="fa-solid fa-plus me-1"></i>Add to portfolio</button>
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">RETURNS</h6>
+                <div class="kpi-row">
+                    <div class="kpi-box"><div class="lbl">NAV</div><div class="val">${(ret.latest_nav||0).toFixed(4)}</div><div style="font-size:.7rem;color:var(--text-muted)">${ret.latest_date||'—'}</div></div>
+                    <div class="kpi-box"><div class="lbl">YTD</div><div class="val ${cls(ana.ytd_pct)}">${pct(ana.ytd_pct)}</div></div>
+                    <div class="kpi-box"><div class="lbl">1M</div><div class="val ${cls(ret.r_1m)}">${pct(ret.r_1m)}</div></div>
+                    <div class="kpi-box"><div class="lbl">6M</div><div class="val ${cls(ret.r_6m)}">${pct(ret.r_6m)}</div></div>
+                    <div class="kpi-box"><div class="lbl">1Y</div><div class="val ${cls(ret.r_1y)}">${pct(ret.r_1y)}</div></div>
+                    <div class="kpi-box"><div class="lbl">3Y CAGR</div><div class="val ${cls(ret.r_3y)}">${pct(ret.r_3y)}</div></div>
+                    <div class="kpi-box"><div class="lbl">5Y CAGR</div><div class="val ${cls(ret.r_5y)}">${pct(ret.r_5y)}</div></div>
+                </div>
+
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">RISK & QUALITY</h6>
+                <div class="kpi-row">
+                    <div class="kpi-box"><div class="lbl">Volatility (ann.)</div><div class="val">${fmt(ana.annual_volatility_pct)}</div><div style="font-size:.7rem;color:var(--text-muted)">std-dev of daily returns</div></div>
+                    <div class="kpi-box"><div class="lbl">Max Drawdown</div><div class="val neg">${fmt(ana.max_drawdown_pct)}</div><div style="font-size:.7rem;color:var(--text-muted)">worst peak→trough</div></div>
+                    <div class="kpi-box"><div class="lbl">Sharpe</div><div class="val ${cls(ana.sharpe_ratio)}">${ana.sharpe_ratio ?? '—'}</div><div style="font-size:.7rem;color:var(--text-muted)">vs ${ana.risk_free_rate_pct||6.5}% RFR</div></div>
+                    <div class="kpi-box"><div class="lbl">Sortino</div><div class="val ${cls(ana.sortino_ratio)}">${ana.sortino_ratio ?? '—'}</div><div style="font-size:.7rem;color:var(--text-muted)">downside-adj.</div></div>
+                    <div class="kpi-box"><div class="lbl">Win Months</div><div class="val">${fmt(ana.win_ratio_pct)}</div><div style="font-size:.7rem;color:var(--text-muted)">positive-month rate</div></div>
+                    <div class="kpi-box"><div class="lbl">Best Month</div><div class="val pos">${fmt(ana.best_month_pct)}</div></div>
+                    <div class="kpi-box"><div class="lbl">Worst Month</div><div class="val neg">${fmt(ana.worst_month_pct)}</div></div>
+                </div>
+
+                ${ana.rolling_1y ? `<div class="mt-2" style="font-size:.78rem;color:var(--text-muted)">
+                    <strong>Rolling 1-yr returns:</strong> median ${ana.rolling_1y.median}%, range ${ana.rolling_1y.min}% → ${ana.rolling_1y.max}%, negative ${ana.rolling_1y.neg_pct}% of the time.
+                </div>` : ''}
+
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">NAV CHART (1Y)</h6>
+                <canvas class="nav-chart" id="navChart"></canvas>
+
+                ${(ana.yearly_returns||[]).length ? `
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">CALENDAR-YEAR RETURNS</h6>
+                <div id="yearBars"></div>` : ''}
+
+                ${(ana.monthly_heatmap||[]).length ? `
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">MONTHLY HEATMAP (LAST 5Y)</h6>
+                <div id="monthHeat"></div>` : ''}
+
+                ${hd ? `
+                <h6 class="mt-3 mb-2 text-muted" style="font-size:.72rem;letter-spacing:.5px">TOP HOLDINGS <span class="text-muted">(as of ${hd.asof||'—'})</span></h6>
+                <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px" class="mf-holdings-grid">
+                    <table class="mf-table">
+                        <thead><tr><th>Symbol</th><th>Sector</th><th class="num">Weight</th></tr></thead>
+                        <tbody>${(hd.top||[]).map(h => `<tr><td><strong>${h.symbol}</strong></td><td>${h.sector||''}</td><td class="num">${(h.weight_pct||0).toFixed(2)}%</td></tr>`).join('')}</tbody>
+                    </table>
+                    ${sectorMix.length ? `<div>
+                        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px">Sector mix (top holdings)</div>
+                        ${sectorMix.map(s => `<div style="margin-bottom:6px">
+                            <div style="display:flex;justify-content:space-between;font-size:.78rem"><span>${s.sector}</span><span><strong>${s.pct.toFixed(1)}%</strong></span></div>
+                            <div style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden">
+                                <div style="height:100%;width:${Math.min(100, s.pct*2)}%;background:#7c3aed"></div>
+                            </div>
+                        </div>`).join('')}
+                    </div>` : ''}
+                </div>` : '<p class="text-muted mt-3" style="font-size:.82rem"><i class="fa-solid fa-info-circle me-1"></i>Stock-level holdings not available for this scheme. Upload a CSV via API to enable overlap analysis.</p>'}
+
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary btn-sm" id="aiExplain"><i class="fa-solid fa-sparkles me-1"></i>AI Analysis</button>
+                </div>
+                <div id="aiExplainOut" class="mt-2"></div>
+            </div>`;
+
+        drawNavChart(j.nav_history||[]);
+        drawYearBars(ana.yearly_returns||[]);
+        drawMonthHeat(ana.monthly_heatmap||[]);
+
+        const addBtn = document.getElementById('addFromDiscover');
+        if (addBtn) addBtn.addEventListener('click', () => {
+            pickedScheme = {code, name: m.scheme_name || name};
+            $('addPicked').textContent = 'Selected: ' + (m.scheme_name || name) + ' (' + code + ')';
+            const r2 = ret.latest_nav; if (r2 && !$('addNav').value) $('addNav').value = r2;
+            new bootstrap.Modal('#addMfModal').show();
+        });
+
+        const aiBtn = document.getElementById('aiExplain');
+        if (aiBtn) aiBtn.addEventListener('click', async () => {
+            aiBtn.disabled = true;
+            $('aiExplainOut').innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div> <span class="text-muted" style="font-size:.8rem">Generating AI analysis…</span>';
+            let rr, jj;
+            try { ({r:rr, j:jj} = await fetchJSON('/api/mutual-funds/ai/explain/' + code, {method:'POST'})); }
+            catch (e) { $('aiExplainOut').innerHTML = `<div class="alert alert-danger">${e.message||e}</div>`; aiBtn.disabled = false; return; }
+            aiBtn.disabled = false;
+            if (jj.error){ $('aiExplainOut').innerHTML = `<div class="alert alert-danger">${jj.detail||jj.error}</div>`; return; }
+            const a = jj.analysis || {};
+            $('aiExplainOut').innerHTML = `<div class="ai-block">
+                ${a.verdict ? `<p class="mb-2"><strong>Verdict:</strong> ${a.verdict}</p>` : ''}
+                ${a.ideal_for ? `<p class="mb-2" style="font-size:.85rem"><strong>Ideal for:</strong> ${a.ideal_for}${a.holding_period_years ? ` · hold ≥ ${a.holding_period_years} yrs` : ''}</p>` : ''}
+                ${(a.pros||[]).length ? `<div><strong style="color:#16a34a;font-size:.82rem">Pros</strong><ul style="font-size:.82rem;margin:4px 0 8px 18px">${a.pros.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : ''}
+                ${(a.cons||[]).length ? `<div><strong style="color:#dc2626;font-size:.82rem">Cons</strong><ul style="font-size:.82rem;margin:4px 0 8px 18px">${a.cons.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : ''}
+                ${(a.suitability||[]).length ? `<div><strong style="font-size:.82rem">Suitability</strong><ul style="font-size:.82rem;margin:4px 0 8px 18px">${a.suitability.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : ''}
+                ${a.key_risk ? `<p class="mb-0" style="font-size:.8rem;color:#b45309"><i class="fa-solid fa-triangle-exclamation me-1"></i>${a.key_risk}</p>` : ''}
+            </div>`;
+        });
+    }
+
+    function sectorBreakdown(hd){
+        if (!hd || !(hd.top||[]).length) return [];
+        const agg = {};
+        for (const h of hd.top){
+            const s = h.sector || 'Other';
+            agg[s] = (agg[s] || 0) + (h.weight_pct || 0);
+        }
+        return Object.entries(agg).map(([sector, pct]) => ({sector, pct}))
+            .sort((a,b) => b.pct - a.pct);
+    }
+
+    function drawYearBars(years){
+        const host = document.getElementById('yearBars');
+        if (!host || !years.length) return;
+        const maxAbs = Math.max(...years.map(y => Math.abs(y.return_pct || 0)), 1);
+        host.innerHTML = `<div style="display:flex;align-items:flex-end;gap:6px;height:110px;border-bottom:1px solid var(--border);padding-bottom:2px">
+            ${years.map(y => {
+                const v = y.return_pct || 0;
+                const h = Math.max(2, Math.abs(v) / maxAbs * 95);
+                const col = v >= 0 ? '#16a34a' : '#dc2626';
+                return `<div style="flex:1;min-width:28px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px" title="${y.year}: ${v}%">
+                    <div style="font-size:.62rem;color:${col};font-weight:700">${v>0?'+':''}${v}%</div>
+                    <div style="width:100%;height:${h}px;background:${col};border-radius:3px 3px 0 0"></div>
+                    <div style="font-size:.62rem;color:var(--text-muted)">${y.year}</div>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    function drawMonthHeat(cells){
+        const host = document.getElementById('monthHeat');
+        if (!host || !cells.length) return;
+        const byYear = {};
+        for (const c of cells){
+            byYear[c.year] = byYear[c.year] || {};
+            byYear[c.year][c.month] = c.return_pct;
+        }
+        const years = Object.keys(byYear).map(Number).sort();
+        const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+        const colour = (v) => {
+            if (v === undefined || v === null) return 'var(--surface-2)';
+            const a = Math.min(1, Math.abs(v) / 8);
+            return v >= 0 ? `rgba(22,163,74,${0.15 + a*0.7})` : `rgba(220,38,38,${0.15 + a*0.7})`;
+        };
+        host.innerHTML = `<div style="display:grid;grid-template-columns:36px repeat(12, 1fr);gap:3px;font-size:.65rem">
+            <div></div>${months.map(m => `<div style="text-align:center;color:var(--text-muted);font-weight:600">${m}</div>`).join('')}
+            ${years.map(y => `
+                <div style="color:var(--text-muted);font-weight:600;align-self:center">${y}</div>
+                ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
+                    const v = byYear[y][m];
+                    return `<div title="${y}-${String(m).padStart(2,'0')}: ${v??'—'}%" style="aspect-ratio:1;border-radius:3px;background:${colour(v)};display:flex;align-items:center;justify-content:center;color:${v!==undefined&&Math.abs(v)>4?'#fff':'var(--text)'};font-weight:600;font-size:.6rem">${v!==undefined?v.toFixed(0):''}</div>`;
+                }).join('')}
+            `).join('')}
+        </div>`;
+    }
+    function drawNavChart(series){
+        const c = $('navChart'); if (!c || !series.length) return;
+        const ctx = c.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
+        ctx.scale(dpr, dpr); const w = c.clientWidth, h = c.clientHeight;
+        ctx.clearRect(0,0,w,h);
+        const navs = series.map(s => s.nav), min = Math.min(...navs), max = Math.max(...navs);
+        const xStep = w / (series.length - 1 || 1);
+        ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2; ctx.beginPath();
+        series.forEach((s,i) => {
+            const x = i * xStep, y = h - ((s.nav - min) / (max - min || 1)) * (h - 20) - 10;
+            i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(124,58,237,.1)';
+        ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    }
+
+    // ── COMPARE ──────────────────────────────────────────
+    const compareList = [];  // {code, name}
+    bindSearch('compareSearch', 'compareResults', (code, name) => {
+        if (compareList.find(x => x.code === code)) return;
+        if (compareList.length >= 5){ alert('Maximum 5 funds.'); return; }
+        compareList.push({code, name});
+        renderCompareChips();
+        $('compareSearch').value = '';
+    });
+    function renderCompareChips(){
+        $('compareChips').innerHTML = compareList.map((f,i) =>
+            `<span class="compare-chip">${f.name} <button data-i="${i}">&times;</button></span>`).join('');
+        $('compareChips').querySelectorAll('button[data-i]').forEach(b =>
+            b.addEventListener('click', () => { compareList.splice(+b.dataset.i, 1); renderCompareChips(); }));
+        $('compareHint').textContent = compareList.length < 2 ? 'Add at least 2 funds to compare.' : `${compareList.length} selected`;
+    }
+    $('compareClear').addEventListener('click', () => { compareList.length = 0; renderCompareChips(); $('compareResult').innerHTML=''; });
+    $('compareRun').addEventListener('click', async () => {
+        if (compareList.length < 2){ alert('Add at least 2 funds.'); return; }
+        $('compareResult').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-primary"></div></div>';
+        const r = await fetch('/api/mutual-funds/compare', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({scheme_codes: compareList.map(x => x.code)})
+        });
+        const j = await r.json();
+        renderCompare(j);
+    });
+    function heatColor(v){ // 0–100 scale
+        const t = Math.min(100, Math.max(0, v)) / 100;
+        const r = Math.round(248 - t*120); const g = Math.round(250 - t*80); const b = Math.round(252 - t*200);
+        return `rgb(${r},${g},${b})`;
+    }
+    function renderCompare(j){
+        const funds = j.funds || [];
+        const matrix = j.overlap_matrix || [];
+        const verdict = j.similarity_score == null ? '' :
+            j.similarity_score > 0.75 ? '<span class="pill pill-high">Nearly identical funds</span>' :
+            j.similarity_score > 0.45 ? '<span class="pill pill-med">High overlap — partial duplicates</span>' :
+            j.similarity_score > 0.20 ? '<span class="pill pill-neutral">Moderate overlap</span>' :
+                                        '<span class="pill pill-low">Mostly distinct</span>';
+        let html = `<div class="mf-card">
+            <div class="d-flex justify-content-between flex-wrap mb-2"><h3>Returns & Metadata</h3>${verdict}</div>
+            <div style="overflow-x:auto"><table class="mf-table">
+                <thead><tr><th>Fund</th><th>Category</th><th class="num">1Y</th><th class="num">3Y</th><th class="num">5Y</th><th class="num">Latest NAV</th></tr></thead>
+                <tbody>${funds.map(f => `<tr>
+                    <td><strong>${f.name}</strong><div style="font-size:.7rem;color:var(--text-muted)">${f.fund_house||''}</div></td>
+                    <td>${f.category||'—'}</td>
+                    <td class="num ${cls(f.returns?.r_1y)}">${pct(f.returns?.r_1y)}</td>
+                    <td class="num ${cls(f.returns?.r_3y)}">${pct(f.returns?.r_3y)}</td>
+                    <td class="num ${cls(f.returns?.r_5y)}">${pct(f.returns?.r_5y)}</td>
+                    <td class="num">${(f.returns?.latest_nav||0).toFixed(4)}</td>
+                </tr>`).join('')}</tbody></table></div></div>`;
+
+        // Overlap matrix
+        html += `<div class="mf-card"><h3>Pairwise Stock-Holdings Overlap (%)</h3>
+            <p class="text-muted" style="font-size:.78rem">Each cell = sum of min(weight_A, weight_B) across shared stocks. Higher = more duplicate exposure.</p>
+            <div style="overflow-x:auto"><table class="matrix-table">
+                <thead><tr><th></th>${funds.map(f => `<th title="${f.name}">${f.name.slice(0,18)}…</th>`).join('')}</tr></thead>
+                <tbody>${matrix.map((row,i) => `<tr>
+                    <th>${funds[i].name.slice(0,18)}…</th>
+                    ${row.map((v,j) => `<td class="overlap-cell heat" style="background:${i===j ? '#e9d5ff' : heatColor(v)}">${v.toFixed(1)}</td>`).join('')}
+                </tr>`).join('')}</tbody></table></div></div>`;
+
+        // Common stocks
+        if ((j.common_stocks||[]).length){
+            html += `<div class="mf-card"><h3>Stocks Common to All ${funds.length} Funds</h3>
+                <div style="overflow-x:auto"><table class="mf-table">
+                    <thead><tr><th>Stock</th>${funds.map(f => `<th class="num">${f.name.slice(0,14)}</th>`).join('')}<th class="num">Avg %</th></tr></thead>
+                    <tbody>${j.common_stocks.map(c => `<tr>
+                        <td><strong>${c.symbol}</strong></td>
+                        ${c.weights.map(w => `<td class="num">${w.toFixed(2)}%</td>`).join('')}
+                        <td class="num"><strong>${c.avg_weight.toFixed(2)}%</strong></td>
+                    </tr>`).join('')}</tbody></table></div></div>`;
+        } else {
+            html += `<div class="mf-card text-muted" style="font-size:.85rem">No stocks common to all selected funds (or holdings data is missing for some).</div>`;
+        }
+
+        if ((j.missing_holdings||[]).length){
+            html += `<div class="mf-card" style="border-color:#f59e0b">
+                <strong><i class="fa-solid fa-triangle-exclamation me-1"></i>Stock-level holdings unavailable</strong> for scheme code(s): ${j.missing_holdings.join(', ')}. Overlap/common-stock results exclude these.
+                <div style="font-size:.78rem;margin-top:4px" class="text-muted">You can upload holdings via <code>POST /api/mutual-funds/holdings/upload</code>.</div>
+            </div>`;
+        }
+        $('compareResult').innerHTML = html;
+    }
+
+    // ── CALCULATORS (Groww-style, live client-side) ───────
+    const calcState = {
+        sip:  {sip_monthly: 10000, sip_years: 15, sip_return: 12},
+        lump: {lump_amt: 500000, lump_years: 10, lump_return: 12},
+        step: {step_monthly: 10000, step_pct: 10, step_years: 15, step_return: 12},
+        goal: {goal_target: 10000000, goal_years: 20, goal_return: 12},
+    };
+    const calcFmt = n => {
+        n = Math.round(n||0);
+        if (n >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+        if (n >= 100000)   return '₹' + (n/100000).toFixed(2) + ' L';
+        return '₹' + n.toLocaleString('en-IN');
+    };
+    const calcFmtExact = n => '₹' + Math.round(n||0).toLocaleString('en-IN');
+
+    // Math engine
+    function sipFV(monthly, years, ratePct){
+        const r = (ratePct/100)/12, n = Math.round(years*12);
+        if (r === 0) return {invested: monthly*n, future: monthly*n};
+        const fv = monthly * (((Math.pow(1+r, n) - 1) / r) * (1+r));
+        return {invested: monthly*n, future: fv};
+    }
+    function lumpFV(amt, years, ratePct){
+        const fv = amt * Math.pow(1 + ratePct/100, years);
+        return {invested: amt, future: fv};
+    }
+    function stepSipFV(monthly, stepPct, years, ratePct){
+        const r = (ratePct/100)/12; let fv = 0, invested = 0, cur = monthly;
+        const n = Math.round(years*12);
+        for (let m=1; m<=n; m++){
+            invested += cur;
+            fv = (fv + cur) * (1 + r);
+            if (m % 12 === 0) cur *= (1 + stepPct/100);
+        }
+        return {invested, future: fv};
+    }
+    function goalSip(target, years, ratePct){
+        const r = (ratePct/100)/12, n = Math.round(years*12);
+        const monthly = r === 0
+            ? target / n
+            : target / ((((Math.pow(1+r, n) - 1) / r)) * (1+r));
+        return {monthly, invested: monthly*n, future: target};
+    }
+    function sipYearly(monthly, years, ratePct, stepPct){
+        const r = (ratePct/100)/12; const rows = []; let fv = 0, invested = 0, cur = monthly;
+        for (let y=1; y<=Math.round(years); y++){
+            for (let m=1; m<=12; m++){ invested += cur; fv = (fv + cur) * (1 + r); }
+            if (stepPct) cur *= (1 + stepPct/100);
+            rows.push({year: y, invested: Math.round(invested), value: Math.round(fv), gains: Math.round(fv - invested)});
+        }
+        return rows;
+    }
+    function lumpYearly(amt, years, ratePct){
+        const rows = []; for (let y=1; y<=Math.round(years); y++){
+            const v = amt * Math.pow(1 + ratePct/100, y);
+            rows.push({year: y, invested: Math.round(amt), value: Math.round(v), gains: Math.round(v - amt)});
+        } return rows;
+    }
+    function goalYearly(monthly, years, ratePct){
+        return sipYearly(monthly, years, ratePct, 0);
+    }
+
+    // Render donut + legend
+    function renderCalcOutputs(pane, invested, gains, total, customCenter){
+        const totalPos = invested + gains;
+        const investedPct = totalPos > 0 ? (invested / totalPos) * 100 : 50;
+        const root = document.querySelector(`.calc-pane[data-pane="${pane}"]`);
+        if (!root) return;
+        // donut: invested slice is the grey, gains slice is purple. Set purple stroke-dasharray = gains%
+        const gainsPct = 100 - investedPct;
+        const donut = root.querySelector(`circle[data-donut="${pane}"]`);
+        if (donut){
+            donut.setAttribute('stroke-dasharray', `${gainsPct} ${100 - gainsPct}`);
+            // Stack the grey beneath so the unused arc shows invested colour
+            const bg = donut.previousElementSibling;
+            if (bg) bg.setAttribute('stroke', '#cbd5e1');
+        }
+        const set = (key, val) => { const el = root.querySelector(`[data-out="${key}"]`); if (el) el.textContent = val; };
+        if (pane === 'goal'){
+            set('goal_monthly', customCenter);
+            set('goal_invested', calcFmt(invested));
+            set('goal_gains', calcFmt(gains));
+            set('goal_total', calcFmt(total));
+        } else {
+            set(`${pane}_total`, calcFmt(total));
+            set(`${pane}_total2`, calcFmt(total));
+            set(`${pane}_invested`, calcFmt(invested));
+            set(`${pane}_gains`, calcFmt(gains));
+        }
+    }
+
+    function renderBreakdown(pane, rows){
+        const wrap = document.querySelector(`[data-breakdown="${pane}"]`);
+        if (!wrap) return;
+        const isGoal = pane === 'goal';
+        wrap.innerHTML = `<div class="scroll"><table>
+            <thead><tr><th>Year</th><th class="num">${isGoal?'Yearly invested':'Invested'}</th><th class="num">Gains</th><th class="num">Total value</th></tr></thead>
+            <tbody>${rows.map(r => `<tr>
+                <td>${r.year}</td>
+                <td class="num">${calcFmtExact(r.invested)}</td>
+                <td class="num" style="color:#16a34a">${calcFmtExact(r.gains)}</td>
+                <td class="num"><strong>${calcFmtExact(r.value)}</strong></td>
+            </tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function recalcSip(){
+        const s = calcState.sip;
+        const {invested, future} = sipFV(s.sip_monthly, s.sip_years, s.sip_return);
+        renderCalcOutputs('sip', invested, future - invested, future);
+        renderBreakdown('sip', sipYearly(s.sip_monthly, s.sip_years, s.sip_return, 0));
+    }
+    function recalcLump(){
+        const s = calcState.lump;
+        const {invested, future} = lumpFV(s.lump_amt, s.lump_years, s.lump_return);
+        renderCalcOutputs('lump', invested, future - invested, future);
+        renderBreakdown('lump', lumpYearly(s.lump_amt, s.lump_years, s.lump_return));
+    }
+    function recalcStep(){
+        const s = calcState.step;
+        const {invested, future} = stepSipFV(s.step_monthly, s.step_pct, s.step_years, s.step_return);
+        renderCalcOutputs('step', invested, future - invested, future);
+        renderBreakdown('step', sipYearly(s.step_monthly, s.step_years, s.step_return, s.step_pct));
+    }
+    function recalcGoal(){
+        const s = calcState.goal;
+        const {monthly, invested, future} = goalSip(s.goal_target, s.goal_years, s.goal_return);
+        renderCalcOutputs('goal', invested, future - invested, future, calcFmt(monthly));
+        renderBreakdown('goal', goalYearly(monthly, s.goal_years, s.goal_return));
+    }
+    const recalcMap = {sip: recalcSip, lump: recalcLump, step: recalcStep, goal: recalcGoal};
+
+    // Wire sliders ↔ number inputs (sync both ways, live recalc)
+    function paneOf(key){
+        if (key.startsWith('sip_'))  return 'sip';
+        if (key.startsWith('lump_')) return 'lump';
+        if (key.startsWith('step_')) return 'step';
+        if (key.startsWith('goal_')) return 'goal';
+    }
+    function syncSlider(slider){
+        const key = slider.dataset.rng;
+        const min = +slider.min, max = +slider.max, val = +slider.value;
+        const pct = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--pct', pct + '%');
+    }
+    function setVal(key, val, source){
+        const pane = paneOf(key); if (!pane) return;
+        calcState[pane][key] = val;
+        const slider = document.querySelector(`[data-rng="${key}"]`);
+        const num = document.querySelector(`[data-num="${key}"]`);
+        if (slider && source !== 'rng'){
+            // Clamp to slider range for the thumb position but allow num input to exceed
+            const clamped = Math.max(+slider.min, Math.min(+slider.max, val));
+            slider.value = clamped; syncSlider(slider);
+        } else if (slider){ syncSlider(slider); }
+        if (num && source !== 'num') num.value = val;
+        recalcMap[pane]();
+    }
+
+    document.querySelectorAll('[data-rng]').forEach(s => {
+        s.addEventListener('input', e => setVal(s.dataset.rng, +e.target.value, 'rng'));
+    });
+    document.querySelectorAll('[data-num]').forEach(n => {
+        n.addEventListener('input', e => {
+            const v = +e.target.value; if (Number.isNaN(v)) return;
+            setVal(n.dataset.num, v, 'num');
+        });
+    });
+
+    // Sub-tabs
+    document.querySelectorAll('.calc-subtab').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('.calc-subtab').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+            document.querySelectorAll('.calc-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === b.dataset.pane));
+        });
+    });
+    document.querySelectorAll('[data-toggle-breakdown]').forEach(b => {
+        b.addEventListener('click', () => {
+            const w = document.querySelector(`[data-breakdown="${b.dataset.toggleBreakdown}"]`);
+            if (w) w.classList.toggle('open');
+        });
+    });
+    document.querySelectorAll('[data-invest]').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelector('.mf-tab[data-tab="discover"]').click();
+        });
+    });
+
+    // Initialise — set values & trigger first calc for every pane
+    Object.entries(calcState).forEach(([pane, vals]) => {
+        Object.entries(vals).forEach(([k, v]) => setVal(k, v, 'init'));
+    });
+
+    // ── AI ADVISOR ────────────────────────────────────────
+    async function fetchJSON(url, opts={}, timeoutMs=90000){
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        try {
+            const r = await fetch(url, {...opts, signal: ctrl.signal});
+            const text = await r.text();
+            let j; try { j = JSON.parse(text); }
+            catch { throw new Error(`Non-JSON response (HTTP ${r.status}): ${text.slice(0,160)}`); }
+            return {r, j};
+        } finally { clearTimeout(t); }
+    }
+
+    $('aiAnalyze').addEventListener('click', async () => {
+        const btn = $('aiAnalyze'); btn.disabled = true;
+        $('aiAnalyzeOut').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-primary"></div><div class="text-muted mt-2" style="font-size:.8rem">Analysing… this can take 10–30 s.</div></div>';
+        let r, j;
+        try { ({r, j} = await fetchJSON('/api/mutual-funds/ai/analyze', {method:'POST'})); }
+        catch (e) {
+            $('aiAnalyzeOut').innerHTML = `<div class="alert alert-danger">Request failed: ${e.message||e}. Check your network and try again.</div>`;
+            btn.disabled = false; return;
+        }
+        btn.disabled = false;
+        if (j.message && !j.analysis){
+            $('aiAnalyzeOut').innerHTML = `<div class="alert alert-info">${j.message}</div>`; return;
+        }
+        if (j.error){
+            if (r.status === 402){ $('aiAnalyzeOut').innerHTML = `<div class="alert alert-warning">${j.message||'Upgrade required.'} <a href="${j.upgrade_url||'/billing'}">View plans</a></div>`; }
+            else if (r.status === 401){ $('aiAnalyzeOut').innerHTML = `<div class="alert alert-warning">Please <a href="/login">sign in</a> to use the AI advisor.</div>`; }
+            else $('aiAnalyzeOut').innerHTML = `<div class="alert alert-danger">${j.detail||j.error}</div>`;
+            return;
+        }
+        const a = j.analysis || {};
+        const riskCls = a.risk_level === 'high' ? 'pill-high' : a.risk_level === 'low' ? 'pill-low' : 'pill-med';
+        $('aiAnalyzeOut').innerHTML = `<div class="ai-block">
+            <div class="d-flex justify-content-between flex-wrap">
+                <h5 class="mb-2">${a.summary||'Analysis'}</h5>
+                <div><span class="pill ${riskCls}">Risk: ${a.risk_level||'—'}</span> <span class="pill pill-neutral">Diversification: ${a.diversification_score ?? '—'}/10</span></div>
+            </div>
+            ${a.strengths?.length ? `<p><strong>Strengths:</strong> ${a.strengths.join('; ')}</p>` : ''}
+            ${(a.issues||[]).map(i => `<div class="ai-issue ${i.severity||'med'}"><strong>${i.title}</strong><div style="font-size:.82rem">${i.detail||''}</div></div>`).join('')}
+            ${a.suggestions?.length ? `<h6 class="mt-3">Suggestions</h6><ul style="font-size:.85rem">${a.suggestions.map(s => `<li><strong>${s.action?.toUpperCase()||''}</strong> – ${s.target}: ${s.rationale||''}</li>`).join('')}</ul>` : ''}
+            ${a.asset_mix_recommendation ? `<div class="mt-2" style="font-size:.82rem"><strong>Suggested mix:</strong> Equity ${a.asset_mix_recommendation.equity_pct}% · Debt ${a.asset_mix_recommendation.debt_pct}% · Gold ${a.asset_mix_recommendation.gold_pct}% · Intl ${a.asset_mix_recommendation.intl_pct}%</div>` : ''}
+        </div>`;
+    });
+    $('recGo').addEventListener('click', async () => {
+        const btn = $('recGo'); btn.disabled = true;
+        $('recOut').innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div>';
+        let r, j;
+        try { ({r, j} = await fetchJSON('/api/mutual-funds/ai/goal', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                goal: $('recGoal').value, years: +$('recYears').value,
+                monthly: +$('recMonthly').value, risk: $('recRisk').value
+            })
+        })); }
+        catch (e) {
+            $('recOut').innerHTML = `<div class="alert alert-danger">Request failed: ${e.message||e}</div>`;
+            btn.disabled = false; return;
+        }
+        btn.disabled = false;
+        if (j.error){
+            if (r.status === 402){ $('recOut').innerHTML = `<div class="alert alert-warning">${j.message||'Upgrade required.'} <a href="${j.upgrade_url||'/billing'}">View plans</a></div>`; }
+            else if (r.status === 401){ $('recOut').innerHTML = `<div class="alert alert-warning">Please <a href="/login">sign in</a> first.</div>`; }
+            else $('recOut').innerHTML = `<div class="alert alert-danger">${j.detail||j.error}</div>`;
+            return;
+        }
+        const a = j.recommendation || {};
+        $('recOut').innerHTML = `<div class="ai-block">
+            <p><strong>${a.verdict||''}</strong></p>
+            ${a.asset_mix ? `<div style="font-size:.82rem">Equity ${a.asset_mix.equity_pct}% · Debt ${a.asset_mix.debt_pct}% · Gold ${a.asset_mix.gold_pct}% · Intl ${a.asset_mix.intl_pct}%</div>` : ''}
+            ${(a.categories||[]).map(c => `<div class="ai-issue low"><strong>${c.category}</strong> – ${c.allocation_pct}%<div style="font-size:.8rem">${c.rationale||''}</div></div>`).join('')}
+            ${(a.warnings||[]).length ? `<p class="mt-2" style="font-size:.78rem;color:#b45309"><i class="fa-solid fa-triangle-exclamation me-1"></i>${a.warnings.join('; ')}</p>` : ''}
+        </div>`;
+    });
+
+    // ── ADD MF MODAL ─────────────────────────────────────
+    let pickedScheme = null;
+    bindSearch('addSearch', 'addResults', async (code, name) => {
+        pickedScheme = {code, name};
+        $('addPicked').textContent = 'Selected: ' + name + ' (' + code + ')';
+        // Auto-fill current NAV as a hint
+        const r = await fetch('/api/mutual-funds/nav/' + code);
+        const j = await r.json();
+        if (j.nav && !$('addNav').value) $('addNav').value = j.nav;
+    });
+    $('addDate').valueAsDate = new Date();
+    $('addSave').addEventListener('click', async () => {
+        if (!pickedScheme){ alert('Pick a scheme first.'); return; }
+        const body = {
+            scheme_code: pickedScheme.code,
+            units: +$('addUnits').value, nav_at_purchase: +$('addNav').value,
+            purchase_date: $('addDate').value, sip_monthly: +$('addSip').value,
+            folio_number: $('addFolio').value
+        };
+        const r = await fetch('/api/mutual-funds/holding', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+        const j = await r.json();
+        if (j.error){ alert(j.error + (j.detail ? (': ' + j.detail) : '')); return; }
+        bootstrap.Modal.getInstance(document.getElementById('addMfModal')).hide();
+        pickedScheme = null; $('addUnits').value=''; $('addNav').value=''; $('addSip').value='0'; $('addFolio').value=''; $('addPicked').textContent='';
+        loadPortfolio();
+    });
+
+    // Init
+    loadPortfolio();
+})();
+</script>
+{% endblock %}
