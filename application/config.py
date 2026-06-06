@@ -87,6 +87,16 @@ USER_ANALYTICS_TTL = int(os.getenv("USER_ANALYTICS_TTL", "60"))
 ENABLE_PRECOMPUTE = (os.getenv("ENABLE_PRECOMPUTE", "1") == "1")
 MARKET_REFRESH_SECONDS = int(os.getenv("MARKET_REFRESH_SECONDS", "10"))
 USER_REFRESH_SECONDS = int(os.getenv("USER_REFRESH_SECONDS", "30"))
+# How often the background job rebuilds the NIFTY option-chain snapshot
+# during market hours. Needed so OI deltas / gap-outlook keep accumulating
+# even when nobody has the options page open in a browser.
+OPTION_CHAIN_REFRESH_SECONDS = int(os.getenv("OPTION_CHAIN_REFRESH_SECONDS", "30"))
 # A user is considered "active" (worth refreshing) if they hit any
 # authenticated endpoint within this many seconds.
 USER_ACTIVE_WINDOW_SECONDS = int(os.getenv("USER_ACTIVE_WINDOW_SECONDS", "300"))
+
+# ── Payments (Razorpay) ───────────────────────────────────────────────
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+RAZORPAY_CURRENCY = os.getenv("RAZORPAY_CURRENCY", "INR")
