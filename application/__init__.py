@@ -10,6 +10,10 @@ from application.services.cache import cache, mark_active as _cache_mark_active
 if cache is not None:
     cache.init_app(app)
 
+# ── Performance middleware: gzip + Cache-Control/ETag + request timing ──
+from application.services import perf as _perf
+_perf.install(app)
+
 
 # Track active users so the background precomputer knows whom to refresh.
 @app.before_request
@@ -43,6 +47,7 @@ from application.routes.swing_tools_api import swing_tools_api
 from application.routes.investing_tools_api import investing_tools_api
 from application.routes.ai_tools_api import ai_tools_api
 from application.routes.mutual_funds_api import mutual_funds_api
+from application.routes.health_api import health_api
 
 app.register_blueprint(user_blueprint)
 app.register_blueprint(tender_api)
@@ -64,6 +69,7 @@ app.register_blueprint(swing_tools_api)
 app.register_blueprint(investing_tools_api)
 app.register_blueprint(ai_tools_api)
 app.register_blueprint(mutual_funds_api)
+app.register_blueprint(health_api)
 
 # Plain routes registered against the app
 from application.routes import route  # noqa: F401, E402
