@@ -1,0 +1,1056 @@
+{# Marketing landing page for unauthenticated visitors. Self-contained:
+   no app shell, no dashboard CSS. Uses Bootstrap 5 + Font Awesome + Inter
+   font already on the CDN. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PortfolioPro — AI-powered portfolio &amp; trading platform for India</title>
+    <meta name="description" content="Live multi-broker portfolio sync, options analytics, AI insights, RAG-powered filing search and pro-grade risk metrics — built for the Indian retail trader." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0a0e1f;
+            --bg-2: #0f1428;
+            --panel: #141a33;
+            --panel-2: #1a213e;
+            --border: rgba(148, 163, 184, .14);
+            --border-strong: rgba(148, 163, 184, .26);
+            --ink: #f1f5f9;
+            --muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-2: #4f46e5;
+            --accent: #a5b4fc;
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --pink: #ec4899;
+            --cyan: #06b6d4;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--ink); }
+        .container-x { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+        section { padding: 96px 0; position: relative; }
+        @media (max-width: 768px) { section { padding: 64px 0; } }
+
+        /* ── Navigation ─────────────────────────────────────────────── */
+        .pp-nav {
+            position: sticky; top: 0; z-index: 50;
+            backdrop-filter: blur(16px);
+            background: rgba(10, 14, 31, .72);
+            border-bottom: 1px solid var(--border);
+        }
+        .pp-nav-inner {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 0;
+        }
+        .pp-brand {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 800; font-size: 1.15rem; color: var(--ink);
+            letter-spacing: -.01em;
+        }
+        .pp-brand-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--pink));
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; box-shadow: 0 4px 16px rgba(99, 102, 241, .35);
+        }
+        .pp-brand-accent { color: var(--accent); }
+        .pp-nav-links { display: flex; align-items: center; gap: 28px; }
+        .pp-nav-links a {
+            font-size: .92rem; font-weight: 500; color: var(--muted);
+            transition: color .15s;
+        }
+        .pp-nav-links a:hover { color: var(--ink); }
+        .pp-nav-cta { display: flex; align-items: center; gap: 12px; }
+        @media (max-width: 880px) { .pp-nav-links { display: none; } }
+
+        /* ── Buttons ─────────────────────────────────────────────────── */
+        .pp-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 11px 22px; border-radius: 10px; font-weight: 600;
+            font-size: .92rem; transition: all .15s; cursor: pointer;
+            border: 1px solid transparent; text-decoration: none;
+            white-space: nowrap;
+        }
+        .pp-btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: #fff;
+            box-shadow: 0 6px 24px rgba(99, 102, 241, .35);
+        }
+        .pp-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, .5);
+            color: #fff;
+        }
+        .pp-btn-ghost {
+            background: transparent; color: var(--ink);
+            border-color: var(--border-strong);
+        }
+        .pp-btn-ghost:hover {
+            background: var(--panel); color: var(--ink);
+            border-color: var(--primary);
+        }
+        .pp-btn-lg { padding: 14px 28px; font-size: 1rem; }
+
+        /* ── Hero ────────────────────────────────────────────────────── */
+        .pp-hero {
+            position: relative; padding: 80px 0 60px;
+            overflow: hidden;
+        }
+        .pp-hero-bg {
+            position: absolute; inset: 0; pointer-events: none;
+            background:
+                radial-gradient(800px 400px at 20% 0%, rgba(99, 102, 241, .15), transparent 60%),
+                radial-gradient(700px 400px at 90% 30%, rgba(236, 72, 153, .10), transparent 65%),
+                radial-gradient(900px 500px at 50% 100%, rgba(6, 182, 212, .08), transparent 60%);
+        }
+        .pp-hero-grid::before {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(148,163,184,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, #000 40%, transparent 100%);
+        }
+        .pp-hero-inner { position: relative; text-align: center; }
+        .pp-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 14px; border-radius: 999px;
+            background: rgba(99, 102, 241, .12);
+            border: 1px solid rgba(99, 102, 241, .3);
+            font-size: .78rem; font-weight: 600; color: var(--accent);
+            margin-bottom: 22px;
+        }
+        .pp-eyebrow .dot {
+            width: 6px; height: 6px; background: var(--green);
+            border-radius: 50%; box-shadow: 0 0 8px var(--green);
+            animation: ppPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes ppPulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+        .pp-h1 {
+            font-size: clamp(2.2rem, 5.5vw, 4.4rem);
+            font-weight: 900; letter-spacing: -.035em; line-height: 1.05;
+            margin: 0 0 22px;
+        }
+        .pp-h1 .grad {
+            background: linear-gradient(135deg, #a5b4fc 0%, #f0abfc 50%, #67e8f9 100%);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .pp-hero-sub {
+            font-size: clamp(1rem, 1.4vw, 1.2rem); color: var(--muted);
+            max-width: 720px; margin: 0 auto 36px; line-height: 1.6;
+        }
+        .pp-hero-actions {
+            display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+        .pp-hero-trust {
+            display: flex; gap: 28px; justify-content: center; flex-wrap: wrap;
+            font-size: .82rem; color: var(--muted);
+        }
+        .pp-hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+        .pp-hero-trust i { color: var(--green); }
+
+        /* ── Hero dashboard mockup ───────────────────────────────────── */
+        .pp-hero-mockup {
+            margin-top: 72px; position: relative;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--panel), var(--panel-2));
+            border: 1px solid var(--border-strong);
+            box-shadow:
+                0 30px 80px rgba(0, 0, 0, .5),
+                0 0 0 1px rgba(99, 102, 241, .15),
+                0 0 60px rgba(99, 102, 241, .12);
+            overflow: hidden;
+        }
+        .pp-mockup-bar {
+            display: flex; align-items: center; gap: 6px;
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, .25);
+        }
+        .pp-mockup-bar .dot {
+            width: 11px; height: 11px; border-radius: 50%;
+        }
+        .pp-mockup-bar .dot.r { background: #ef4444; }
+        .pp-mockup-bar .dot.y { background: #f59e0b; }
+        .pp-mockup-bar .dot.g { background: #22c55e; }
+        .pp-mockup-bar .url {
+            margin-left: 16px; padding: 4px 14px; border-radius: 6px;
+            background: rgba(0, 0, 0, .35); font-size: .78rem; color: var(--muted);
+            font-family: 'SF Mono', Menlo, monospace;
+        }
+        .pp-mockup-body {
+            display: grid; grid-template-columns: 220px 1fr; min-height: 460px;
+        }
+        .pp-mockup-side {
+            border-right: 1px solid var(--border);
+            padding: 18px 14px; background: rgba(0, 0, 0, .18);
+        }
+        .pp-mockup-side .item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px; border-radius: 7px; font-size: .82rem;
+            color: var(--muted); margin-bottom: 3px;
+        }
+        .pp-mockup-side .item.active {
+            background: rgba(99, 102, 241, .15); color: var(--ink);
+        }
+        .pp-mockup-side .item i { width: 14px; text-align: center; }
+        .pp-mockup-side .label { font-size: .65rem; text-transform: uppercase;
+            letter-spacing: .08em; color: var(--muted); padding: 12px 10px 6px;
+            font-weight: 700; }
+        .pp-mockup-main { padding: 22px; }
+        .pp-mockup-kpis { display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin-bottom: 18px; }
+        .pp-mockup-kpi { background: rgba(0, 0, 0, .28); padding: 14px;
+            border-radius: 10px; border: 1px solid var(--border); }
+        .pp-mockup-kpi .lbl { font-size: .65rem; text-transform: uppercase;
+            color: var(--muted); font-weight: 700; letter-spacing: .05em; }
+        .pp-mockup-kpi .val { font-size: 1.4rem; font-weight: 800;
+            color: var(--ink); margin-top: 2px; }
+        .pp-mockup-kpi .chg { font-size: .78rem; font-weight: 600; margin-top: 4px; }
+        .pp-mockup-kpi .chg.up { color: var(--green); }
+        .pp-mockup-kpi .chg.dn { color: #f87171; }
+        .pp-mockup-chart {
+            height: 200px; background: rgba(0, 0, 0, .28);
+            border-radius: 10px; border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+        .pp-mockup-chart svg { width: 100%; height: 100%; display: block; }
+        @media (max-width: 768px) {
+            .pp-mockup-body { grid-template-columns: 1fr; }
+            .pp-mockup-side { display: none; }
+            .pp-mockup-kpis { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── Marquee / logos ─────────────────────────────────────────── */
+        .pp-logos {
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 36px 0; text-align: center; background: var(--bg-2);
+        }
+        .pp-logos-title {
+            font-size: .72rem; text-transform: uppercase; letter-spacing: .12em;
+            color: var(--muted); font-weight: 700; margin-bottom: 18px;
+        }
+        .pp-logos-row {
+            display: flex; gap: 50px; justify-content: center; flex-wrap: wrap;
+            align-items: center; opacity: .75;
+        }
+        .pp-logo {
+            font-size: 1.15rem; font-weight: 800; color: var(--muted);
+            letter-spacing: -.02em; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .pp-logo i { color: var(--accent); font-size: 1rem; }
+
+        /* ── Section heading ─────────────────────────────────────────── */
+        .pp-section-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
+        .pp-section-eb {
+            display: inline-block; padding: 4px 12px; border-radius: 999px;
+            background: rgba(99, 102, 241, .12); border: 1px solid rgba(99, 102, 241, .3);
+            font-size: .72rem; font-weight: 700; color: var(--accent);
+            text-transform: uppercase; letter-spacing: .08em; margin-bottom: 18px;
+        }
+        .pp-h2 {
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 800; letter-spacing: -.025em; line-height: 1.15;
+            margin: 0 0 16px;
+        }
+        .pp-h2 .grad {
+            background: linear-gradient(135deg, var(--accent), #f0abfc);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .pp-section-sub { font-size: 1.05rem; color: var(--muted); line-height: 1.6; }
+
+        /* ── Feature grid (bento) ────────────────────────────────────── */
+        .pp-bento {
+            display: grid; grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: 240px; gap: 18px;
+        }
+        .pp-bento-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; position: relative;
+            overflow: hidden; transition: transform .2s, border-color .2s;
+        }
+        .pp-bento-card:hover {
+            transform: translateY(-3px); border-color: var(--primary);
+        }
+        .pp-bento-card::before {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(circle at 90% 10%,
+                rgba(99, 102, 241, .15), transparent 50%);
+            pointer-events: none;
+        }
+        .pp-bento-card .icon {
+            width: 44px; height: 44px; border-radius: 11px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; margin-bottom: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--pink));
+            color: #fff;
+        }
+        .pp-bento-card .icon.alt { background: linear-gradient(135deg, var(--cyan), var(--primary)); }
+        .pp-bento-card .icon.alt2 { background: linear-gradient(135deg, var(--amber), var(--pink)); }
+        .pp-bento-card .icon.alt3 { background: linear-gradient(135deg, var(--green), var(--cyan)); }
+        .pp-bento-card h3 {
+            font-size: 1.18rem; font-weight: 700; margin: 0 0 8px; color: var(--ink);
+            letter-spacing: -.015em;
+        }
+        .pp-bento-card p { font-size: .9rem; color: var(--muted); line-height: 1.55; margin: 0; }
+        .pp-bento-card .badge-mini {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            background: rgba(34, 197, 94, .18); color: #4ade80;
+            font-size: .68rem; font-weight: 700; margin-left: 6px;
+            border: 1px solid rgba(34, 197, 94, .3);
+        }
+
+        /* Bento layouts */
+        .pp-bento-card.lg { grid-column: span 4; }
+        .pp-bento-card.md { grid-column: span 3; }
+        .pp-bento-card.sm { grid-column: span 2; }
+        @media (max-width: 992px) {
+            .pp-bento { grid-template-columns: repeat(2, 1fr); }
+            .pp-bento-card.lg, .pp-bento-card.md, .pp-bento-card.sm { grid-column: span 1; }
+            .pp-bento-card.lg { grid-column: span 2; }
+        }
+        @media (max-width: 600px) {
+            .pp-bento { grid-template-columns: 1fr; grid-auto-rows: auto; }
+            .pp-bento-card.lg { grid-column: span 1; }
+            .pp-bento-card { min-height: 200px; }
+        }
+
+        /* Decorative visual chips inside bento */
+        .pp-bento-visual {
+            position: absolute; right: -10px; bottom: -10px;
+            opacity: .25; font-size: 7rem; color: var(--primary);
+            pointer-events: none;
+        }
+        .pp-mini-chart {
+            margin-top: 16px; display: flex; align-items: flex-end;
+            gap: 4px; height: 60px;
+        }
+        .pp-mini-chart .bar {
+            flex: 1; background: linear-gradient(180deg, var(--primary), var(--primary-2));
+            border-radius: 3px; opacity: .8;
+        }
+
+        /* ── Stats strip ─────────────────────────────────────────────── */
+        .pp-stats {
+            background: linear-gradient(135deg, var(--panel), var(--panel-2));
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .pp-stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+            text-align: center;
+        }
+        @media (max-width: 768px) { .pp-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .pp-stat-num {
+            font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), #f0abfc);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -.03em;
+        }
+        .pp-stat-lbl { font-size: .88rem; color: var(--muted); margin-top: 4px; }
+
+        /* ── Workflow steps ──────────────────────────────────────────── */
+        .pp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        @media (max-width: 880px) { .pp-steps { grid-template-columns: 1fr; } }
+        .pp-step {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 14px; padding: 28px; position: relative;
+        }
+        .pp-step-num {
+            position: absolute; top: -16px; left: 24px;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--pink));
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 800; color: #fff; font-size: 1rem;
+            box-shadow: 0 6px 18px rgba(99, 102, 241, .4);
+        }
+        .pp-step h4 { font-size: 1.1rem; font-weight: 700; margin: 14px 0 8px; }
+        .pp-step p { color: var(--muted); margin: 0; font-size: .92rem; line-height: 1.55; }
+
+        /* ── Pricing ─────────────────────────────────────────────────── */
+        .pp-price-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
+            align-items: stretch;
+        }
+        @media (max-width: 992px) { .pp-price-grid { grid-template-columns: 1fr; } }
+        .pp-price-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 16px; padding: 32px; position: relative;
+            display: flex; flex-direction: column;
+        }
+        .pp-price-card.featured {
+            border-color: var(--primary);
+            background: linear-gradient(180deg, rgba(99, 102, 241, .12), var(--panel));
+            box-shadow: 0 20px 60px rgba(99, 102, 241, .15);
+            transform: scale(1.02);
+        }
+        .pp-price-card.featured::before {
+            content: "MOST POPULAR";
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--pink));
+            color: #fff; font-size: .68rem; font-weight: 800;
+            padding: 5px 14px; border-radius: 999px; letter-spacing: .08em;
+        }
+        .pp-price-name {
+            font-size: .82rem; text-transform: uppercase; font-weight: 700;
+            color: var(--accent); letter-spacing: .08em; margin-bottom: 8px;
+        }
+        .pp-price-amount { font-size: 2.5rem; font-weight: 900; color: var(--ink);
+            letter-spacing: -.03em; }
+        .pp-price-amount small { font-size: 1rem; font-weight: 500;
+            color: var(--muted); margin-left: 4px; }
+        .pp-price-period { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+        .pp-price-desc { font-size: .9rem; color: var(--muted); margin: 14px 0 22px;
+            line-height: 1.5; }
+        .pp-price-features { list-style: none; padding: 0; margin: 0 0 26px;
+            flex: 1; }
+        .pp-price-features li {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 7px 0; font-size: .9rem; color: var(--ink);
+        }
+        .pp-price-features i { color: var(--green); margin-top: 4px; flex-shrink: 0; }
+        .pp-price-features li.muted { color: var(--muted); }
+        .pp-price-features li.muted i { color: var(--muted); opacity: .5; }
+
+        /* ── Testimonials ────────────────────────────────────────────── */
+        .pp-test-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+        }
+        @media (max-width: 880px) { .pp-test-grid { grid-template-columns: 1fr; } }
+        .pp-test-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 14px; padding: 24px;
+        }
+        .pp-test-stars { color: var(--amber); font-size: .85rem; margin-bottom: 12px; }
+        .pp-test-quote {
+            font-size: .98rem; line-height: 1.6; color: var(--ink); margin-bottom: 18px;
+        }
+        .pp-test-author {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .pp-test-avatar {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--pink));
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 1rem;
+        }
+        .pp-test-author .name { font-weight: 700; font-size: .9rem; color: var(--ink); }
+        .pp-test-author .title { font-size: .78rem; color: var(--muted); }
+
+        /* ── FAQ ─────────────────────────────────────────────────────── */
+        .pp-faq { max-width: 800px; margin: 0 auto; }
+        .pp-faq-item {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 12px; margin-bottom: 12px; overflow: hidden;
+        }
+        .pp-faq-q {
+            padding: 18px 22px; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 600; color: var(--ink); font-size: .98rem;
+            user-select: none;
+        }
+        .pp-faq-q i { color: var(--accent); transition: transform .2s; }
+        .pp-faq-item.open .pp-faq-q i { transform: rotate(180deg); }
+        .pp-faq-a {
+            max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s;
+            padding: 0 22px; color: var(--muted); font-size: .92rem; line-height: 1.6;
+        }
+        .pp-faq-item.open .pp-faq-a { max-height: 300px; padding: 0 22px 18px; }
+
+        /* ── Final CTA ───────────────────────────────────────────────── */
+        .pp-cta {
+            background:
+                radial-gradient(600px 300px at 50% 0%, rgba(99, 102, 241, .25), transparent 60%),
+                linear-gradient(180deg, var(--panel), var(--bg));
+            text-align: center; padding: 100px 0;
+            border-top: 1px solid var(--border);
+        }
+        .pp-cta-h { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 900;
+            letter-spacing: -.03em; margin-bottom: 18px; line-height: 1.1; }
+        .pp-cta-sub { font-size: 1.1rem; color: var(--muted); margin-bottom: 32px;
+            max-width: 620px; margin-left: auto; margin-right: auto; }
+
+        /* ── Footer ──────────────────────────────────────────────────── */
+        footer {
+            background: var(--bg-2); border-top: 1px solid var(--border);
+            padding: 56px 0 32px;
+        }
+        .pp-foot-grid {
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 36px;
+            margin-bottom: 36px;
+        }
+        @media (max-width: 768px) { .pp-foot-grid { grid-template-columns: 1fr 1fr; } }
+        .pp-foot-grid h5 { font-size: .8rem; text-transform: uppercase;
+            color: var(--accent); letter-spacing: .08em; font-weight: 700;
+            margin-bottom: 14px; }
+        .pp-foot-grid a { display: block; color: var(--muted); padding: 5px 0;
+            font-size: .88rem; }
+        .pp-foot-grid a:hover { color: var(--ink); }
+        .pp-foot-bottom {
+            border-top: 1px solid var(--border); padding-top: 24px;
+            display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            font-size: .82rem; color: var(--muted);
+        }
+        .pp-disclaimer {
+            background: rgba(245, 158, 11, .08);
+            border: 1px solid rgba(245, 158, 11, .25);
+            border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;
+            font-size: .78rem; color: var(--muted); line-height: 1.55;
+        }
+        .pp-disclaimer strong { color: var(--amber); }
+
+        /* Animations on scroll */
+        .reveal { opacity: 0; transform: translateY(20px); transition: all .6s ease; }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────────── -->
+<nav class="pp-nav">
+    <div class="container-x pp-nav-inner">
+        <a href="#" class="pp-brand">
+            <span class="pp-brand-icon"><i class="fa-solid fa-chart-line"></i></span>
+            Portfolio<span class="pp-brand-accent">Pro</span>
+        </a>
+        <div class="pp-nav-links">
+            <a href="#features">Features</a>
+            <a href="#workflow">How it works</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#testimonials">Reviews</a>
+            <a href="#faq">FAQ</a>
+        </div>
+        <div class="pp-nav-cta">
+            <a href="{{ url_for('logIn') }}" class="pp-btn pp-btn-ghost">Log in</a>
+            <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-primary">
+                Start free <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────────────── -->
+<section class="pp-hero pp-hero-grid">
+    <div class="pp-hero-bg"></div>
+    <div class="container-x pp-hero-inner">
+        <div class="pp-eyebrow">
+            <span class="dot"></span>
+            <span>Live • Built for the Indian market • 18+ pro tools</span>
+        </div>
+        <h1 class="pp-h1">
+            The <span class="grad">AI-native</span> portfolio platform<br/>
+            built for Indian traders.
+        </h1>
+        <p class="pp-hero-sub">
+            Sync your brokers, scan NIFTY options, run Sharpe / VaR / drawdown on your real portfolio,
+            and let an AI analyst walk you through every position — all in one workspace.
+        </p>
+        <div class="pp-hero-actions">
+            <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-primary pp-btn-lg">
+                Start free — no card required <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            <a href="#features" class="pp-btn pp-btn-ghost pp-btn-lg">
+                <i class="fa-solid fa-play"></i> See the tour
+            </a>
+        </div>
+        <div class="pp-hero-trust">
+            <span><i class="fa-solid fa-shield-halved"></i> Read-only broker access</span>
+            <span><i class="fa-solid fa-check"></i> Fyers + Dhan integrated</span>
+            <span><i class="fa-solid fa-check"></i> 15-day Pro trial</span>
+            <span><i class="fa-solid fa-check"></i> Cancel anytime</span>
+        </div>
+
+        <!-- Dashboard mockup -->
+        <div class="pp-hero-mockup">
+            <div class="pp-mockup-bar">
+                <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+                <span class="url">app.portfoliopro.in/dashboard</span>
+            </div>
+            <div class="pp-mockup-body">
+                <div class="pp-mockup-side">
+                    <div class="label">Workspace</div>
+                    <div class="item active"><i class="fa-solid fa-house"></i> Dashboard</div>
+                    <div class="item"><i class="fa-solid fa-magnifying-glass-chart"></i> Portfolio</div>
+                    <div class="item"><i class="fa-solid fa-chart-line"></i> Advanced</div>
+                    <div class="label">Trading</div>
+                    <div class="item"><i class="fa-solid fa-bolt"></i> Intraday Tools</div>
+                    <div class="item"><i class="fa-solid fa-rocket"></i> Swing Tools</div>
+                    <div class="item"><i class="fa-solid fa-link"></i> Options Analytics</div>
+                    <div class="label">AI</div>
+                    <div class="item"><i class="fa-solid fa-robot"></i> AI Assistant</div>
+                </div>
+                <div class="pp-mockup-main">
+                    <div class="pp-mockup-kpis">
+                        <div class="pp-mockup-kpi">
+                            <div class="lbl">Portfolio Value</div>
+                            <div class="val">₹14,82,360</div>
+                            <div class="chg up"><i class="fa-solid fa-arrow-up"></i> +2.14% today</div>
+                        </div>
+                        <div class="pp-mockup-kpi">
+                            <div class="lbl">Day P&amp;L</div>
+                            <div class="val" style="color:#4ade80">+₹31,022</div>
+                            <div class="chg up">12 winners · 4 losers</div>
+                        </div>
+                        <div class="pp-mockup-kpi">
+                            <div class="lbl">Sharpe (1Y)</div>
+                            <div class="val">1.84</div>
+                            <div class="chg up">vs NIFTY 0.92</div>
+                        </div>
+                        <div class="pp-mockup-kpi">
+                            <div class="lbl">AI Score</div>
+                            <div class="val" style="color:#a5b4fc">A−</div>
+                            <div class="chg">2 rebalance ideas</div>
+                        </div>
+                    </div>
+                    <div class="pp-mockup-chart">
+                        <svg viewBox="0 0 600 200" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="ppCG" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#6366f1" stop-opacity=".5"/>
+                                    <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M0,160 C60,140 100,130 150,110 C200,90 230,135 280,120 C330,105 360,75 410,65 C460,55 490,80 540,50 C570,32 590,40 600,30 L600,200 L0,200 Z"
+                                  fill="url(#ppCG)" />
+                            <path d="M0,160 C60,140 100,130 150,110 C200,90 230,135 280,120 C330,105 360,75 410,65 C460,55 490,80 540,50 C570,32 590,40 600,30"
+                                  fill="none" stroke="#a5b4fc" stroke-width="2.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Logo strip / social proof ─────────────────────────────────── -->
+<div class="pp-logos">
+    <div class="container-x">
+        <div class="pp-logos-title">Built on top of the broker APIs you already trust</div>
+        <div class="pp-logos-row">
+            <span class="pp-logo"><i class="fa-solid fa-bolt"></i> Fyers API v3</span>
+            <span class="pp-logo"><i class="fa-solid fa-chart-simple"></i> DhanHQ</span>
+            <span class="pp-logo"><i class="fa-brands fa-yahoo"></i> Yahoo Finance</span>
+            <span class="pp-logo"><i class="fa-solid fa-building-columns"></i> NSE India</span>
+            <span class="pp-logo"><i class="fa-solid fa-piggy-bank"></i> AMFI</span>
+            <span class="pp-logo"><i class="fa-solid fa-microchip"></i> Azure OpenAI</span>
+        </div>
+    </div>
+</div>
+
+<!-- ── Stats strip ───────────────────────────────────────────────── -->
+<section class="pp-stats" style="padding: 56px 0;">
+    <div class="container-x">
+        <div class="pp-stats-grid">
+            <div><div class="pp-stat-num">18+</div><div class="pp-stat-lbl">Pro toolkits</div></div>
+            <div><div class="pp-stat-num">15s</div><div class="pp-stat-lbl">Live quote refresh</div></div>
+            <div><div class="pp-stat-num">5,000+</div><div class="pp-stat-lbl">NSE stocks &amp; MFs</div></div>
+            <div><div class="pp-stat-num">₹0</div><div class="pp-stat-lbl">To get started</div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Features bento ────────────────────────────────────────────── -->
+<section id="features">
+    <div class="container-x">
+        <div class="pp-section-head">
+            <span class="pp-section-eb">What you get</span>
+            <h2 class="pp-h2">Everything you'd build yourself,<br/><span class="grad">if you had a team of 12.</span></h2>
+            <p class="pp-section-sub">
+                Portfolio sync, AI insights, options analytics, swing scanners, mutual-fund advice,
+                and pro-grade risk metrics — one workspace, one subscription.
+            </p>
+        </div>
+
+        <div class="pp-bento">
+            <!-- Row 1 -->
+            <div class="pp-bento-card lg">
+                <div class="icon"><i class="fa-solid fa-brain"></i></div>
+                <h3>AI Assistant — knows your portfolio</h3>
+                <p>Ask "Should I trim TCS?" and get a real answer grounded in your holdings, current valuations,
+                   recent NSE filings, and live news. Bulk-analyse all positions in one click.</p>
+                <div class="pp-mini-chart">
+                    <div class="bar" style="height:35%"></div><div class="bar" style="height:55%"></div>
+                    <div class="bar" style="height:70%"></div><div class="bar" style="height:48%"></div>
+                    <div class="bar" style="height:82%"></div><div class="bar" style="height:65%"></div>
+                    <div class="bar" style="height:90%"></div><div class="bar" style="height:75%"></div>
+                    <div class="bar" style="height:60%"></div><div class="bar" style="height:88%"></div>
+                </div>
+            </div>
+            <div class="pp-bento-card sm">
+                <div class="icon alt"><i class="fa-solid fa-plug"></i></div>
+                <h3>Multi-broker sync</h3>
+                <p>Fyers + Dhan + manual — all your positions, one dashboard.</p>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="pp-bento-card md">
+                <div class="icon alt2"><i class="fa-solid fa-link"></i></div>
+                <h3>Options analytics <span class="badge-mini">NEW</span></h3>
+                <p>NIFTY option chain, OI flow sentiment, gap-up/gap-down forecast for tomorrow's open —
+                   with a track record of past predictions vs actual.</p>
+            </div>
+            <div class="pp-bento-card md">
+                <div class="icon alt3"><i class="fa-solid fa-bolt"></i></div>
+                <h3>Intraday + Swing scanners</h3>
+                <p>ORB breakouts, RVOL heatmap, gappers, 50-day breakouts, relative strength rankings,
+                   chart pattern detection — pick your edge.</p>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="pp-bento-card sm">
+                <div class="icon"><i class="fa-solid fa-chart-pie"></i></div>
+                <h3>Pro risk metrics</h3>
+                <p>Sharpe, Sortino, VaR, drawdown, beta — on your real portfolio.</p>
+            </div>
+            <div class="pp-bento-card md">
+                <div class="icon alt"><i class="fa-solid fa-piggy-bank"></i></div>
+                <h3>Mutual Fund advisor</h3>
+                <p>Spot stock-overlap between MFs, compare expense ratios, plan SIPs for goals,
+                   and let AI flag underperformers.</p>
+            </div>
+            <div class="pp-bento-card md">
+                <div class="icon alt3"><i class="fa-solid fa-table-cells-large"></i></div>
+                <h3>Sector heatmap &amp; market pulse</h3>
+                <p>NIFTY 50 + Bank NIFTY live performance, breadth, top movers,
+                   FII/DII flows — the macro tape at a glance.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Workflow ──────────────────────────────────────────────────── -->
+<section id="workflow" style="background: var(--bg-2);">
+    <div class="container-x">
+        <div class="pp-section-head">
+            <span class="pp-section-eb">How it works</span>
+            <h2 class="pp-h2">From signup to insight in <span class="grad">under 60 seconds.</span></h2>
+        </div>
+        <div class="pp-steps">
+            <div class="pp-step">
+                <span class="pp-step-num">1</span>
+                <h4>Connect your broker</h4>
+                <p>Read-only Fyers or Dhan token in two clicks. We never get order-placement access,
+                   so there's nothing to misuse. Prefer manual? Paste a CSV.</p>
+            </div>
+            <div class="pp-step">
+                <span class="pp-step-num">2</span>
+                <h4>Get your AI snapshot</h4>
+                <p>Within seconds, your portfolio is scored: concentration risk, sector skew,
+                   over/undervalued holdings, plus a ranked list of rebalance ideas.</p>
+            </div>
+            <div class="pp-step">
+                <span class="pp-step-num">3</span>
+                <h4>Trade with edge, daily</h4>
+                <p>Open the option chain at 14:30 for tomorrow's gap forecast.
+                   Run the swing scanner before the close. Ask AI anything, any time.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Pricing ───────────────────────────────────────────────────── -->
+<section id="pricing">
+    <div class="container-x">
+        <div class="pp-section-head">
+            <span class="pp-section-eb">Pricing</span>
+            <h2 class="pp-h2">Simple. Transparent. <span class="grad">Built for India.</span></h2>
+            <p class="pp-section-sub">Start free. Upgrade when your portfolio outgrows the limits. Cancel any time.</p>
+        </div>
+
+        <div class="pp-price-grid">
+            <!-- Basic -->
+            <div class="pp-price-card">
+                <div class="pp-price-name">Basic</div>
+                <div class="pp-price-amount">₹0<small>/forever</small></div>
+                <div class="pp-price-period">No card required</div>
+                <p class="pp-price-desc">For curious investors who want a real taste of the platform.</p>
+                <ul class="pp-price-features">
+                    <li><i class="fa-solid fa-check"></i> Track up to 15 holdings</li>
+                    <li><i class="fa-solid fa-check"></i> 1 broker connection</li>
+                    <li><i class="fa-solid fa-check"></i> 5 AI stock analyses / month</li>
+                    <li><i class="fa-solid fa-check"></i> Sector heatmap + dashboard</li>
+                    <li><i class="fa-solid fa-check"></i> 3 price alerts</li>
+                    <li class="muted"><i class="fa-solid fa-xmark"></i> No options analytics</li>
+                    <li class="muted"><i class="fa-solid fa-xmark"></i> No advanced risk metrics</li>
+                </ul>
+                <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-ghost" style="justify-content:center">Get started</a>
+            </div>
+
+            <!-- Pro -->
+            <div class="pp-price-card featured">
+                <div class="pp-price-name">Pro</div>
+                <div class="pp-price-amount">₹499<small>/month</small></div>
+                <div class="pp-price-period">or ₹3,999/yr (₹333/mo, save 33%)</div>
+                <p class="pp-price-desc">Everything an active retail trader needs. Most popular.</p>
+                <ul class="pp-price-features">
+                    <li><i class="fa-solid fa-check"></i> <strong>Unlimited holdings</strong></li>
+                    <li><i class="fa-solid fa-check"></i> 3 brokers connected</li>
+                    <li><i class="fa-solid fa-check"></i> 150 AI analyses + 15 bulk / month</li>
+                    <li><i class="fa-solid fa-check"></i> Full options analytics + gap history</li>
+                    <li><i class="fa-solid fa-check"></i> All 12+ swing &amp; intraday scanners</li>
+                    <li><i class="fa-solid fa-check"></i> Sharpe / Sortino / VaR / drawdown</li>
+                    <li><i class="fa-solid fa-check"></i> 50 alerts incl. email + technical</li>
+                    <li><i class="fa-solid fa-check"></i> Annual tax / P&amp;L export</li>
+                </ul>
+                <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-primary" style="justify-content:center">
+                    Start 15-day Pro trial
+                </a>
+            </div>
+
+            <!-- Pro Max -->
+            <div class="pp-price-card">
+                <div class="pp-price-name">Pro Max</div>
+                <div class="pp-price-amount">₹1,499<small>/month</small></div>
+                <div class="pp-price-period">or ₹11,999/yr (₹999/mo, save 33%)</div>
+                <p class="pp-price-desc">For serious traders, advisors, and family offices.</p>
+                <ul class="pp-price-features">
+                    <li><i class="fa-solid fa-check"></i> <strong>Everything in Pro, plus:</strong></li>
+                    <li><i class="fa-solid fa-check"></i> Unlimited brokers</li>
+                    <li><i class="fa-solid fa-check"></i> 750 AI + 75 bulk / month</li>
+                    <li><i class="fa-solid fa-check"></i> Custom alerts + WhatsApp + webhooks</li>
+                    <li><i class="fa-solid fa-check"></i> AI rebalancing &amp; goal planner</li>
+                    <li><i class="fa-solid fa-check"></i> Quarterly tax reports (CSV/Excel)</li>
+                    <li><i class="fa-solid fa-check"></i> Read-only API access</li>
+                    <li><i class="fa-solid fa-check"></i> Priority support + onboarding call</li>
+                </ul>
+                <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-ghost" style="justify-content:center">Get Pro Max</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Testimonials ──────────────────────────────────────────────── -->
+<section id="testimonials" style="background: var(--bg-2);">
+    <div class="container-x">
+        <div class="pp-section-head">
+            <span class="pp-section-eb">Loved by traders</span>
+            <h2 class="pp-h2">Don't take our word for it.</h2>
+        </div>
+        <div class="pp-test-grid">
+            <div class="pp-test-card">
+                <div class="pp-test-stars">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                </div>
+                <div class="pp-test-quote">
+                    "The gap-forecast track record is the only honest signal tool I've seen in India.
+                    No vibes — actual hit-rate published next to the prediction. Made me an instant believer."
+                </div>
+                <div class="pp-test-author">
+                    <span class="pp-test-avatar">RK</span>
+                    <div>
+                        <div class="name">Rohit K.</div>
+                        <div class="title">Full-time options trader, Mumbai</div>
+                    </div>
+                </div>
+            </div>
+            <div class="pp-test-card">
+                <div class="pp-test-stars">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                </div>
+                <div class="pp-test-quote">
+                    "Replaced three subscriptions for me — StockEdge, Sensibull, and a scrappy MF tracker.
+                    The AI bulk-analyse on my portfolio caught a sector concentration I'd been ignoring for months."
+                </div>
+                <div class="pp-test-author">
+                    <span class="pp-test-avatar">SV</span>
+                    <div>
+                        <div class="name">Sneha V.</div>
+                        <div class="title">SEBI RIA, Bangalore</div>
+                    </div>
+                </div>
+            </div>
+            <div class="pp-test-card">
+                <div class="pp-test-stars">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                </div>
+                <div class="pp-test-quote">
+                    "Sharpe and drawdown on my actual portfolio — not some demo. The advanced metrics page is
+                    what made me upgrade to Pro. Finally I know if my returns are luck or skill."
+                </div>
+                <div class="pp-test-author">
+                    <span class="pp-test-avatar">AM</span>
+                    <div>
+                        <div class="name">Arjun M.</div>
+                        <div class="title">Swing trader, Pune</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── FAQ ───────────────────────────────────────────────────────── -->
+<section id="faq">
+    <div class="container-x">
+        <div class="pp-section-head">
+            <span class="pp-section-eb">FAQ</span>
+            <h2 class="pp-h2">Questions, answered.</h2>
+        </div>
+        <div class="pp-faq">
+            <div class="pp-faq-item open">
+                <div class="pp-faq-q">Is my broker data safe?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Yes. We use <strong>read-only</strong> scopes on Fyers and Dhan — we can fetch your holdings and quotes,
+                    but cannot place, modify, or cancel orders. Tokens are encrypted at rest and you can revoke access
+                    from your broker dashboard at any time.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">Do I need to be an experienced trader?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Not at all. The dashboard and AI assistant work whether you have one mutual fund or 200 holdings.
+                    Advanced tools (options, swing scanners, VaR) are there when you're ready — but never in the way.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">Is PortfolioPro SEBI-registered? Do you give buy/sell calls?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    PortfolioPro is an <strong>analytics platform</strong>, not a SEBI-registered investment advisor.
+                    Our AI explanations, screeners, and signals are educational and for informational use only.
+                    Always do your own research or consult a SEBI-registered advisor before trading.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">What happens after my 15-day Pro trial?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    You'll automatically drop to the free Basic plan — your data stays, but Pro features lock.
+                    Upgrade any time. We don't ask for a card upfront, so there's no surprise billing.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">Can I pay monthly via UPI?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Yes — UPI AutoPay, RazorPay subscriptions, and major Indian credit/debit cards are all supported.
+                    Annual plans get a 33% discount.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">Do you support BSE, MCX, or US stocks?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Today we're focused on NSE cash + F&amp;O and AMFI mutual funds — the universe most Indian retail
+                    investors actually use. BSE, MCX commodities, and US equities are on the 2026 roadmap.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Final CTA ─────────────────────────────────────────────────── -->
+<section class="pp-cta">
+    <div class="container-x">
+        <h2 class="pp-cta-h">Give your portfolio an <span style="color:var(--accent)">unfair advantage.</span></h2>
+        <p class="pp-cta-sub">
+            15-day Pro trial. No card required. Cancel any time.
+            Join the traders treating their portfolio like a professional fund.
+        </p>
+        <div class="pp-hero-actions" style="margin-bottom:0;">
+            <a href="{{ url_for('signup') }}" class="pp-btn pp-btn-primary pp-btn-lg">
+                Start free <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            <a href="{{ url_for('logIn') }}" class="pp-btn pp-btn-ghost pp-btn-lg">
+                I already have an account
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────── -->
+<footer>
+    <div class="container-x">
+        <div class="pp-disclaimer">
+            <strong>Disclaimer:</strong> PortfolioPro is an analytics and education platform. It is not a SEBI-registered
+            investment advisor and does not provide buy / sell recommendations. Past performance is not indicative of future
+            results. Trading in equities, derivatives, and mutual funds involves risk of loss. Please consult a SEBI-registered
+            advisor before making investment decisions.
+        </div>
+        <div class="pp-foot-grid">
+            <div>
+                <div class="pp-brand" style="margin-bottom:12px;">
+                    <span class="pp-brand-icon"><i class="fa-solid fa-chart-line"></i></span>
+                    Portfolio<span class="pp-brand-accent">Pro</span>
+                </div>
+                <p style="color:var(--muted); font-size:.88rem; max-width:340px; line-height:1.55;">
+                    The AI-native portfolio &amp; trading platform built for Indian retail investors.
+                </p>
+            </div>
+            <div>
+                <h5>Product</h5>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#workflow">How it works</a>
+                <a href="#faq">FAQ</a>
+            </div>
+            <div>
+                <h5>Company</h5>
+                <a href="#">About</a>
+                <a href="#">Blog</a>
+                <a href="#">Careers</a>
+                <a href="#">Contact</a>
+            </div>
+            <div>
+                <h5>Legal</h5>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Disclaimer</a>
+                <a href="#">Refund Policy</a>
+            </div>
+        </div>
+        <div class="pp-foot-bottom">
+            <div>© 2026 PortfolioPro. All rights reserved.</div>
+            <div>Made with <i class="fa-solid fa-heart" style="color:var(--pink)"></i> in India</div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // FAQ accordion
+    document.querySelectorAll('.pp-faq-q').forEach(q => {
+        q.addEventListener('click', () => {
+            const item = q.closest('.pp-faq-item');
+            item.classList.toggle('open');
+        });
+    });
+
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.pp-bento-card, .pp-step, .pp-price-card, .pp-test-card')
+        .forEach(el => { el.classList.add('reveal'); io.observe(el); });
+
+    // Smooth scroll for nav anchors
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            const id = a.getAttribute('href');
+            if (id.length > 1) {
+                const tgt = document.querySelector(id);
+                if (tgt) { e.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            }
+        });
+    });
+</script>
+</body>
+</html>

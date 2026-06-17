@@ -1,0 +1,1072 @@
+{% extends "layout.html" %}
+{% block content %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.oc-page{display:flex;flex-direction:column;gap:14px}
+.oc-header{margin-bottom:4px}
+.oc-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+.oc-meta{display:flex;flex-wrap:wrap;gap:18px;font-size:.8rem;color:var(--text-muted)}
+.oc-meta strong{color:var(--text);font-weight:700}
+
+.oc-indicator{border:1px solid var(--border);border-radius:10px;padding:14px 18px;background:var(--surface);display:flex;flex-direction:column;gap:6px;border-left:5px solid var(--border)}
+.oc-indicator.bullish{border-left-color:#16a34a;background:linear-gradient(135deg,rgba(22,163,74,.06),transparent)}
+.oc-indicator.bearish{border-left-color:#dc2626;background:linear-gradient(135deg,rgba(220,38,38,.06),transparent)}
+.oc-indicator.neutral{border-left-color:#f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.05),transparent)}
+.oc-indicator-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.oc-badge{padding:5px 16px;border-radius:999px;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.oc-badge.bullish{background:#16a34a;color:#fff}
+.oc-badge.bearish{background:#dc2626;color:#fff}
+.oc-badge.neutral{background:#f59e0b;color:#fff}
+.oc-score-bar{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,#16a34a,#94a3b8 50%,#dc2626);margin:6px 0 2px}
+.oc-score-pin{position:absolute;top:-3px;width:4px;height:14px;background:#0f172a;border-radius:2px}
+[data-theme="dark"] .oc-score-pin{background:#f8fafc}
+.oc-score-labels{display:flex;justify-content:space-between;font-size:.65rem;color:var(--text-muted);font-weight:600}
+
+.oc-reasons{margin:0;padding-left:18px;font-size:.78rem;color:var(--text-muted)}
+.oc-reasons li{margin-bottom:2px}
+
+.oc-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.oc-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.oc-card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:var(--text-muted)}
+.oc-card-value{font-size:1.05rem;font-weight:800;margin-top:4px;color:var(--text)}
+.oc-card-sub{font-size:.7rem;color:var(--text-muted);margin-top:2px}
+
+.oc-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:auto}
+.oc-table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:760px}
+.oc-table th,.oc-table td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+.oc-table thead th{position:sticky;top:0;background:var(--surface-2);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;z-index:1}
+.oc-table td.strike{text-align:center;font-weight:800;background:var(--surface-2);color:var(--text)}
+.oc-table td.itm{background:rgba(59,130,246,.06)}
+.oc-table tr.atm td{background:rgba(245,158,11,.12);font-weight:700}
+.oc-table tr.atm td.strike{background:rgba(245,158,11,.25)}
+.oc-pos{color:#16a34a;font-weight:600}
+.oc-neg{color:#dc2626;font-weight:600}
+.oc-zero{color:var(--text-muted)}
+[data-theme="dark"] .oc-table td.itm{background:rgba(59,130,246,.1)}
+[data-theme="dark"] .oc-pos{color:#4ade80}
+[data-theme="dark"] .oc-neg{color:#f87171}
+
+.oc-loading{padding:40px;text-align:center;color:var(--text-muted)}
+.oc-error{padding:18px;border:1px solid #dc2626;border-radius:8px;background:rgba(220,38,38,.05);color:#b91c1c}
+.oc-disclaimer{font-size:.7rem;color:var(--text-muted);opacity:.8;margin-top:4px}
+
+.oc-buildup-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.oc-buildup-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.oc-buildup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.oc-buildup-grid{grid-template-columns:1fr}}
+.oc-buildup-col h5{font-size:.85rem;margin:0 0 6px;font-weight:800}
+.oc-buildup-col h5.ce{color:#16a34a}
+.oc-buildup-col h5.pe{color:#dc2626}
+.oc-buildup-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;font-size:.78rem}
+.oc-buildup-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;border-radius:5px;background:var(--surface-2)}
+.oc-buildup-list li .name{font-weight:600;color:var(--text)}
+.oc-buildup-list li .count{font-weight:800;font-size:.72rem;padding:1px 7px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.oc-buildup-list li.bull{border-left:3px solid #16a34a}
+.oc-buildup-list li.bear{border-left:3px solid #dc2626}
+.oc-buildup-list li.weak-bull{border-left:3px solid #86efac}
+.oc-buildup-list li.weak-bear{border-left:3px solid #fca5a5}
+
+.oc-gap-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:grid;grid-template-columns:1fr 2fr;gap:18px;align-items:center}
+@media (max-width:720px){.oc-gap-panel{grid-template-columns:1fr}}
+.oc-gap-panel.up{border-left:4px solid #16a34a}
+.oc-gap-panel.down{border-left:4px solid #dc2626}
+.oc-gap-panel.flat,.oc-gap-panel.too_early{border-left:4px solid var(--border)}
+.oc-gap-label{font-size:1.4rem;font-weight:900;letter-spacing:.02em}
+.oc-gap-label.up{color:#16a34a}
+.oc-gap-label.down{color:#dc2626}
+.oc-gap-label.flat,.oc-gap-label.too_early{color:var(--text-muted)}
+.oc-gap-meta{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:4px}
+.oc-gap-summary{font-size:.88rem;color:var(--text);line-height:1.4}
+.oc-gap-bar{position:relative;height:8px;border-radius:4px;background:linear-gradient(to right,rgba(220,38,38,.25),rgba(148,163,184,.2),rgba(22,163,74,.25));margin:10px 0 4px}
+.oc-gap-pin{position:absolute;top:-3px;width:4px;height:14px;background:var(--text);border-radius:2px;transform:translateX(-50%);transition:left .4s ease}
+.oc-gap-confidence{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--text-muted);margin-left:8px}
+.oc-gap-stats{display:flex;gap:14px;font-size:.72rem;color:var(--text-muted);margin-top:6px;flex-wrap:wrap}
+.oc-gap-stats strong{color:var(--text);font-variant-numeric:tabular-nums}
+
+.oc-bchip{display:inline-block;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:2px;letter-spacing:.02em;white-space:nowrap}
+.oc-bchip.bull{background:rgba(22,163,74,.15);color:#15803d}
+.oc-bchip.bear{background:rgba(220,38,38,.15);color:#b91c1c}
+.oc-bchip.weak-bull{background:rgba(22,163,74,.08);color:#15803d}
+.oc-bchip.weak-bear{background:rgba(220,38,38,.08);color:#b91c1c}
+[data-theme="dark"] .oc-bchip.bull{background:rgba(22,163,74,.25);color:#4ade80}
+[data-theme="dark"] .oc-bchip.bear{background:rgba(220,38,38,.25);color:#f87171}
+.oc-table td.ce-cell, .oc-table td.pe-cell{position:relative}
+.oc-table td.bull-bg{background:rgba(22,163,74,.05)}
+.oc-table td.bear-bg{background:rgba(220,38,38,.05)}
+[data-theme="dark"] .oc-table td.bull-bg{background:rgba(22,163,74,.1)}
+[data-theme="dark"] .oc-table td.bear-bg{background:rgba(220,38,38,.1)}
+
+/* ── India VIX widget ────────────────────────────────────── */
+.oc-vix{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;border-left:5px solid var(--border)}
+.oc-vix.calm{border-left-color:#16a34a;background:linear-gradient(135deg,rgba(22,163,74,.05),transparent)}
+.oc-vix.normal{border-left-color:#3b82f6}
+.oc-vix.elevated{border-left-color:#f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.06),transparent)}
+.oc-vix.high{border-left-color:#dc2626;background:linear-gradient(135deg,rgba(220,38,38,.06),transparent)}
+.oc-vix-icon{font-size:1.6rem;color:var(--text-muted)}
+.oc-vix.calm .oc-vix-icon{color:#16a34a}
+.oc-vix.normal .oc-vix-icon{color:#3b82f6}
+.oc-vix.elevated .oc-vix-icon{color:#f59e0b}
+.oc-vix.high .oc-vix-icon{color:#dc2626}
+.oc-vix-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.oc-vix-regime{font-size:.85rem;font-weight:600;color:var(--text);margin-top:2px}
+.oc-vix-value{display:flex;align-items:baseline;gap:6px;justify-content:flex-end}
+.oc-vix-value .v{font-size:1.6rem;font-weight:900;font-variant-numeric:tabular-nums}
+.oc-vix-value .chg{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums}
+.oc-vix-value .chg.up{color:#dc2626}    /* rising VIX = bad for longs */
+.oc-vix-value .chg.down{color:#16a34a}
+.oc-vix-bar{position:relative;height:6px;border-radius:3px;background:linear-gradient(to right,#16a34a 0%,#16a34a 33%,#3b82f6 33%,#3b82f6 60%,#f59e0b 60%,#f59e0b 83%,#dc2626 83%);margin-top:8px;grid-column:1 / -1}
+.oc-vix-pin{position:absolute;top:-3px;width:3px;height:12px;background:var(--text);border-radius:2px;transform:translateX(-50%);transition:left .4s ease}
+.oc-vix-scale{grid-column:1 / -1;display:flex;justify-content:space-between;font-size:.6rem;color:var(--text-muted);font-weight:700;margin-top:3px}
+
+/* ── Support / Resistance panel ──────────────────────────── */
+.oc-sr-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.oc-sr-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.oc-sr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.oc-sr-grid{grid-template-columns:1fr}}
+.oc-sr-col h5{font-size:.85rem;margin:0 0 8px;font-weight:800;display:flex;align-items:center;gap:6px}
+.oc-sr-col.resistance h5{color:#dc2626}
+.oc-sr-col.support h5{color:#16a34a}
+.oc-sr-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px}
+.oc-sr-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;border-radius:6px;background:var(--surface-2);font-size:.8rem}
+.oc-sr-item.strongest{border-left:3px solid currentColor;font-weight:700}
+.oc-sr-col.resistance .oc-sr-item{color:#b91c1c}
+.oc-sr-col.support .oc-sr-item{color:#15803d}
+.oc-sr-strike{font-weight:800;font-variant-numeric:tabular-nums}
+.oc-sr-oi{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)}
+.oc-sr-dist{font-size:.7rem;color:var(--text-muted);font-weight:600}
+.oc-sr-summary{margin-top:10px;font-size:.78rem;color:var(--text-muted);line-height:1.5;background:var(--surface-2);padding:8px 12px;border-radius:6px}
+.oc-sr-summary b{color:var(--text);font-weight:700}
+[data-theme="dark"] .oc-sr-col.resistance .oc-sr-item{color:#f87171}
+[data-theme="dark"] .oc-sr-col.support .oc-sr-item{color:#4ade80}
+
+/* ── Block-deals / Unusual activity panel ────────────────── */
+.oc-block-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.oc-block-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.oc-block-panel h6 .oc-block-total{font-size:.75rem;color:var(--text);font-weight:700;text-transform:none;letter-spacing:0}
+.oc-block-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.oc-block-table th,.oc-block-table td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+.oc-block-table th{text-align:right;font-size:.66rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.04em}
+.oc-block-table th:nth-child(1),.oc-block-table td:nth-child(1),
+.oc-block-table th:nth-child(2),.oc-block-table td:nth-child(2){text-align:left}
+.oc-block-tag{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:.04em}
+.oc-block-tag.ce{background:rgba(220,38,38,.12);color:#dc2626}
+.oc-block-tag.pe{background:rgba(22,163,74,.12);color:#16a34a}
+.oc-block-dir{display:inline-block;font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.03em}
+.oc-block-dir.BUY{background:rgba(37,99,235,.13);color:#1d4ed8}
+.oc-block-dir.WRITE{background:rgba(124,58,237,.13);color:#6d28d9}
+.oc-block-dir.COVER{background:rgba(245,158,11,.15);color:#b45309}
+.oc-block-dir.UNWIND{background:rgba(100,116,139,.18);color:#475569}
+.oc-block-dir.MIXED{background:rgba(148,163,184,.2);color:#64748b}
+.oc-block-empty{padding:24px;text-align:center;color:var(--text-muted);font-size:.85rem}
+.oc-block-reason{font-size:.7rem;color:var(--text-muted)}
+[data-theme="dark"] .oc-block-tag.ce{background:rgba(220,38,38,.22);color:#f87171}
+[data-theme="dark"] .oc-block-tag.pe{background:rgba(22,163,74,.22);color:#4ade80}
+[data-theme="dark"] .oc-block-dir.BUY{background:rgba(59,130,246,.22);color:#60a5fa}
+[data-theme="dark"] .oc-block-dir.WRITE{background:rgba(168,85,247,.22);color:#c084fc}
+[data-theme="dark"] .oc-block-dir.COVER{background:rgba(245,158,11,.22);color:#fbbf24}
+
+/* ── Inner tabs ───────────────────────────────────────── */
+.oc-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);flex-wrap:wrap;margin-bottom:6px}
+.oc-tab-btn{background:transparent;border:none;padding:9px 16px;font-size:.85rem;font-weight:600;color:var(--text-muted);border-bottom:3px solid transparent;cursor:pointer;transition:color .15s,border-color .15s;display:inline-flex;align-items:center;gap:6px}
+.oc-tab-btn:hover{color:var(--text)}
+.oc-tab-btn.active{color:var(--text);border-bottom-color:#3b82f6}
+.oc-tab-btn i{font-size:.85rem}
+.oc-gap-history{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-top:14px;border-left:5px solid var(--border)}
+.oc-gh-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.oc-gh-title{font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px}
+.oc-gh-sub{font-size:.74rem;color:var(--text-muted);margin-top:4px;max-width:620px;line-height:1.45}
+.oc-gh-stats{display:flex;gap:8px;flex-wrap:wrap}
+.oc-gh-stat{display:flex;flex-direction:column;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;min-width:78px}
+.oc-gh-stat .lbl{font-size:.6rem;text-transform:uppercase;font-weight:700;color:var(--text-muted);letter-spacing:.06em}
+.oc-gh-stat .val{font-size:1rem;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums}
+.oc-gh-tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.oc-gh-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:720px}
+.oc-gh-table th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);font-weight:700;z-index:1}
+.oc-gh-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.oc-gh-table tr:last-child td{border-bottom:none}
+.oc-gh-table tr:hover td{background:var(--surface-2)}
+.oc-gh-empty{padding:20px;text-align:center;color:var(--text-muted);font-style:italic}
+.oc-gh-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.02em;white-space:nowrap;border:1px solid transparent}
+.oc-gh-pill.up{background:rgba(22,163,74,.14);color:#16a34a;border-color:rgba(22,163,74,.28)}
+.oc-gh-pill.down{background:rgba(220,38,38,.14);color:#dc2626;border-color:rgba(220,38,38,.28)}
+.oc-gh-pill.flat{background:rgba(100,116,139,.16);color:var(--text-muted);border-color:var(--border)}
+.oc-gh-pill.hit{background:rgba(22,163,74,.2);color:#16a34a;border-color:rgba(22,163,74,.38)}
+.oc-gh-pill.miss{background:rgba(220,38,38,.2);color:#dc2626;border-color:rgba(220,38,38,.38)}
+.oc-gh-pill.pending{background:rgba(245,158,11,.18);color:#b45309;border-color:rgba(245,158,11,.35)}
+.oc-gh-pill.flat_ok{background:rgba(59,130,246,.18);color:#1d4ed8;border-color:rgba(59,130,246,.35)}
+.oc-gh-pill.flat_miss{background:rgba(244,114,182,.18);color:#be185d;border-color:rgba(244,114,182,.35)}
+.oc-gh-num{font-variant-numeric:tabular-nums}
+[data-theme="dark"] .oc-gh-pill.up{color:#4ade80}
+[data-theme="dark"] .oc-gh-pill.down{color:#f87171}
+[data-theme="dark"] .oc-gh-pill.hit{color:#86efac}
+[data-theme="dark"] .oc-gh-pill.miss{color:#fca5a5}
+[data-theme="dark"] .oc-gh-pill.pending{color:#fcd34d}
+[data-theme="dark"] .oc-gh-pill.flat_ok{color:#93c5fd}
+[data-theme="dark"] .oc-gh-pill.flat_miss{color:#f9a8d4}
+</style>
+
+<div class="oc-page">
+    <header class="oc-header">
+        <div>
+            <h1 style="margin:0"><i class="fa-solid fa-link me-2"></i>NIFTY Options Analytics</h1>
+            <p class="text-muted" style="margin:4px 0 0;font-size:.85rem">
+                Volatility, sentiment, OI build-up, support &amp; resistance and unusual F&amp;O activity — all in one place.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span id="ocAsOf" class="text-muted" style="font-size:.78rem"></span>
+            <button id="ocRefresh" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-rotate me-1"></i>Refresh
+            </button>
+        </div>
+    </header>
+
+    <div id="ocLoading" class="oc-loading">
+        <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
+        <p class="mt-2">Fetching NIFTY option chain from NSE…</p>
+    </div>
+
+    <div id="ocError" class="oc-error" hidden></div>
+
+    <div id="ocContent" hidden>
+        <nav class="oc-tabs" id="ocTabs" role="tablist">
+            <button type="button" class="oc-tab-btn active" data-tab-target="overview"><i class="fa-solid fa-gauge-high"></i>Overview</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="chain"><i class="fa-solid fa-table-list"></i>Option Chain</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="oi"><i class="fa-solid fa-arrows-up-to-line"></i>OI &amp; Levels</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="blocks"><i class="fa-solid fa-money-bill-trend-up"></i>Block Deals</button>
+        </nav>
+
+        <div id="ocVix" class="oc-vix normal" data-tab="overview" hidden>
+            <div class="oc-vix-icon"><i class="fa-solid fa-temperature-three-quarters"></i></div>
+            <div>
+                <div class="oc-vix-label">India VIX</div>
+                <div class="oc-vix-regime" id="ocVixRegime">—</div>
+            </div>
+            <div class="oc-vix-value">
+                <span class="v" id="ocVixValue">—</span>
+                <span class="chg" id="ocVixChg">—</span>
+            </div>
+            <div class="oc-vix-bar"><div id="ocVixPin" class="oc-vix-pin" style="left:0%"></div></div>
+            <div class="oc-vix-scale">
+                <span>Calm &lt;12</span>
+                <span>Normal 12–18</span>
+                <span>Elevated 18–25</span>
+                <span>High &gt;25</span>
+            </div>
+        </div>
+
+        <div id="ocIndicator" class="oc-indicator neutral" data-tab="overview">
+            <div class="oc-indicator-head">
+                <div>
+                    <div style="font-size:.72rem;text-transform:uppercase;font-weight:700;color:var(--text-muted)">Institutional Flow Sentiment (Writer-weighted)</div>
+                    <div id="ocSummary" style="font-size:1rem;font-weight:700;margin-top:2px"></div>
+                </div>
+                <span id="ocBadge" class="oc-badge neutral">—</span>
+            </div>
+            <div class="oc-score-bar">
+                <div id="ocScorePin" class="oc-score-pin" style="left:50%"></div>
+            </div>
+            <div class="oc-score-labels">
+                <span>← Bullish</span>
+                <span>Neutral</span>
+                <span>Bearish →</span>
+            </div>
+            <ul id="ocReasons" class="oc-reasons"></ul>
+        </div>
+
+        <div id="ocGapPanel" class="oc-gap-panel flat" data-tab="overview">
+            <div>
+                <div class="oc-gap-meta"><i class="fa-solid fa-arrows-up-down me-1"></i>Tomorrow's Open Forecast</div>
+                <div id="ocGapLabel" class="oc-gap-label flat">—</div>
+                <span id="ocGapConfidence" class="oc-gap-confidence">confidence —</span>
+            </div>
+            <div>
+                <div id="ocGapSummary" class="oc-gap-summary">Awaiting data…</div>
+                <div class="oc-gap-bar">
+                    <div id="ocGapPin" class="oc-gap-pin" style="left:50%"></div>
+                </div>
+                <div class="oc-gap-labels" style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">
+                    <span>← Gap Down (Call writing)</span>
+                    <span>Flat</span>
+                    <span>Gap Up (Put writing) →</span>
+                </div>
+                <div class="oc-gap-stats" id="ocGapStats"></div>
+            </div>
+        </div>
+
+        <div id="ocGapHistoryPanel" class="oc-gap-history" data-tab="overview">
+            <div class="oc-gh-head">
+                <div>
+                    <div class="oc-gh-title"><i class="fa-solid fa-clock-rotate-left me-1"></i>Signal Track Record</div>
+                    <div class="oc-gh-sub">Each day's gap-outlook prediction is saved and scored against the next session's actual open.</div>
+                </div>
+                <div id="ocGhStats" class="oc-gh-stats">
+                    <span class="oc-gh-stat"><span class="lbl">Accuracy</span><span class="val" id="ocGhAcc">—</span></span>
+                    <span class="oc-gh-stat"><span class="lbl">Hits</span><span class="val" id="ocGhHits">—</span></span>
+                    <span class="oc-gh-stat"><span class="lbl">Pending</span><span class="val" id="ocGhPending">—</span></span>
+                </div>
+            </div>
+            <div class="oc-gh-tablewrap">
+                <table class="oc-gh-table">
+                    <thead>
+                        <tr>
+                            <th>Signal Date</th>
+                            <th>Predicted</th>
+                            <th>Score</th>
+                            <th>Conf.</th>
+                            <th>Pred. Pts</th>
+                            <th>Prev Close</th>
+                            <th>Next Open</th>
+                            <th>Actual Pts</th>
+                            <th>Actual Gap</th>
+                            <th>Error Pts</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ocGhBody">
+                        <tr><td colspan="8" class="oc-gh-empty">Loading history…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="oc-summary-cards" data-tab="overview">
+            <div class="oc-card">
+                <div class="oc-card-label">NIFTY Spot</div>
+                <div class="oc-card-value" id="ocSpot">—</div>
+                <div class="oc-card-sub" id="ocExpiry">Expiry —</div>
+            </div>
+            <div class="oc-card">
+                <div class="oc-card-label">Total Call OI (ATM±10)</div>
+                <div class="oc-card-value" id="ocCeOi">—</div>
+                <div class="oc-card-sub" id="ocCeOiChg"></div>
+            </div>
+            <div class="oc-card">
+                <div class="oc-card-label">Total Put OI (ATM±10)</div>
+                <div class="oc-card-value" id="ocPeOi">—</div>
+                <div class="oc-card-sub" id="ocPeOiChg"></div>
+            </div>
+            <div class="oc-card">
+                <div class="oc-card-label">Put-Call Ratio (PCR)</div>
+                <div class="oc-card-value" id="ocPcr">—</div>
+                <div class="oc-card-sub" id="ocPcrPrev"></div>
+            </div>
+        </div>
+
+        <div class="oc-buildup-panel" data-tab="chain">
+            <h6><i class="fa-solid fa-layer-group me-1"></i>Price + OI Build-up (per strike, ATM ± 10)</h6>
+            <div class="oc-buildup-grid">
+                <div class="oc-buildup-col">
+                    <h5 class="ce">Calls</h5>
+                    <ul id="ocBuildupCe" class="oc-buildup-list"></ul>
+                </div>
+                <div class="oc-buildup-col">
+                    <h5 class="pe">Puts</h5>
+                    <ul id="ocBuildupPe" class="oc-buildup-list"></ul>
+                </div>
+            </div>
+            <div style="margin-top:8px;font-size:.7rem;color:var(--text-muted);line-height:1.5">
+                <strong>Smart-money model:</strong> option writers (sellers) are treated as institutions,
+                option buyers as retail. Strongest signals are
+                <span class="oc-bchip bear" style="margin:0 2px">Call Short Build-up</span>
+                (institutions writing calls → resistance, bearish) and
+                <span class="oc-bchip bull" style="margin:0 2px">Put Short Build-up</span>
+                (institutions writing puts → support, bullish).
+                Retail-led Long Build-ups carry a much smaller weight.
+            </div>
+        </div>
+
+        <div class="oc-buildup-panel" data-tab="oi">
+            <h6><i class="fa-solid fa-chart-line me-1"></i>Intraday OI — Calls vs Puts (today)</h6>
+            <div style="position:relative;height:240px">
+                <canvas id="ocOiChart"></canvas>
+            </div>
+            <div style="margin-top:8px;font-size:.7rem;color:var(--text-muted)">
+                Live minute-by-minute total Call OI vs Put OI for the ATM±10 strike band.
+                Widening Put-over-Call gap = bullish writer dominance; the reverse = bearish.
+            </div>
+        </div>
+
+        <div class="oc-sr-panel" data-tab="oi">
+            <h6><i class="fa-solid fa-arrows-up-to-line me-1"></i>OI-based Support &amp; Resistance</h6>
+            <div style="position:relative;height:260px;margin-bottom:14px">
+                <canvas id="ocSrChart"></canvas>
+            </div>
+            <div style="display:flex;gap:14px;font-size:.7rem;color:var(--text-muted);margin-bottom:10px;flex-wrap:wrap">
+                <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Call OI → Resistance</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Put OI → Support</span>
+                <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #f59e0b;margin-right:4px;vertical-align:middle"></span>NIFTY Spot</span>
+            </div>
+            <div class="oc-sr-grid">
+                <div class="oc-sr-col resistance">
+                    <h5><i class="fa-solid fa-ceiling me-1"></i>Resistance (Highest Call OI)</h5>
+                    <ul id="ocSrResistance" class="oc-sr-list"></ul>
+                </div>
+                <div class="oc-sr-col support">
+                    <h5><i class="fa-solid fa-shield-halved me-1"></i>Support (Highest Put OI)</h5>
+                    <ul id="ocSrSupport" class="oc-sr-list"></ul>
+                </div>
+            </div>
+            <div class="oc-sr-summary" id="ocSrSummary">—</div>
+        </div>
+
+        <div class="oc-block-panel" data-tab="blocks">
+            <h6>
+                <span><i class="fa-solid fa-money-bill-trend-up me-1"></i>Large F&amp;O Orders &amp; Unusual Activity</span>
+                <span class="oc-block-total" id="ocBlockTotal">—</span>
+            </h6>
+            <div id="ocBlockBody">
+                <div class="oc-block-empty">Scanning option chain for large trades…</div>
+            </div>
+            <div style="margin-top:8px;font-size:.7rem;color:var(--text-muted);line-height:1.5">
+                Strikes ranked by today's traded notional (volume × LTP). High volume
+                relative to OI (<b>V/OI</b>) indicates a fresh institutional position. Direction
+                inferred from same-day price + OI change: <b>BUY</b> (price↑ OI↑), <b>WRITE</b> (price↓ OI↑),
+                <b>COVER</b> (price↑ OI↓), <b>UNWIND</b> (price↓ OI↓).
+            </div>
+        </div>
+
+        <div class="oc-table-wrap" data-tab="chain">
+            <table class="oc-table">
+                <thead>
+                    <tr>
+                        <th colspan="6" style="text-align:center;color:#16a34a">CALLS</th>
+                        <th>Strike</th>
+                        <th colspan="6" style="text-align:center;color:#dc2626">PUTS</th>
+                    </tr>
+                    <tr>
+                        <th>Build-up</th><th>OI</th><th>Δ OI</th><th>IV</th><th>Vol</th><th>LTP</th>
+                        <th></th>
+                        <th>LTP</th><th>Vol</th><th>IV</th><th>Δ OI</th><th>OI</th><th>Build-up</th>
+                    </tr>
+                </thead>
+                <tbody id="ocTbody"></tbody>
+            </table>
+        </div>
+
+        <div class="oc-disclaimer" data-tab="chain">
+            Source: nseindia.com. Δ OI = intraday change vs previous close.
+            "Crash" / "rally" indicator is purely heuristic and not investment advice.
+        </div>
+    </div>
+</div>
+
+<script>
+const fmt = (n) => {
+    n = Number(n || 0);
+    if (Math.abs(n) >= 1e7) return (n / 1e7).toFixed(2) + ' Cr';
+    if (Math.abs(n) >= 1e5) return (n / 1e5).toFixed(2) + ' L';
+    if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return n.toLocaleString('en-IN');
+};
+const sign = (n) => n > 0 ? '+' : (n < 0 ? '' : '');
+const cls  = (n) => n > 0 ? 'oc-pos' : (n < 0 ? 'oc-neg' : 'oc-zero');
+
+function setBusy(busy) {
+    document.getElementById('ocLoading').hidden = !busy;
+    if (busy) {
+        document.getElementById('ocError').hidden = true;
+    }
+}
+
+async function load(refresh) {
+    setBusy(document.getElementById('ocContent').hidden);
+    const btn = document.getElementById('ocRefresh');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    try {
+        const url = '/api/option-chain/nifty' + (refresh ? '?refresh=1' : '');
+        const r = await fetch(url);
+        const data = await r.json().catch(() => ({}));
+        if (data && data.error) {
+            throw new Error((data.error + (data.detail ? ' — ' + data.detail : '')));
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        render(data);
+        document.getElementById('ocContent').hidden = false;
+        document.getElementById('ocLoading').hidden = true;
+    } catch (e) {
+        const err = document.getElementById('ocError');
+        err.textContent = 'Failed to load option chain: ' + (e.message || e);
+        err.hidden = false;
+        document.getElementById('ocLoading').hidden = true;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
+    }
+}
+
+function render(d) {
+    document.getElementById('ocAsOf').textContent = 'As of ' + (d.as_of || '');
+    document.getElementById('ocSpot').textContent = Number(d.spot || 0).toLocaleString('en-IN');
+    document.getElementById('ocExpiry').textContent = 'Expiry ' + (d.expiry || '—');
+
+    const t = d.totals || {};
+    document.getElementById('ocCeOi').textContent = fmt(t.ce_oi);
+    document.getElementById('ocPeOi').textContent = fmt(t.pe_oi);
+    document.getElementById('ocCeOiChg').innerHTML =
+        '<span class="' + cls(t.ce_oi_chg) + '">Δ ' + sign(t.ce_oi_chg) + fmt(t.ce_oi_chg) + '</span>';
+    document.getElementById('ocPeOiChg').innerHTML =
+        '<span class="' + cls(t.pe_oi_chg) + '">Δ ' + sign(t.pe_oi_chg) + fmt(t.pe_oi_chg) + '</span>';
+
+    document.getElementById('ocPcr').textContent = (d.pcr || 0).toFixed(2);
+    document.getElementById('ocPcrPrev').textContent = d.pcr_prev
+        ? ('Prev snapshot: ' + Number(d.pcr_prev).toFixed(2))
+        : 'Awaiting next snapshot…';
+
+    // Indicator block
+    const ind = d.indicator || {};
+    const label = (ind.label || 'NEUTRAL').toLowerCase();
+    const box = document.getElementById('ocIndicator');
+    box.classList.remove('bullish', 'bearish', 'neutral');
+    box.classList.add(label);
+    const badge = document.getElementById('ocBadge');
+    badge.classList.remove('bullish', 'bearish', 'neutral');
+    badge.classList.add(label);
+    badge.textContent = ind.label || 'NEUTRAL';
+    document.getElementById('ocSummary').textContent = ind.summary || '';
+
+    // Map shift_score (-1..+1) onto 0..100% (left=bullish, right=bearish)
+    const pct = Math.max(0, Math.min(100, 50 + (ind.shift_score || 0) * 50));
+    document.getElementById('ocScorePin').style.left = pct.toFixed(1) + '%';
+
+    const reasons = ind.reasons || [];
+    document.getElementById('ocReasons').innerHTML =
+        reasons.map(r => '<li>' + escapeHtml(r) + '</li>').join('');
+
+    // Build-up breakdown panel
+    renderBuildup(ind.buildup || {});
+
+    // Gap-outlook forecast panel
+    renderGapOutlook(d.gap_outlook || {});
+
+    // Persisted gap-signal history (predicted vs actual next-day open).
+    loadGapHistory();
+
+    // Intraday OI line chart
+    renderOiChart(d.series || []);
+
+    // India VIX widget, OI-based support/resistance, and unusual-activity panel
+    renderVix(d.vix || null);
+    window._ocLastRows = d.rows || [];
+    renderSrLevels(d.sr_levels || {}, d.spot || 0);
+    renderBlockDeals(d.block_deals || {});
+
+    // Table
+    const rows = d.rows || [];
+    const spot = d.spot || 0;
+    // ATM = strike with min |strike - spot|
+    let atmIdx = 0, atmDiff = Infinity;
+    rows.forEach((r, i) => {
+        const diff = Math.abs(r.strike - spot);
+        if (diff < atmDiff) { atmDiff = diff; atmIdx = i; }
+    });
+
+    const tbody = document.getElementById('ocTbody');
+    tbody.innerHTML = rows.map((r, i) => {
+        const ce = r.ce || {}, pe = r.pe || {};
+        const isATM = i === atmIdx;
+        // ITM call = strike < spot; ITM put = strike > spot
+        const ceItm = r.strike < spot ? 'itm' : '';
+        const peItm = r.strike > spot ? 'itm' : '';
+        const ceBg = ce.buildup_bias > 0 ? 'bull-bg' : (ce.buildup_bias < 0 ? 'bear-bg' : '');
+        const peBg = pe.buildup_bias > 0 ? 'bull-bg' : (pe.buildup_bias < 0 ? 'bear-bg' : '');
+        const ceCls = `${ceItm} ${ceBg}`.trim();
+        const peCls = `${peItm} ${peBg}`.trim();
+        return `<tr class="${isATM ? 'atm' : ''}">
+            <td class="${ceCls}">${buildupChip(ce.buildup, ce.buildup_bias)}</td>
+            <td class="${ceCls}">${fmt(ce.oi)}</td>
+            <td class="${ceCls} ${cls(ce.oi_chg)}">${sign(ce.oi_chg)}${fmt(ce.oi_chg)}</td>
+            <td class="${ceCls}">${(ce.iv || 0).toFixed(1)}</td>
+            <td class="${ceCls}">${fmt(ce.vol)}</td>
+            <td class="${ceCls}">${(ce.ltp || 0).toFixed(2)}</td>
+            <td class="strike">${r.strike.toFixed(0)}</td>
+            <td class="${peCls}">${(pe.ltp || 0).toFixed(2)}</td>
+            <td class="${peCls}">${fmt(pe.vol)}</td>
+            <td class="${peCls}">${(pe.iv || 0).toFixed(1)}</td>
+            <td class="${peCls} ${cls(pe.oi_chg)}">${sign(pe.oi_chg)}${fmt(pe.oi_chg)}</td>
+            <td class="${peCls}">${fmt(pe.oi)}</td>
+            <td class="${peCls}">${buildupChip(pe.buildup, pe.buildup_bias)}</td>
+        </tr>`;
+    }).join('');
+}
+
+// Build-up name → semantic class (matches Python _BUILDUP_* tables).
+const BUILDUP_CLASS = {
+    'Long Build-up':       'bull',
+    'Short Build-up':      'bear',
+    'Short Covering':      'weak-bull',
+    'Long Unwinding':      'weak-bear',
+    'Long Put Build-up':   'bear',
+    'Short Put Build-up':  'bull',
+    'Put Short Covering':  'weak-bear',
+    'Put Long Unwinding':  'weak-bull',
+};
+
+function buildupChip(name, bias) {
+    if (!name) return '<span class="text-muted" style="font-size:.7rem">—</span>';
+    const cls = BUILDUP_CLASS[name] || (bias > 0 ? 'bull' : (bias < 0 ? 'bear' : ''));
+    return `<span class="oc-bchip ${cls}">${escapeHtml(name)}</span>`;
+}
+
+function renderBuildup(buildup) {
+    const ceCounts = buildup.ce_counts || {};
+    const peCounts = buildup.pe_counts || {};
+    const ceUl = document.getElementById('ocBuildupCe');
+    const peUl = document.getElementById('ocBuildupPe');
+    const order = (counts) => Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    ceUl.innerHTML = order(ceCounts).map(([name, n]) => {
+        const cls = BUILDUP_CLASS[name] || '';
+        return `<li class="${cls}"><span class="name">${escapeHtml(name)}</span><span class="count">${n}</span></li>`;
+    }).join('') || '<li style="background:transparent;color:var(--text-muted);font-size:.72rem">No qualifying CE build-ups (price & OI flat).</li>';
+
+    peUl.innerHTML = order(peCounts).map(([name, n]) => {
+        const cls = BUILDUP_CLASS[name] || '';
+        return `<li class="${cls}"><span class="name">${escapeHtml(name)}</span><span class="count">${n}</span></li>`;
+    }).join('') || '<li style="background:transparent;color:var(--text-muted);font-size:.72rem">No qualifying PE build-ups (price & OI flat).</li>';
+}
+
+function renderGapOutlook(g) {
+    const labelMap = {
+        'GAP UP':    { cls: 'up',        text: '↑ Gap Up' },
+        'GAP DOWN':  { cls: 'down',      text: '↓ Gap Down' },
+        'FLAT':      { cls: 'flat',      text: '→ Flat Open' },
+        'TOO EARLY': { cls: 'too_early', text: '… Too Early' },
+    };
+    const meta = labelMap[g.label] || labelMap['FLAT'];
+    const panel = document.getElementById('ocGapPanel');
+    panel.classList.remove('up', 'down', 'flat', 'too_early');
+    panel.classList.add(meta.cls);
+
+    const labelEl = document.getElementById('ocGapLabel');
+    labelEl.classList.remove('up', 'down', 'flat', 'too_early');
+    labelEl.classList.add(meta.cls);
+    labelEl.textContent = meta.text;
+
+    const conf = Math.round((g.confidence || 0) * 100);
+    document.getElementById('ocGapConfidence').textContent =
+        'confidence ' + conf + '%' + (g.phase ? ' — ' + g.phase : '');
+    document.getElementById('ocGapSummary').textContent = g.summary || '';
+
+    // gap_score in [-1,+1]; left = -1 (gap down), right = +1 (gap up)
+    const pct = Math.max(0, Math.min(100, 50 + (g.gap_score || 0) * 50));
+    document.getElementById('ocGapPin').style.left = pct.toFixed(1) + '%';
+
+    const fmt = (n) => {
+        const sign = n > 0 ? '+' : (n < 0 ? '−' : '');
+        return sign + Math.abs(n).toLocaleString();
+    };
+    const fmtPct = (n) => {
+        const sign = n > 0 ? '+' : (n < 0 ? '−' : '');
+        return sign + Math.abs(Number(n || 0)).toFixed(2) + '%';
+    };
+    const showPts = (g.label === 'GAP UP' || g.label === 'GAP DOWN');
+    const expPts = Number(g.expected_gap_points || 0);
+    const expPct = Number(g.expected_gap_pct || 0);
+    const expLo = Number(g.expected_gap_points_low || 0);
+    const expHi = Number(g.expected_gap_points_high || 0);
+    const srcLabel = g.source === 'recent'
+        ? 'OI added in last snapshot'
+        : 'Intraday OI change (no baseline yet)';
+    document.getElementById('ocGapStats').innerHTML = `
+        <span>${srcLabel}:</span>
+        <span>Calls <strong>${fmt(g.ce_recent || 0)}</strong></span>
+        <span>Puts <strong>${fmt(g.pe_recent || 0)}</strong></span>
+        <span>Raw score <strong>${(g.raw_score || 0).toFixed(2)}</strong></span>
+        <span>Expected gap <strong>${showPts ? `${fmt(expPts)} pts (${fmtPct(expPct)})` : '—'}</strong></span>
+        <span>Expected range <strong>${showPts ? `${fmt(expLo)} to ${fmt(expHi)} pts` : '—'}</strong></span>
+    `;
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+// ── Gap-signal history (persisted in Azure Tables, evaluated next day) ──
+let _ocGhInflight = false;
+async function loadGapHistory() {
+    if (_ocGhInflight) return;
+    _ocGhInflight = true;
+    try {
+        const res = await fetch('/api/option-chain/gap-history?limit=14', {
+            credentials: 'same-origin',
+        });
+        if (!res.ok) throw new Error('http ' + res.status);
+        const j = await res.json();
+        renderGapHistory(j);
+    } catch (e) {
+        const tb = document.getElementById('ocGhBody');
+        if (tb) tb.innerHTML =
+            '<tr><td colspan="8" class="oc-gh-empty">Could not load signal history.</td></tr>';
+    } finally {
+        _ocGhInflight = false;
+    }
+}
+
+function renderGapHistory(payload) {
+    const items = (payload && payload.items) || [];
+    const stats = (payload && payload.stats) || {};
+    const tb = document.getElementById('ocGhBody');
+    if (!tb) return;
+
+    const accEl = document.getElementById('ocGhAcc');
+    const hitsEl = document.getElementById('ocGhHits');
+    const pendEl = document.getElementById('ocGhPending');
+    if (accEl)  accEl.textContent  = (stats.hit_rate_pct == null) ? '—' : (stats.hit_rate_pct + '%');
+    if (hitsEl) hitsEl.textContent = (stats.hits == null || stats.directional_evaluated == null)
+        ? '—' : (stats.hits + ' / ' + stats.directional_evaluated);
+    if (pendEl) pendEl.textContent = (stats.pending == null) ? '—' : String(stats.pending);
+
+    if (!items.length) {
+        tb.innerHTML =
+            '<tr><td colspan="11" class="oc-gh-empty">No signals recorded yet. Predictions are saved automatically after 13:30 IST.</td></tr>';
+        return;
+    }
+
+    const predClass = (p) => {
+        const u = String(p || '').toUpperCase();
+        if (u === 'GAP UP') return 'up';
+        if (u === 'GAP DOWN') return 'down';
+        return 'flat';
+    };
+    const outcomeClass = (o) => {
+        const u = String(o || 'PENDING').toUpperCase();
+        if (u === 'HIT') return 'hit';
+        if (u === 'MISS') return 'miss';
+        if (u === 'FLAT_OK') return 'flat_ok';
+        if (u === 'FLAT_MISS') return 'flat_miss';
+        return 'pending';
+    };
+    const outcomeText = (o) => {
+        const u = String(o || 'PENDING').toUpperCase();
+        if (u === 'HIT') return '✓ Hit';
+        if (u === 'MISS') return '✗ Miss';
+        if (u === 'FLAT_OK') return '✓ Flat';
+        if (u === 'FLAT_MISS') return '~ Flat miss';
+        return '… Pending';
+    };
+    const num = (n, dp) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(dp == null ? 2 : dp);
+    const pts = (n) => {
+        if (n == null || isNaN(n)) return '—';
+        const v = Number(n);
+        const s = v > 0 ? '+' : (v < 0 ? '−' : '');
+        return s + Math.abs(v).toFixed(0);
+    };
+    const pct = (n) => {
+        if (n == null || isNaN(n)) return '—';
+        const v = Number(n);
+        const s = v > 0 ? '+' : (v < 0 ? '−' : '');
+        return s + Math.abs(v).toFixed(2) + '%';
+    };
+
+    tb.innerHTML = items.map(it => {
+        const pc = predClass(it.predicted);
+        const oc = outcomeClass(it.outcome);
+        return `<tr>
+            <td class="oc-gh-num">${escapeHtml(it.date || '—')}</td>
+            <td><span class="oc-gh-pill ${pc}">${escapeHtml(it.predicted || '—')}</span></td>
+            <td class="oc-gh-num">${num(it.predicted_score, 2)}</td>
+            <td class="oc-gh-num">${(it.confidence == null) ? '—' : Math.round(it.confidence * 100) + '%'}</td>
+            <td class="oc-gh-num">${pts(it.predicted_gap_points)}</td>
+            <td class="oc-gh-num">${num(it.prev_close, 2)}</td>
+            <td class="oc-gh-num">${num(it.actual_open, 2)}</td>
+            <td class="oc-gh-num">${pts(it.actual_gap_points)}</td>
+            <td class="oc-gh-num">${pct(it.actual_gap_pct)}</td>
+            <td class="oc-gh-num">${pts(it.points_error)}</td>
+            <td><span class="oc-gh-pill ${oc}">${outcomeText(it.outcome)}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+let _oiChart = null;
+let _srChart = null;
+
+// Vertical dashed line at NIFTY spot, drawn over the bar chart.
+const _spotLinePlugin = {
+    id: 'spotLine',
+    afterDatasetsDraw(chart, _args, opts) {
+        const spot = opts && opts.spot;
+        const strikes = opts && opts.strikes;
+        if (!spot || !strikes || !strikes.length) return;
+        const xAxis = chart.scales.x;
+        const yArea = chart.chartArea;
+        if (!xAxis || !yArea) return;
+        // Interpolate spot's x-pixel between the two surrounding category ticks.
+        let lo = 0;
+        for (let i = 0; i < strikes.length; i++) {
+            if (strikes[i] <= spot) lo = i; else break;
+        }
+        const hi = Math.min(strikes.length - 1, lo + 1);
+        const xLo = xAxis.getPixelForValue(lo);
+        const xHi = xAxis.getPixelForValue(hi);
+        const span = strikes[hi] - strikes[lo] || 1;
+        const t = Math.max(0, Math.min(1, (spot - strikes[lo]) / span));
+        const x = xLo + (xHi - xLo) * t;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.moveTo(x, yArea.top);
+        ctx.lineTo(x, yArea.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = '600 11px system-ui,sans-serif';
+        const label = 'Spot ' + Math.round(spot).toLocaleString('en-IN');
+        const tw = ctx.measureText(label).width;
+        const lx = Math.min(yArea.right - tw - 4, Math.max(yArea.left + 4, x - tw / 2));
+        ctx.fillText(label, lx, yArea.top + 12);
+        ctx.restore();
+    },
+};
+
+function renderSrChart(rows, spot, sr) {
+    const ctx = document.getElementById('ocSrChart');
+    if (!ctx || !window.Chart || !rows || !rows.length) return;
+    const sorted = rows.slice().sort((a, b) => (a.strike || 0) - (b.strike || 0));
+    const strikes = sorted.map(r => Number(r.strike || 0));
+    const ce = sorted.map(r => ((r.ce && r.ce.oi) || 0) / 1e5);  // → lakh contracts
+    const pe = sorted.map(r => ((r.pe && r.pe.oi) || 0) / 1e5);
+    const labels = strikes.map(s => s.toLocaleString('en-IN'));
+    const strongRes = sr && sr.strongest_resistance;
+    const strongSup = sr && sr.strongest_support;
+    const ceColors = strikes.map(s => s === strongRes ? '#b91c1c' : 'rgba(220,38,38,0.85)');
+    const peColors = strikes.map(s => s === strongSup ? '#15803d' : 'rgba(22,163,74,0.85)');
+
+    const data = {
+        labels,
+        datasets: [
+            { label: 'Call OI (Resistance)', data: ce, backgroundColor: ceColors, borderWidth: 0, borderRadius: 3 },
+            { label: 'Put OI (Support)',     data: pe, backgroundColor: peColors, borderWidth: 0, borderRadius: 3 },
+        ],
+    };
+    const opts = {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            x: { ticks: { color: '#94a3b8', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+                 grid: { display: false }, title: { display: true, text: 'Strike', color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', callback: v => v.toFixed(1) + ' L' },
+                 grid: { color: 'rgba(148,163,184,.15)' },
+                 title: { display: true, text: 'Open Interest', color: '#94a3b8', font: { size: 10 } } },
+        },
+        plugins: {
+            legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: {
+                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} L`
+            }},
+            spotLine: { spot, strikes },
+        },
+    };
+    if (_srChart) {
+        _srChart.data = data;
+        _srChart.options.plugins.spotLine = { spot, strikes };
+        _srChart.update('none');
+    } else {
+        _srChart = new Chart(ctx, { type: 'bar', data, options: opts, plugins: [_spotLinePlugin] });
+    }
+}
+
+function renderOiChart(series) {
+    const ctx = document.getElementById('ocOiChart');
+    if (!ctx || !window.Chart) return;
+    const labels = series.map(p => p.t);
+    const ce = series.map(p => (p.ce_oi || 0) / 1e7);   // → Crore
+    const pe = series.map(p => (p.pe_oi || 0) / 1e7);
+    const data = {
+        labels,
+        datasets: [
+            { label: 'Call OI (Cr)', data: ce, borderColor: '#dc2626',
+              backgroundColor: 'rgba(220,38,38,.08)', tension: .25,
+              pointRadius: 0, borderWidth: 2, fill: true },
+            { label: 'Put OI (Cr)',  data: pe, borderColor: '#16a34a',
+              backgroundColor: 'rgba(22,163,74,.08)', tension: .25,
+              pointRadius: 0, borderWidth: 2, fill: true },
+        ],
+    };
+    const opts = {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            x: { ticks: { maxTicksLimit: 10, color: '#94a3b8', autoSkip: true },
+                 grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', callback: v => v.toFixed(1) + ' Cr' },
+                 grid: { color: 'rgba(148,163,184,.15)' } },
+        },
+        plugins: {
+            legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: {
+                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`
+            }},
+        },
+    };
+    if (_oiChart) {
+        _oiChart.data = data;
+        _oiChart.update('none');
+    } else {
+        _oiChart = new Chart(ctx, { type: 'line', data, options: opts });
+    }
+}
+
+document.getElementById('ocRefresh').addEventListener('click', () => load(true));
+
+// ── Inner tab switching ──────────────────────────────────────────
+function setActiveTab(name) {
+    const root = document.getElementById('ocContent');
+    if (!root) return;
+    root.querySelectorAll('[data-tab]').forEach(el => {
+        el.style.display = (el.dataset.tab === name) ? '' : 'none';
+    });
+    document.querySelectorAll('.oc-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tabTarget === name);
+    });
+    // Chart.js needs an explicit resize when its container becomes visible again.
+    if (name === 'oi') {
+        requestAnimationFrame(() => {
+            try { _oiChart && _oiChart.resize(); } catch (_) {}
+            try { _srChart && _srChart.resize(); } catch (_) {}
+        });
+    }
+    try { sessionStorage.setItem('ocActiveTab', name); } catch (_) {}
+}
+document.querySelectorAll('.oc-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tabTarget));
+});
+// Restore last-active tab (if any) once content is rendered.
+const _ocInitialTab = (() => { try { return sessionStorage.getItem('ocActiveTab') || 'overview'; } catch (_) { return 'overview'; } })();
+setActiveTab(_ocInitialTab);
+
+load(false);
+
+// ── New panels: VIX widget, S/R levels, large-orders tracker ────────────
+function renderVix(vix) {
+    const el = document.getElementById('ocVix');
+    if (!vix || !vix.value) { el.hidden = true; return; }
+    el.hidden = false;
+    el.className = 'oc-vix ' + (vix.level || 'normal');
+    document.getElementById('ocVixValue').textContent = vix.value.toFixed(2);
+    document.getElementById('ocVixRegime').textContent = vix.regime_label || '—';
+    const chg = document.getElementById('ocVixChg');
+    const up = (vix.change || 0) >= 0;
+    chg.className = 'chg ' + (up ? 'up' : 'down');
+    chg.textContent = (up ? '+' : '') + (vix.change || 0).toFixed(2)
+        + '  (' + (up ? '+' : '') + (vix.change_pct || 0).toFixed(2) + '%)';
+    // Pin position: clamp value into [8, 35] then map to 0-100% of the bar.
+    const v = Math.max(8, Math.min(35, vix.value));
+    const pct = ((v - 8) / (35 - 8)) * 100;
+    document.getElementById('ocVixPin').style.left = pct.toFixed(1) + '%';
+}
+
+function renderSrLevels(sr, spot) {
+    renderSrChart(window._ocLastRows || [], spot, sr);
+    const fmtStrike = s => Number(s || 0).toLocaleString('en-IN');
+    const fmtOI = oi => (oi >= 1e7 ? (oi/1e7).toFixed(2) + ' Cr'
+                       : oi >= 1e5 ? (oi/1e5).toFixed(2) + ' L'
+                       : Number(oi).toLocaleString('en-IN'));
+    const fmtItem = (it, strongest) => {
+        const cls = strongest === it.strike ? ' strongest' : '';
+        const distSign = it.dist_pct >= 0 ? '+' : '';
+        return `<li class="oc-sr-item${cls}">
+            <span class="oc-sr-strike">${fmtStrike(it.strike)}</span>
+            <span class="oc-sr-oi">${fmtOI(it.oi)} OI</span>
+            <span class="oc-sr-dist">${distSign}${it.dist_pct}% from spot</span>
+        </li>`;
+    };
+    const resEl = document.getElementById('ocSrResistance');
+    const supEl = document.getElementById('ocSrSupport');
+    const resistance = sr.resistance || [];
+    const support = sr.support || [];
+    resEl.innerHTML = resistance.length
+        ? resistance.map(it => fmtItem(it, sr.strongest_resistance)).join('')
+        : '<li class="oc-sr-item" style="color:var(--text-muted)">No data</li>';
+    supEl.innerHTML = support.length
+        ? support.map(it => fmtItem(it, sr.strongest_support)).join('')
+        : '<li class="oc-sr-item" style="color:var(--text-muted)">No data</li>';
+
+    let summary = '';
+    if (sr.strongest_support && sr.strongest_resistance) {
+        const room = sr.strongest_resistance - (spot || 0);
+        const cushion = (spot || 0) - sr.strongest_support;
+        summary = `NIFTY is trading at <b>${fmtStrike(spot)}</b> in the ` +
+            `<b>${fmtStrike(sr.strongest_support)} → ${fmtStrike(sr.strongest_resistance)}</b> ` +
+            `OI band (width <b>${sr.range_pct}%</b>). ` +
+            `Room above: <b>${room.toFixed(0)} pts</b>; ` +
+            `cushion below: <b>${cushion.toFixed(0)} pts</b>. ` +
+            `A close above ${fmtStrike(sr.strongest_resistance)} = bullish breakout; ` +
+            `a close below ${fmtStrike(sr.strongest_support)} = bearish breakdown.`;
+    } else {
+        summary = 'Insufficient OI data to map support/resistance.';
+    }
+    document.getElementById('ocSrSummary').innerHTML = summary;
+}
+
+function renderBlockDeals(blk) {
+    const body = document.getElementById('ocBlockBody');
+    const totalEl = document.getElementById('ocBlockTotal');
+    const deals = (blk && blk.deals) || [];
+    const asOf = (blk && blk.as_of) ? blk.as_of : '';
+    const asOfHtml = asOf
+        ? `<span style="color:var(--text-muted);font-weight:600"><i class="fa-regular fa-clock me-1"></i>${escapeHtml(asOf)}</span>`
+        : '';
+    totalEl.innerHTML = deals.length
+        ? `${asOfHtml}${asOfHtml ? ' · ' : ''}${blk.count || deals.length} large trades · ₹${(blk.total_notional_cr || 0).toLocaleString('en-IN')} Cr total`
+        : (asOfHtml || '—');
+
+    if (!deals.length) {
+        body.innerHTML = '<div class="oc-block-empty">No unusual options activity detected at the moment. Large trades will appear here as they happen.</div>';
+        return;
+    }
+    const fmtN = n => Number(n).toLocaleString('en-IN');
+    const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 2}) + ' Cr';
+    body.innerHTML = `<div style="overflow-x:auto"><table class="oc-block-table">
+        <thead><tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Type · Strike</th>
+            <th>Action</th>
+            <th>Notional</th>
+            <th>Volume</th>
+            <th>OI</th>
+            <th>V/OI</th>
+            <th>LTP</th>
+            <th>Δ Price</th>
+            <th>Δ OI</th>
+            <th>Why</th>
+        </tr></thead><tbody>
+        ${deals.map(d => {
+            const distSign = d.dist_pct >= 0 ? '+' : '';
+            const chgCls = d.price_chg >= 0 ? 'gain-positive' : 'gain-negative';
+            return `<tr>
+                <td style="color:var(--text-muted);font-size:.72rem">${escapeHtml(d.date || '')}</td>
+                <td style="color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums">${escapeHtml(d.time || '')}</td>
+                <td><span class="oc-block-tag ${d.type === 'CE' ? 'ce' : 'pe'}">${d.type}</span> <b>${fmtN(d.strike)}</b> <span style="color:var(--text-muted);font-size:.7rem">(${distSign}${d.dist_pct}%)</span></td>
+                <td><span class="oc-block-dir ${d.direction}">${d.direction}</span></td>
+                <td><b>${fmtINR(d.notional_cr)}</b></td>
+                <td>${fmtN(d.vol)}</td>
+                <td>${fmtN(d.oi)}</td>
+                <td>${d.vol_oi_ratio}×</td>
+                <td>₹${d.ltp}</td>
+                <td class="${chgCls}">${d.price_chg >= 0 ? '+' : ''}${d.price_chg}</td>
+                <td>${d.oi_chg >= 0 ? '+' : ''}${fmtN(d.oi_chg)}</td>
+                <td class="oc-block-reason">${escapeHtml(d.reason || '')}</td>
+            </tr>`;
+        }).join('')}
+        </tbody></table></div>`;
+}
+
+// Auto-refresh every 30s while the tab is visible. Background
+// scheduler keeps the cache + intraday series fresh when no tab is open,
+// so the chart still has a full-day picture when the user returns.
+let _ocTimer = setInterval(() => {
+    if (!document.hidden) load(false);
+}, 30_000);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) load(false);
+});
+</script>
+{% endblock %}
