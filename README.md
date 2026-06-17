@@ -93,7 +93,16 @@ Procfile             # For gunicorn-based hosts (Render, Railway, Heroku)
 
 ## Deployment
 
-The included `Procfile` starts the app with `gunicorn run:app`. Set the same env vars in your hosting provider's dashboard. Compatible with Render, Railway, Azure App Service (with custom startup command), and similar PaaS hosts.
+The repo ships a [Procfile](Procfile) (production gunicorn config) and a [render.yaml](render.yaml) blueprint for one-click deploy on Render.
+
+### Render (recommended)
+
+1. Push the repo to GitHub.
+2. On Render, choose **New → Blueprint** and point it at this repo — it picks up `render.yaml` and creates a Web Service + Key Value (Redis) instance.
+3. In the dashboard, fill the secrets marked `sync: false` (Azure connection string, OpenAI keys, market-data tokens, Brevo, Razorpay, etc.).
+4. Health check path: `/api/_health`. First deploy will run `pip install -r requirements.txt` and start `gunicorn run:app` with the config in the Procfile.
+
+The app is also compatible with Railway, Fly.io, Heroku, and Azure App Service — set the same env vars and use the same start command.
 
 ## License
 
