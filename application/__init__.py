@@ -3,7 +3,19 @@ from flask import Flask, render_template, session
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
-app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# Treat the app as "production" only when FLASK_DEBUG is explicitly off.
+# Anything else (FLASK_DEBUG=1, unset locally, or app.run(debug=True)) keeps
+# Flask's normal dev behaviour so templates and static files reload on edit.
+_FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "").lower()
+_PROD = _FLASK_DEBUG in ("0", "false", "no")
+if _PROD:
+    app.config["TEMPLATES_AUTO_RELOAD"] = False
+    # Long-cache /static/* in production; browsers + CDN revalidate via ETag.
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60 * 60 * 24 * 30
+else:
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # ── Shared cache (Redis when configured, in-process fallback otherwise) ──
 from application.services.cache import cache, mark_active as _cache_mark_active
@@ -126,10 +138,16 @@ def _start_rag_scheduler():
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
         from application.services.rag.ingest import runner as rag_runner
+        from application.services import cache as _cache
+
+        def _run_if_leader():
+            # Only the worker holding the Redis leader lock runs the job.
+            if _cache.try_become_leader(ttl=3600):
+                rag_runner.run_daily()
 
         sched = BackgroundScheduler(timezone="Asia/Kolkata", daemon=True)
         sched.add_job(
-            rag_runner.run_daily,
+            _run_if_leader,
             trigger=CronTrigger(hour=RAG_INGEST_HOUR_IST, minute=0),
             id="rag_daily_ingest",
             replace_existing=True,
