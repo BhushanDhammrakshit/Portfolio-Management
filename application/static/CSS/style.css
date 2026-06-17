@@ -678,6 +678,45 @@ a:hover { color: var(--primary-dark); }
     .dashboard-charts, .dashboard-bottom-row { grid-template-columns: 1fr; }
 }
 
+/* Mobile fixes: prevent numeric values from wrapping, table horizontal scroll,
+   smaller action icons, and ensure chart/modal close buttons remain visible. */
+@media (max-width: 520px) {
+    /* Prevent large currency values from breaking across lines */
+    .dash-card-value,
+    .holding-current,
+    .holding-gain,
+    .sector-card td:nth-child(2),
+    .sector-card td:nth-child(3),
+    .sector-card td:nth-child(4) {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dash-card-value { font-size: 1.05rem; }
+    .dash-card { padding: 12px; }
+
+    /* Make charts slightly shorter on small screens */
+    .chart-canvas-wrap { height: 200px; overflow: visible; }
+
+    /* Allow the sector table to scroll horizontally on small screens */
+    .sector-card { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; }
+    .sector-card table { min-width: 640px; }
+
+    /* Compact holdings list: allow values to shrink and shrink action icons */
+    .holdings-list { max-height: 260px; }
+    .holding-values { min-width: 0; align-items: flex-end; margin-left: 8px; }
+    .holding-current { font-size: 0.9rem; white-space: nowrap; }
+    .holding-gain { font-size: 0.78rem; }
+    .holding-actions { gap: 8px; margin-left: 8px; }
+    .icon-btn { width: 26px; height: 26px; border-radius: 6px; font-size: .85rem; padding: 0; }
+
+    /* Ensure modal/chart close buttons are visible (some embeds use absolute positioning) */
+    .modal-content { overflow: visible; }
+    .modal .btn-close { position: absolute; top: 8px; right: 8px; z-index: 1200; }
+    .chart-card { padding: 12px; }
+}
+
 /* Portfolio analysis */
 .portfolio-analysis-container { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
 .portfolio-stock-list {
@@ -1146,4 +1185,204 @@ a:hover { color: var(--primary-dark); }
 
 /* Footer */
 [data-theme="dark"] .app-footer { color: #64748B; border-color: rgba(255, 255, 255, .06); }
+
+/* =========================================================================
+   Responsive layer (tablet + phone)
+   ------------------------------------------------------------------
+   Goal: every page adapts cleanly from desktop down to ~320px without
+   horizontal scroll. Keeps existing desktop look untouched; only kicks
+   in below the listed breakpoints.
+   ========================================================================= */
+
+/* Stop pages from ever overflowing horizontally on phones. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* Tablet (≤ 991.98px) */
+@media (max-width: 991.98px) {
+    .app-topbar  { padding: 0 16px; gap: 10px; }
+    .app-content { padding: 18px 16px; }
+    .app-footer  { padding: 14px 16px; flex-wrap: wrap; }
+    .topbar-title { font-size: .98rem; }
+    .topbar-cta .d-md-inline { display: none; }
+}
+
+/* Small tablet / large phone (≤ 768px) */
+@media (max-width: 768px) {
+    :root { --topbar-height: 58px; }
+    .app-content { padding: 14px 12px; }
+
+    /* Sidebar drawer takes most of the screen but never the full width */
+    .app-sidebar { width: min(82vw, 280px); }
+
+    /* Topbar: keep title + burger + user; hide secondary CTA text */
+    .app-topbar { padding: 0 12px; gap: 8px; }
+    .topbar-cta { padding: 6px 10px; font-size: .8rem; }
+    .topbar-cta i { margin: 0 !important; }
+    .topbar-cta span,
+    .topbar-cta::after { display: none; }
+
+    /* Headings + cards breathe less on phones */
+    .page-header h1 { font-size: 1.2rem; }
+    .page-header p  { font-size: .85rem; }
+    .surface-card,
+    .portfolio-stock-info,
+    .portfolio-form { padding: 14px; }
+
+    /* Single column for any 2-col grid in the app */
+    .dashboard-charts,
+    .dashboard-bottom-row,
+    .profile-grid,
+    .algo-grid { grid-template-columns: 1fr !important; gap: 12px; }
+    .dashboard-cards { gap: 12px; }
+
+    /* Tables: horizontal scroll instead of overflowing the viewport */
+    .table-responsive,
+    .oc-table-wrap,
+    .oc-gh-tablewrap { -webkit-overflow-scrolling: touch; }
+
+    /* Bootstrap tables that aren't already wrapped: make scrollable */
+    .surface-card > .table,
+    .holdings-card .table,
+    .sector-card .table { display: block; overflow-x: auto; white-space: nowrap; }
+
+    /* Charts: cap height so they don't dominate the screen */
+    canvas { max-height: 280px; }
+
+    /* Modals: edge-to-edge on phones */
+    .modal-dialog {
+        margin: 8px;
+        max-width: calc(100% - 16px);
+    }
+    .modal-dialog.modal-lg,
+    .modal-dialog.modal-xl { max-width: calc(100% - 16px); }
+
+    /* Forms: inputs full-width and bigger tap target */
+    .form-control,
+    .form-select { font-size: 16px; /* iOS no-zoom */ }
+    .btn { min-height: 40px; }
+    .btn-sm { min-height: 34px; }
+
+    /* Flash + alerts */
+    .flash-stack { padding: 10px 12px 0; }
+}
+
+/* Phone (≤ 480px) */
+@media (max-width: 480px) {
+    .app-content { padding: 12px 10px; }
+    .app-topbar  { padding: 0 10px; }
+
+    /* Hide username text in topbar; avatar still visible */
+    .topbar-user-btn .d-md-inline-block,
+    .topbar-user-btn .fa-chevron-down { display: none !important; }
+
+    /* Compact tender / heatmap grids */
+    .tenders-grid { grid-template-columns: 1fr; }
+    .stock-detail-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+
+    /* Smaller modal hero on phones */
+    .upgrade-hero { padding: 22px 18px 16px; }
+    .upgrade-title { font-size: 1.1rem; }
+
+    /* Footer wraps cleanly */
+    .app-footer { font-size: .72rem; gap: 6px; }
+    .app-footer .text-muted { width: 100%; }
+
+    /* Auth screens: trim padding */
+    .auth-card { padding: 22px 18px; }
+
+    /* Dashboard KPI cards: 2 cols on tiny screens looks better than 1 wide one */
+    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-cards > * { padding: 12px !important; }
+}
+
+/* Very small phone (≤ 360px) */
+@media (max-width: 360px) {
+    .dashboard-cards { grid-template-columns: 1fr; }
+    .page-header h1 { font-size: 1.05rem; }
+    .btn { font-size: .85rem; }
+}
+
+/* Landscape phones: sidebar drawer scrolls inside */
+@media (max-height: 520px) and (orientation: landscape) {
+    .app-sidebar-nav { padding: 8px; }
+    .nav-group-label { padding: 8px 12px 4px; }
+    .nav-item { padding: 7px 12px; }
+}
+
+/* Respect iOS safe-area on notched devices */
+@supports (padding: max(0px)) {
+    .app-topbar  { padding-left:  max(12px, env(safe-area-inset-left));
+                   padding-right: max(12px, env(safe-area-inset-right)); }
+    .app-content { padding-left:  max(12px, env(safe-area-inset-left));
+                   padding-right: max(12px, env(safe-area-inset-right)); }
+    .app-footer  { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+}
+
+/* =========================================================================
+   Tool help panel — shared by intraday / swing / investing tools pages
+   ========================================================================= */
+.tool-help {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm);
+    padding: 0;
+    margin: 0 0 16px;
+    font-size: .88rem;
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+.tool-help > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--text);
+    user-select: none;
+}
+.tool-help > summary::-webkit-details-marker { display: none; }
+.tool-help > summary::after {
+    content: "\f078"; /* fa chevron-down */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-left: auto;
+    font-size: .75rem;
+    color: var(--text-muted);
+    transition: transform .15s ease;
+}
+.tool-help[open] > summary::after { transform: rotate(180deg); }
+.tool-help > summary i.fa-circle-info { color: var(--primary); }
+.tool-help-body {
+    padding: 4px 16px 14px 16px;
+    border-top: 1px dashed var(--border);
+    line-height: 1.55;
+}
+.tool-help-body p { margin: 8px 0 6px; color: var(--text-muted); }
+.tool-help-body p strong { color: var(--text); }
+.tool-help-body ol {
+    margin: 4px 0 8px;
+    padding-left: 22px;
+    color: var(--text);
+}
+.tool-help-body ol li { margin-bottom: 3px; }
+.tool-help-body .tool-help-tip {
+    margin-top: 8px;
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: .82rem;
+    color: var(--text-muted);
+}
+.tool-help-body .tool-help-tip strong { color: var(--accent); }
+[data-theme="dark"] .tool-help { background: var(--surface-2); }
+@media (max-width: 768px) {
+    .tool-help { font-size: .82rem; }
+    .tool-help > summary { padding: 9px 12px; }
+    .tool-help-body { padding: 4px 12px 12px 12px; }
+}
+
+
 
