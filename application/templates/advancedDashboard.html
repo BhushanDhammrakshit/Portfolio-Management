@@ -384,7 +384,7 @@
 .metric-card.compare-nifty { border-left: 3px solid #4f46e5; }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
 const pct = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
