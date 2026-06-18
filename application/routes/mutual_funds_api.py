@@ -102,6 +102,7 @@ def api_add_holding():
             purchase_date=str(body.get("purchase_date") or "").strip(),
             sip_monthly=float(body.get("sip_monthly") or 0),
             folio_number=str(body.get("folio_number") or "").strip(),
+            scheme_name=str(body.get("scheme_name") or "").strip() or None,
         )
         return jsonify({"ok": True, "holding": h})
     except ValueError as e:
@@ -116,10 +117,20 @@ def api_holding_modify(hid):
     if not _auth_ok():
         return _err("auth", 401)
     if request.method == "DELETE":
-        ok = mf_portfolio.delete_holding(session["user_id"], hid)
-        return jsonify({"ok": ok})
+        try:
+            ok = mf_portfolio.delete_holding(session["user_id"], hid)
+        except Exception as e:
+            traceback.print_exc()
+            return _err("delete_failed", 500, detail=str(e))
+        if not ok:
+            return _err("not_found", 404)
+        return jsonify({"ok": True})
     body = request.get_json(silent=True) or {}
-    updated = mf_portfolio.update_holding(session["user_id"], hid, **body)
+    try:
+        updated = mf_portfolio.update_holding(session["user_id"], hid, **body)
+    except Exception as e:
+        traceback.print_exc()
+        return _err("update_failed", 500, detail=str(e))
     if not updated:
         return _err("not_found", 404)
     return jsonify({"ok": True, "holding": updated})
