@@ -1,4 +1,4 @@
-﻿"""Core HTML routes for Portfolio Manager."""
+"""Core HTML routes for Portfolio Manager."""
 import uuid
 import csv
 import io
@@ -174,6 +174,8 @@ def signup():
                 "Location": location,
                 "Password": generate_password_hash(password),
                 "EmailVerified": False,
+                "Plan": "free",
+                "PlanExpiresOn": "",
             }
             user_table_client.create_entity(entity=entity)
             # Stash pending state and trigger OTP. Do NOT log the user in yet.
