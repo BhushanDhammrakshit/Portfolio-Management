@@ -410,12 +410,12 @@ a:hover { color: var(--primary-dark); }
     /* Density adapts to viewport height via custom props */
     --nav-pad-y: clamp(6px, 1.2vh, 14px);
     --nav-pad-x: 10px;
-    --nav-item-py: clamp(7px, 0.95vh, 10px);
+    --nav-item-py: clamp(13px, 1.4vh, 16px);
     --nav-item-fs: clamp(0.84rem, 0.6vw + 0.78rem, 0.92rem);
     --nav-label-fs: clamp(0.62rem, 0.3vw + 0.58rem, 0.7rem);
-    --nav-label-pt: clamp(8px, 1.4vh, 16px);
-    --nav-label-pb: clamp(2px, 0.6vh, 6px);
-    --nav-gap: clamp(1px, 0.25vh, 3px);
+    --nav-label-pt: clamp(10px, 1.6vh, 18px);
+    --nav-label-pb: clamp(4px, 0.8vh, 8px);
+    --nav-gap: clamp(2px, 0.35vh, 4px);
 
     padding: var(--nav-pad-y) var(--nav-pad-x) calc(var(--nav-pad-y) + 4px);
     flex: 1; overflow-y: auto; overscroll-behavior: contain;
@@ -452,17 +452,18 @@ a:hover { color: var(--primary-dark); }
 .nav-group-label.is-collapsed .nav-group-chev { transform: rotate(-90deg); }
 .nav-item.nav-group-hidden { display: none; }
 .nav-item {
-    display: flex; align-items: center; gap: 11px;
+    display: flex; align-items: center; gap: 13px;
     padding: var(--nav-item-py) 10px;
     border-radius: 8px;
     color: var(--sidebar-text);
     font-size: var(--nav-item-fs); font-weight: 500;
+    line-height: 1.25;
     transition: all var(--transition);
     white-space: nowrap; overflow: hidden; text-decoration: none;
 }
 .nav-item i {
-    width: 18px; text-align: center;
-    font-size: clamp(0.9rem, 0.5vw + 0.82rem, 0.98rem);
+    width: 22px; text-align: center;
+    font-size: clamp(0.92rem, 0.5vw + 0.84rem, 1rem);
     flex-shrink: 0;
 }
 .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
@@ -476,10 +477,10 @@ a:hover { color: var(--primary-dark); }
     .app-sidebar-nav { --nav-gap: 0px; }
     .nav-group-label { border-top-color: transparent; }
 }
-/* Tall viewport: more breathing room between sections */
-@media (min-height: 960px) {
-    .app-sidebar-nav { --nav-gap: 4px; }
-    .nav-group-label { border-top-color: rgba(255, 255, 255, 0.07); }
+/* Tall viewport: drop dividers (the bigger gap is enough separation) */
+@media (min-height: 820px) {
+    .app-sidebar-nav { --nav-gap: 5px; }
+    .nav-group-label { border-top-color: transparent; }
 }
 .nav-item-logout { color: #fda4af; }
 .nav-item-logout:hover { background: rgba(220, 38, 38, .15); color: #fecaca; }
