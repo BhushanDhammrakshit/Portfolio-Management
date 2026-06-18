@@ -519,7 +519,12 @@
                 </tr>`).join('')}</tbody></table></div>`;
         $('holdingsContainer').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
             if (!confirm('Delete this holding?')) return;
-            await fetch('/api/mutual-funds/holding/' + b.dataset.del, {method:'DELETE'});
+            const r = await fetch('/api/mutual-funds/holding/' + b.dataset.del, {method:'DELETE'});
+            if (!r.ok) {
+                const j = await r.json().catch(() => ({}));
+                alert('Could not delete: ' + (j.detail || j.error || r.statusText));
+                return;
+            }
             loadPortfolio();
         }));
     }
@@ -1128,13 +1133,14 @@
         if (!pickedScheme){ alert('Pick a scheme first.'); return; }
         const body = {
             scheme_code: pickedScheme.code,
+            scheme_name: pickedScheme.name,
             units: +$('addUnits').value, nav_at_purchase: +$('addNav').value,
             purchase_date: $('addDate').value, sip_monthly: +$('addSip').value,
             folio_number: $('addFolio').value
         };
         const r = await fetch('/api/mutual-funds/holding', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
         const j = await r.json();
-        if (j.error){ alert(j.error + (j.detail ? (': ' + j.detail) : '')); return; }
+        if (!r.ok || j.error){ alert((j.error || 'add_failed') + (j.detail ? (': ' + j.detail) : '')); return; }
         bootstrap.Modal.getInstance(document.getElementById('addMfModal')).hide();
         pickedScheme = null; $('addUnits').value=''; $('addNav').value=''; $('addSip').value='0'; $('addFolio').value=''; $('addPicked').textContent='';
         loadPortfolio();
