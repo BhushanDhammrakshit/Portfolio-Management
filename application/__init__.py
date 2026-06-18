@@ -54,6 +54,7 @@ from application.routes.rag_admin import rag_admin_bp
 from application.routes.fundamentals_api import fundamentals_api
 from application.routes.option_chain_api import option_chain_api
 from application.routes.market_pulse_api import market_pulse_api
+from application.routes.global_markets_api import global_markets_api
 from application.routes.intraday_tools_api import intraday_tools_api
 from application.routes.swing_tools_api import swing_tools_api
 from application.routes.investing_tools_api import investing_tools_api
@@ -76,6 +77,7 @@ app.register_blueprint(rag_admin_bp)
 app.register_blueprint(fundamentals_api)
 app.register_blueprint(option_chain_api)
 app.register_blueprint(market_pulse_api)
+app.register_blueprint(global_markets_api)
 app.register_blueprint(intraday_tools_api)
 app.register_blueprint(swing_tools_api)
 app.register_blueprint(investing_tools_api)
@@ -112,6 +114,9 @@ def _inject_globals():
         except Exception:
             plan_dict = plans.PLANS["free"]
 
+    _plan_id = (plan_dict or {}).get("id", "free")
+    _rank = {"free": 0, "pro": 1, "elite": 2}.get(_plan_id, 0)
+
     return {
         "current_user": {
             "name": session.get("name"),
@@ -120,6 +125,8 @@ def _inject_globals():
         },
         "market_data_provider": provider_name(),
         "current_plan": plan_dict,
+        "has_pro": _rank >= 1,
+        "has_elite": _rank >= 2,
     }
 
 
