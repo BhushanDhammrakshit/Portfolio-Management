@@ -45,8 +45,8 @@
         </button>
     </div>
 
-    <nav class="app-sidebar-nav">
-        <span class="nav-group-label">Workspace</span>
+    <nav class="app-sidebar-nav" id="appSidebarNav">
+        <button type="button" class="nav-group-label" data-group="workspace"><span>Workspace</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('home') }}" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
             <i class="fa-solid fa-house"></i><span>Dashboard</span>
         </a>
@@ -60,7 +60,7 @@
             <i class="fa-solid fa-plus"></i><span>Add Stock</span>
         </a>
 
-        <span class="nav-group-label">Intraday</span>
+        <button type="button" class="nav-group-label" data-group="intraday"><span>Intraday</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('intraday_tools_api.intraday_tools_page') }}" class="nav-item {% if title == 'Intraday Tools' %}active{% endif %}">
             <i class="fa-solid fa-bolt"></i><span>Intraday Tools</span>
         </a>
@@ -74,7 +74,7 @@
             <i class="fa-solid fa-tower-broadcast"></i><span>Market Pulse</span>
         </a>
 
-        <span class="nav-group-label">Swing</span>
+        <button type="button" class="nav-group-label" data-group="swing"><span>Swing</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('swing_tools_api.swing_tools_page') }}" class="nav-item {% if title == 'Swing Tools' %}active{% endif %}">
             <i class="fa-solid fa-rocket"></i><span>Swing Tools</span>
         </a>
@@ -82,7 +82,7 @@
             <i class="fa-solid fa-link"></i><span>Options Analytics</span>
         </a>
 
-        <span class="nav-group-label">Investing</span>
+        <button type="button" class="nav-group-label" data-group="investing"><span>Investing</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('investing_tools_api.investing_tools_page') }}" class="nav-item {% if title == 'Investing Tools' %}active{% endif %}">
             <i class="fa-solid fa-seedling"></i><span>Investing Tools</span>
         </a>
@@ -93,15 +93,18 @@
             <i class="fa-solid fa-piggy-bank"></i><span>Mutual Funds</span>
         </a>
 
-        <span class="nav-group-label">Markets</span>
+        <button type="button" class="nav-group-label" data-group="markets"><span>Markets</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('heatmap.heatmap') }}" class="nav-item {% if title == 'Sector Heatmap' %}active{% endif %}">
             <i class="fa-solid fa-table-cells-large"></i><span>Sector Heatmap</span>
+        </a>
+        <a href="{{ url_for('global_markets_api.global_markets_page') }}" class="nav-item {% if title == 'Global Markets' %}active{% endif %}">
+            <i class="fa-solid fa-globe"></i><span>Global Markets</span>
         </a>
         <a href="{{ url_for('tendor_api.show_stock_news') }}" class="nav-item {% if title == 'News & Trends' %}active{% endif %}">
             <i class="fa-solid fa-newspaper"></i><span>News & Trends</span>
         </a>
 
-        <span class="nav-group-label">AI</span>
+        <button type="button" class="nav-group-label" data-group="ai"><span>AI</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('algoHelper') }}" class="nav-item {% if title == 'AI Assistant' %}active{% endif %}">
             <i class="fa-solid fa-robot"></i><span>AI Assistant</span>
         </a>
@@ -109,7 +112,7 @@
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI &amp; Tools</span>
         </a>
 
-        <span class="nav-group-label">Account</span>
+        <button type="button" class="nav-group-label" data-group="account"><span>Account</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
         <a href="{{ url_for('profile_page') }}" class="nav-item {% if title == 'My Account' %}active{% endif %}">
             <i class="fa-solid fa-user"></i><span>My Account</span>
         </a>
@@ -312,6 +315,49 @@ button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;
   if (backdrop) backdrop.addEventListener('click', function(){
     document.body.classList.remove('sidebar-mobile-open');
   });
+
+  // ── Per-group collapse / expand on the sidebar ───────────────────
+  (function(){
+    const STORE_KEY = 'sidebar:groups:v1';
+    const nav = document.getElementById('appSidebarNav');
+    if (!nav) return;
+    const labels = nav.querySelectorAll('.nav-group-label');
+    let state = {};
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch(e) { state = {}; }
+
+    function itemsAfter(label){
+      const items = [];
+      let n = label.nextElementSibling;
+      while (n && !n.classList.contains('nav-group-label')) {
+        if (n.classList.contains('nav-item')) items.push(n);
+        n = n.nextElementSibling;
+      }
+      return items;
+    }
+    function applyGroup(label, collapsed){
+      label.classList.toggle('is-collapsed', !!collapsed);
+      label.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      itemsAfter(label).forEach(el => el.classList.toggle('nav-group-hidden', !!collapsed));
+    }
+    function persist(){
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+    }
+
+    labels.forEach(label => {
+      const key = label.dataset.group || label.textContent.trim().toLowerCase();
+      // If a child item is .active, force the group open regardless of saved state.
+      const hasActive = itemsAfter(label).some(el => el.classList.contains('active'));
+      const collapsed = hasActive ? false : !!state[key];
+      applyGroup(label, collapsed);
+
+      label.addEventListener('click', function(){
+        const next = !label.classList.contains('is-collapsed');
+        applyGroup(label, next);
+        state[key] = next;
+        persist();
+      });
+    });
+  })();
 
   // Logout confirmation
   const modalEl = document.getElementById('logoutModal');
@@ -618,6 +664,128 @@ window.appPlanRank = {free:0, pro:1, elite:2};
     openChart(el.getAttribute('data-tv'));
     const tr = el.closest('tr'); if(tr) tr.classList.add('tv-active');
   });
+})();
+</script>
+
+<!-- ── Global Plan Gate (handles 402 upgrade_required from any API) ── -->
+<style>
+  #planGateModal{position:fixed;inset:0;z-index:11000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);padding:20px}
+  #planGateModal.show{display:flex}
+  #planGateModal .pg-card{background:var(--surface,#fff);color:var(--text,#0f172a);border:1px solid var(--border,#e2e8f0);border-radius:14px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(2,6,23,.35);text-align:center;animation:pgIn .18s ease-out}
+  [data-theme="dark"] #planGateModal .pg-card{background:linear-gradient(180deg,#1e293b,#0f172a);border-color:var(--border-strong,#334155)}
+  @keyframes pgIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  #planGateModal .pg-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#fde68a,#f59e0b);color:#78350f;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:14px;box-shadow:0 4px 14px rgba(245,158,11,.35)}
+  #planGateModal .pg-title{font-size:1.2rem;font-weight:700;margin:0 0 6px;color:var(--text,#0f172a);background:none !important;-webkit-background-clip:initial !important;background-clip:initial !important;-webkit-text-fill-color:currentColor !important;text-fill-color:currentColor !important}
+  [data-theme="dark"] #planGateModal .pg-title{color:#f8fafc}
+  #planGateModal .pg-msg{color:var(--text-muted,#64748b);font-size:.93rem;margin:0 0 18px;line-height:1.45}
+  [data-theme="dark"] #planGateModal .pg-msg{color:#cbd5e1}
+  #planGateModal .pg-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  #planGateModal .pg-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;font-weight:600;font-size:.9rem;text-decoration:none;border:0;cursor:pointer;transition:all .15s}
+  #planGateModal .pg-btn-ghost{background:transparent;color:var(--text-muted,#64748b);border:1px solid var(--border,#e2e8f0)}
+  #planGateModal .pg-btn-ghost:hover{background:var(--surface-2,#f1f5f9)}
+  [data-theme="dark"] #planGateModal .pg-btn-ghost{border-color:var(--border-strong,#334155);color:#cbd5e1}
+  [data-theme="dark"] #planGateModal .pg-btn-ghost:hover{background:rgba(148,163,184,.12)}
+  #planGateModal .pg-btn-primary{background:#2563eb;color:#fff}
+  #planGateModal .pg-btn-primary:hover{background:#1d4ed8}
+
+  /* Inline upgrade lock card (rendered server-side for gated tools) */
+  .upgrade-locked-card{
+    background:var(--surface,#fff);
+    border:1px solid var(--border,#e2e8f0);
+    border-radius:14px;
+    padding:32px 28px;
+    text-align:center;
+    max-width:560px;
+    margin:24px auto;
+    box-shadow:0 4px 18px rgba(2,6,23,.05);
+    color:var(--text,#0f172a);
+  }
+  [data-theme="dark"] .upgrade-locked-card{
+    background:linear-gradient(180deg,rgba(30,41,59,.95),rgba(15,23,42,.95));
+    border-color:var(--border-strong,#334155);
+    box-shadow:0 8px 28px rgba(0,0,0,.45);
+  }
+  .upgrade-locked-card.compact{padding:22px 18px;margin:12px auto}
+  .upgrade-locked-icon{
+    width:60px;height:60px;border-radius:14px;
+    background:linear-gradient(135deg,#fde68a,#f59e0b);
+    color:#78350f;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:1.55rem;margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(245,158,11,.35);
+  }
+  .upgrade-locked-card.compact .upgrade-locked-icon{width:48px;height:48px;font-size:1.25rem;margin-bottom:10px}
+  .upgrade-locked-title{
+    font-size:1.18rem;font-weight:700;margin:0 0 8px;
+    color:var(--text,#0f172a);
+    /* Override any inherited gradient/text-fill from h1-h6 themes */
+    background:none !important;
+    -webkit-background-clip:initial !important;
+    background-clip:initial !important;
+    -webkit-text-fill-color:currentColor !important;
+    text-fill-color:currentColor !important;
+  }
+  [data-theme="dark"] .upgrade-locked-title{color:#f8fafc}
+  .upgrade-locked-card.compact .upgrade-locked-title{font-size:1.02rem}
+  .upgrade-locked-msg{color:var(--text-muted,#64748b);font-size:.94rem;margin:0 0 18px;line-height:1.55;max-width:440px;margin-left:auto;margin-right:auto}
+  [data-theme="dark"] .upgrade-locked-msg{color:#cbd5e1}
+  .upgrade-locked-btn{display:inline-flex;align-items:center;gap:6px}
+</style>
+<script>
+(function(){
+  function buildModal(){
+    let m = document.getElementById('planGateModal');
+    if(m) return m;
+    m = document.createElement('div');
+    m.id = 'planGateModal';
+    m.innerHTML = `
+      <div class="pg-card" role="dialog" aria-modal="true" aria-labelledby="pgTitle">
+        <div class="pg-icon"><i class="fa-solid fa-lock"></i></div>
+        <h4 class="pg-title" id="pgTitle">Upgrade your plan</h4>
+        <p class="pg-msg"></p>
+        <div class="pg-actions">
+          <button type="button" class="pg-btn pg-btn-ghost" data-pg-close>Maybe later</button>
+          <a class="pg-btn pg-btn-primary" data-pg-cta href="/billing"><i class="fa-solid fa-rocket"></i> Upgrade now</a>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click', (e)=>{
+      if(e.target === m || e.target.matches('[data-pg-close]')) m.classList.remove('show');
+    });
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape') m.classList.remove('show');
+    });
+    return m;
+  }
+
+  window.PlanGate = {
+    /** Show the upgrade modal. ``data`` is the JSON body from a 402 response. */
+    show(data){
+      const m = buildModal();
+      const plan = (data && data.required_plan) ? data.required_plan : 'Pro';
+      const planNice = plan.charAt(0).toUpperCase() + plan.slice(1);
+      const url = (data && data.upgrade_url) || '/billing';
+      const msg = (data && data.message) ||
+        `This feature is part of the ${planNice} plan. Upgrade to unlock it.`;
+      m.querySelector('.pg-msg').textContent = msg;
+      m.querySelector('[data-pg-cta]').setAttribute('href', url);
+      m.querySelector('[data-pg-cta]').innerHTML = `<i class="fa-solid fa-rocket"></i> Upgrade to ${planNice}`;
+      m.classList.add('show');
+    },
+    /**
+     * If ``response`` (or already-parsed ``data``) indicates an
+     * ``upgrade_required`` plan gate, show the modal and return true.
+     * Otherwise return false so the caller can keep handling the error.
+     */
+    handle(response, data){
+      const isGate =
+        (response && response.status === 402) ||
+        (data && data.error === 'upgrade_required');
+      if(!isGate) return false;
+      this.show(data || {});
+      return true;
+    }
+  };
 })();
 </script>
 {% block scripts %}{% endblock %}
