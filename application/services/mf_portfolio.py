@@ -76,7 +76,8 @@ def _entity_to_dict(e: dict) -> dict:
 def add_holding(user_id: str, scheme_code: str, units: float,
                 nav_at_purchase: float, purchase_date: str,
                 sip_monthly: float = 0.0,
-                folio_number: str = "") -> dict:
+                folio_number: str = "",
+                scheme_name: Optional[str] = None) -> dict:
     if not user_id:
         raise ValueError("user_id required")
     if not scheme_code:
@@ -86,15 +87,33 @@ def add_holding(user_id: str, scheme_code: str, units: float,
 
     scheme = mf_data.get_scheme(scheme_code)
     meta = scheme.get("meta") or {}
+    name = meta.get("scheme_name")
+    category = meta.get("scheme_category", "") or ""
+    fund_house = meta.get("fund_house", "") or ""
+
+    # Fall back to the cached universe list if MFAPI scheme detail is unavailable.
+    if not name:
+        try:
+            for s in mf_data.list_schemes():
+                if str(s.get("schemeCode")) == str(scheme_code):
+                    name = s.get("schemeName")
+                    break
+        except Exception:
+            pass
+    # Last resort: client-supplied name from the search dropdown.
+    if not name:
+        name = (scheme_name or "").strip() or None
+    if not name:
+        raise ValueError("scheme_not_found")
 
     entity = {
         "PartitionKey": "mf",
         "RowKey": str(uuid.uuid4()),
         "UserId": user_id,
         "SchemeCode": str(scheme_code),
-        "SchemeName": meta.get("scheme_name") or f"Scheme {scheme_code}",
-        "Category": meta.get("scheme_category", ""),
-        "FundHouse": meta.get("fund_house", ""),
+        "SchemeName": name,
+        "Category": category,
+        "FundHouse": fund_house,
         "Units": float(units),
         "NavAtPurchase": float(nav_at_purchase or 0),
         "PurchaseDate": purchase_date or date.today().isoformat(),
@@ -160,7 +179,10 @@ def portfolio_summary(user_id: str) -> dict:
     by_fund_house: dict[str, float] = {}
 
     for h in holdings:
-        nav = mf_data.latest_nav(h["scheme_code"]) or h["nav_at_purchase"]
+        try:
+            nav = mf_data.latest_nav(h["scheme_code"]) or h["nav_at_purchase"]
+        except Exception:
+            nav = h["nav_at_purchase"]
         invested = h["units"] * h["nav_at_purchase"]
         current = h["units"] * nav
         pnl = current - invested
