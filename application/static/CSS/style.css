@@ -407,27 +407,79 @@ a:hover { color: var(--primary-dark); }
 .sidebar-collapse-btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 
 .app-sidebar-nav {
-    padding: 12px 12px 16px;
-    flex: 1; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 2px;
+    /* Density adapts to viewport height via custom props */
+    --nav-pad-y: clamp(6px, 1.2vh, 14px);
+    --nav-pad-x: 10px;
+    --nav-item-py: clamp(7px, 0.95vh, 10px);
+    --nav-item-fs: clamp(0.84rem, 0.6vw + 0.78rem, 0.92rem);
+    --nav-label-fs: clamp(0.62rem, 0.3vw + 0.58rem, 0.7rem);
+    --nav-label-pt: clamp(8px, 1.4vh, 16px);
+    --nav-label-pb: clamp(2px, 0.6vh, 6px);
+    --nav-gap: clamp(1px, 0.25vh, 3px);
+
+    padding: var(--nav-pad-y) var(--nav-pad-x) calc(var(--nav-pad-y) + 4px);
+    flex: 1; overflow-y: auto; overscroll-behavior: contain;
+    display: flex; flex-direction: column; gap: var(--nav-gap);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
+.app-sidebar-nav::-webkit-scrollbar { width: 6px; }
+.app-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1); border-radius: 4px;
+}
+.app-sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
 .nav-group-label {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.4); padding: 14px 12px 6px; font-weight: 600;
+    font-size: var(--nav-label-fs); text-transform: uppercase; letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.42); font-weight: 600;
+    padding: var(--nav-label-pt) 10px var(--nav-label-pb);
+    margin-top: 2px;
+    /* Clickable collapse toggle */
+    background: transparent; border: none;
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; cursor: pointer; text-align: left;
+    transition: color var(--transition);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
+.app-sidebar-nav > .nav-group-label:first-child { border-top: none; margin-top: 0; padding-top: 4px; }
+.nav-group-label:hover { color: rgba(255, 255, 255, 0.78); }
+.nav-group-label > span { flex: 1; min-width: 0; }
+.nav-group-chev {
+    font-size: 0.65rem; opacity: .55;
+    transition: transform .2s ease;
+}
+.nav-group-label:hover .nav-group-chev { opacity: .9; }
+.nav-group-label.is-collapsed .nav-group-chev { transform: rotate(-90deg); }
+.nav-item.nav-group-hidden { display: none; }
 .nav-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 9px 12px; border-radius: 8px;
+    display: flex; align-items: center; gap: 11px;
+    padding: var(--nav-item-py) 10px;
+    border-radius: 8px;
     color: var(--sidebar-text);
-    font-size: 0.9rem; font-weight: 500;
+    font-size: var(--nav-item-fs); font-weight: 500;
     transition: all var(--transition);
     white-space: nowrap; overflow: hidden; text-decoration: none;
 }
-.nav-item i { width: 18px; text-align: center; font-size: 0.95rem; flex-shrink: 0; }
+.nav-item i {
+    width: 18px; text-align: center;
+    font-size: clamp(0.9rem, 0.5vw + 0.82rem, 0.98rem);
+    flex-shrink: 0;
+}
 .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
 .nav-item.active {
     background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff;
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+
+/* Short viewport: hide subtle dividers, even tighter spacing */
+@media (max-height: 720px) {
+    .app-sidebar-nav { --nav-gap: 0px; }
+    .nav-group-label { border-top-color: transparent; }
+}
+/* Tall viewport: more breathing room between sections */
+@media (min-height: 960px) {
+    .app-sidebar-nav { --nav-gap: 4px; }
+    .nav-group-label { border-top-color: rgba(255, 255, 255, 0.07); }
 }
 .nav-item-logout { color: #fda4af; }
 .nav-item-logout:hover { background: rgba(220, 38, 38, .15); color: #fecaca; }
