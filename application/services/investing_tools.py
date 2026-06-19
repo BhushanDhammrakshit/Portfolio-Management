@@ -602,6 +602,32 @@ def moat_score(symbol: str) -> Dict[str, Any]:
     }
 
 
+def scan_moat_scores(limit: int = 10, force: bool = False) -> Dict[str, Any]:
+    """Scan the full universe, compute moat/quality scores and return the
+    top `limit` stocks ranked by composite score."""
+    limit = max(5, min(int(limit or 10), 50))
+    key = "invest:moat:scan:v1"
+    payload = None if force else shared_cache.jget(key)
+    if not payload:
+        rows = _parallel(moat_score, SCREENER_UNIVERSE, max_workers=6)
+        scored = [r for r in rows if r and not r.get("error")
+                  and isinstance(r.get("composite"), (int, float))]
+        scored.sort(key=lambda r: r.get("composite", 0), reverse=True)
+        payload = {
+            "stocks": scored,
+            "total_scanned": len(scored),
+            "as_of": _now_ist().strftime("%d %b %Y, %I:%M %p IST"),
+        }
+        shared_cache.jset(key, payload, ttl=60 * 60)
+    top = payload.get("stocks", [])[:limit]
+    return {
+        "stocks": top,
+        "limit": limit,
+        "total_scanned": payload.get("total_scanned", len(top)),
+        "as_of": payload.get("as_of"),
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # 10. Portfolio health check
 # ─────────────────────────────────────────────────────────────────────────
