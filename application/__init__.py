@@ -106,6 +106,7 @@ def _inject_globals():
     from flask import session
     from application.services.market_data import provider_name
     from application.services import plans
+    from application.constants import PERSONAS, get_persona, persona_groups
 
     plan_dict = None
     if session.get("email"):
@@ -117,6 +118,8 @@ def _inject_globals():
     _plan_id = (plan_dict or {}).get("id", "free")
     _rank = {"free": 0, "pro": 1, "elite": 2}.get(_plan_id, 0)
 
+    _persona_id = session.get("persona")
+
     return {
         "current_user": {
             "name": session.get("name"),
@@ -127,6 +130,9 @@ def _inject_globals():
         "current_plan": plan_dict,
         "has_pro": _rank >= 1,
         "has_elite": _rank >= 2,
+        "user_persona": get_persona(_persona_id),
+        "persona_groups": persona_groups(_persona_id),
+        "all_personas": PERSONAS,
     }
 
 
