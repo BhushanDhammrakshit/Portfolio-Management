@@ -1710,7 +1710,7 @@ function renderPreopen(d) {
     }
 }
 
-// Auto-refresh pre-open panel every 30s but only when its tab is active
+// Auto-refresh pre-open panel every 20s but only when its tab is active
 // AND we're in the live pre-open window (otherwise upstream caches it).
 _preTimer = setInterval(() => {
     if (document.hidden) return;
@@ -1718,7 +1718,7 @@ _preTimer = setInterval(() => {
     if (active && active.dataset.tabTarget === 'preopen') {
         loadPreopen(false);
     }
-}, 30_000);
+}, 20_000);
 
 function renderPreopenChart(series, niftySig) {
     const canvas = document.getElementById('ocPreChart');
