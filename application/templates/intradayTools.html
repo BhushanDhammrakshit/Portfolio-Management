@@ -1,0 +1,568 @@
+{% extends "layout.html" %}
+{% from "_upgrade_lock.html" import upgrade_card %}
+{% block content %}
+<style>
+.tools-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;overflow-x:auto;margin-bottom:18px;scrollbar-width:thin}
+.tools-tabs::-webkit-scrollbar{height:6px}
+.tools-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tools-tab:hover{background:var(--surface-2);color:var(--text)}
+.tools-tab.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.25)}
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+.tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.tool-header h2{font-size:1.35rem;font-weight:700;margin:0}
+.tool-header p{font-size:.85rem;color:var(--text-muted);margin:4px 0 0}
+.tool-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tool-controls select,.tool-controls input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:.82rem}
+.tool-table{width:100%;font-size:.82rem;border-collapse:collapse}
+.tool-table th{background:var(--surface-2);text-align:left;padding:10px;font-weight:600;color:var(--text-muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);position:sticky;top:0}
+.tool-table td{padding:10px;border-bottom:1px solid var(--border)}
+.tool-table tr:hover td{background:var(--surface-2)}
+.tool-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.pill-up{background:rgba(22,163,74,.12);color:#16a34a}
+.pill-dn{background:rgba(220,38,38,.12);color:#dc2626}
+.pill-warn{background:rgba(245,158,11,.15);color:#b45309}
+.pill-neutral{background:rgba(100,116,139,.12);color:var(--text-muted)}
+.gain-pos{color:#16a34a;font-weight:600}
+.gain-neg{color:#dc2626;font-weight:600}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.kpi-box .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.kpi-box .val{font-size:1.3rem;font-weight:700;margin-top:3px;color:var(--text)}
+.rvol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rvol-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.rvol-cell:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.rvol-cell .rv-name{font-weight:700;font-size:.85rem}
+.rvol-cell .rv-sub{font-size:.7rem;color:var(--text-muted)}
+.rvol-cell .rv-val{font-size:1.4rem;font-weight:800;margin-top:6px;font-family:Consolas,monospace}
+.rvol-cell.tier-extreme{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fca5a5}
+.rvol-cell.tier-high{background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:#fdba74}
+.rvol-cell.tier-elevated{background:linear-gradient(135deg,#fefce8,#fef9c3);border-color:#fde68a}
+[data-theme="dark"] .rvol-cell.tier-extreme{background:rgba(127,29,29,.3);border-color:#7f1d1d}
+[data-theme="dark"] .rvol-cell.tier-high{background:rgba(124,45,18,.3);border-color:#7c2d12}
+[data-theme="dark"] .rvol-cell.tier-elevated{background:rgba(113,63,18,.3);border-color:#713f12}
+.pivot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media (max-width:768px){.pivot-grid{grid-template-columns:1fr}}
+.pivot-col h4{font-size:.9rem;font-weight:700;margin:0 0 8px;display:flex;justify-content:space-between}
+.pivot-row{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.82rem;font-family:Consolas,monospace}
+.pivot-row.current{background:rgba(79,70,229,.1);font-weight:700;border-radius:4px}
+.confluence-card{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:8px}
+[data-theme="dark"] .confluence-card{background:rgba(79,70,229,.15);border-color:rgba(99,102,241,.4)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+.spinner-wrap{text-align:center;padding:50px}
+.table-scroll{max-height:580px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.sym-pill{display:inline-block;font-weight:700;color:var(--primary)}
+.score-bar{display:inline-block;width:80px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.score-bar .fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
+.score-bar.neg .fill{background:linear-gradient(90deg,#dc2626,#ef4444)}
+</style>
+
+<div class="page-container">
+    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <div>
+            <h1><i class="fa-solid fa-bolt me-2"></i>Intraday Tools</h1>
+            <p>Six real-time scanners for day-trading. Pick a tab below.</p>
+        </div>
+    </header>
+
+    <div class="tools-tabs" role="tablist">
+        <button class="tools-tab active" data-tab="orb"><i class="fa-solid fa-flag-checkered"></i>ORB Scanner</button>
+        <button class="tools-tab" data-tab="rvol"><i class="fa-solid fa-fire"></i>RVOL Heatmap</button>
+        <button class="tools-tab" data-tab="gappers"><i class="fa-solid fa-arrows-up-down"></i>Gappers</button>
+        <button class="tools-tab" data-tab="pivots"><i class="fa-solid fa-layer-group"></i>Pivots</button>
+        <button class="tools-tab" data-tab="momentum"><i class="fa-solid fa-rocket"></i>Momentum Burst</button>
+        <button class="tools-tab" data-tab="basis"><i class="fa-solid fa-scale-balanced"></i>Index Basis</button>
+        <button class="tools-tab" data-tab="vwap"><i class="fa-solid fa-wave-square"></i>VWAP Deviation</button>
+        <button class="tools-tab" data-tab="rotation"><i class="fa-solid fa-arrows-spin"></i>Sector Rotation</button>
+        <button class="tools-tab" data-tab="news"><i class="fa-solid fa-newspaper"></i>News Sentiment</button>
+    </div>
+
+    <!-- ORB -->
+    <section class="tool-panel active" id="panel-orb">
+        {% if has_pro %}
+        <div class="tool-header">
+            <div><h2>Opening Range Breakout</h2><p>Stocks breaking the first N-minute high/low with volume confirmation.</p></div>
+            <div class="tool-controls">
+                <select id="orbMin"><option value="15">15-min ORB</option><option value="30">30-min ORB</option><option value="60">60-min ORB</option></select>
+                <button class="btn btn-primary btn-sm" id="orbScan"><i class="fa-solid fa-satellite-dish me-1"></i>Scan</button>
+            </div>
+        </div>
+        <div id="orbKpis" class="kpi-row" hidden></div>
+        <div id="orbContent"></div>
+        {% else %}
+        {{ upgrade_card('pro', title='ORB Scanner — Pro feature', message='Spot stocks breaking the first 15/30/60-min high or low with volume confirmation. Upgrade to Pro to unlock.') }}
+        {% endif %}
+    </section>
+
+    <!-- RVOL -->
+    <section class="tool-panel" id="panel-rvol">
+        {% if has_pro %}
+        <div class="tool-header">
+            <div><h2>Relative Volume Heatmap</h2><p>Today's volume vs 20-day average at same time-of-day. Higher = unusual activity.</p></div>
+            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="rvolScan"><i class="fa-solid fa-satellite-dish me-1"></i>Refresh</button></div>
+        </div>
+        <div id="rvolKpis" class="kpi-row" hidden></div>
+        <div id="rvolContent"></div>
+        {% else %}
+        {{ upgrade_card('pro', title='RVOL Heatmap — Pro feature', message='Live relative-volume heatmap vs 20-day average at the same time of day. Upgrade to Pro to unlock.') }}
+        {% endif %}
+    </section>
+
+    <!-- Gappers -->
+    <section class="tool-panel" id="panel-gappers">
+        <div class="tool-header">
+            <div><h2>Pre-Market Gappers + Gap-Fill Tracker</h2><p>Today's largest opening gaps and whether they've filled back to prev close.</p></div>
+            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="gappersScan"><i class="fa-solid fa-satellite-dish me-1"></i>Refresh</button></div>
+        </div>
+        <div id="gappersKpis" class="kpi-row" hidden></div>
+        <div id="gappersContent"></div>
+    </section>
+
+    <!-- Pivots -->
+    <section class="tool-panel" id="panel-pivots">
+        <div class="tool-header">
+            <div><h2>Pivot Calculator + Confluence</h2><p>Classic / Fibonacci / Camarilla pivots with auto-detected confluence zones.</p></div>
+            <div class="tool-controls">
+                <input id="pivotSymbol" placeholder="e.g. RELIANCE" style="width:180px" data-stock-suggest />
+                <button class="btn btn-primary btn-sm" id="pivotGo"><i class="fa-solid fa-magnifying-glass me-1"></i>Compute</button>
+            </div>
+        </div>
+        <div id="pivotContent"><div class="empty-state"><i class="fa-solid fa-layer-group"></i><h4>Enter a symbol to compute pivots</h4></div></div>
+    </section>
+
+    <!-- Momentum -->
+    <section class="tool-panel" id="panel-momentum">
+        <div class="tool-header">
+            <div><h2>Momentum Burst Scanner</h2><p>Stocks moving sharply in the last N minutes with above-average volume.</p></div>
+            <div class="tool-controls">
+                <select id="momLB"><option value="15">Last 15 min</option><option value="30" selected>Last 30 min</option><option value="60">Last 60 min</option><option value="120">Last 2 hours</option></select>
+                <button class="btn btn-primary btn-sm" id="momScan"><i class="fa-solid fa-satellite-dish me-1"></i>Scan</button>
+            </div>
+        </div>
+        <div id="momKpis" class="kpi-row" hidden></div>
+        <div id="momContent"></div>
+    </section>
+
+    <!-- Basis -->
+    <section class="tool-panel" id="panel-basis">
+        <div class="tool-header">
+            <div><h2>Index Basis Monitor</h2><p>Index spot price and theoretical fair value of current-month futures.</p></div>
+            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="basisScan"><i class="fa-solid fa-satellite-dish me-1"></i>Refresh</button></div>
+        </div>
+        <div id="basisContent"></div>
+    </section>
+
+    <!-- VWAP Deviation -->
+    <section class="tool-panel" id="panel-vwap">
+        <div class="tool-header">
+            <div><h2>VWAP Deviation Scanner</h2><p>Stocks trading meaningfully above/below intraday VWAP with volume confirmation.</p></div>
+            <div class="tool-controls">
+                <label style="font-size:.78rem">Min |Dev| %</label>
+                <input id="vwapMin" type="number" step="0.5" value="2" style="width:80px" />
+                <button class="btn btn-primary btn-sm" id="vwapScan"><i class="fa-solid fa-magnifying-glass me-1"></i>Scan</button>
+            </div>
+        </div>
+        <div id="vwapKpis" class="kpi-row" hidden></div>
+        <div id="vwapContent"></div>
+    </section>
+
+    <!-- Sector Rotation -->
+    <section class="tool-panel" id="panel-rotation">
+        <div class="tool-header">
+            <div><h2>Sector Rotation Ticker</h2><p>Real-time sector index strength with 1-hour momentum delta.</p></div>
+            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="rotScan"><i class="fa-solid fa-arrows-rotate me-1"></i>Refresh</button></div>
+        </div>
+        <div id="rotKpis" class="kpi-row" hidden></div>
+        <div id="rotContent"></div>
+    </section>
+
+    <!-- News Sentiment -->
+    <section class="tool-panel" id="panel-news">
+        <div class="tool-header">
+            <div><h2>Live News Sentiment Tagger</h2><p>Recent news per ticker (last 48h) scored bullish / bearish via keyword sentiment.</p></div>
+            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="newsScan"><i class="fa-solid fa-arrows-rotate me-1"></i>Refresh</button></div>
+        </div>
+        <div id="newsKpis" class="kpi-row" hidden></div>
+        <div id="newsContent"></div>
+    </section>
+
+</div>
+
+<script>
+(function(){
+    // Tab switching
+    document.querySelectorAll('.tools-tab').forEach(b=>b.addEventListener('click',()=>{
+        document.querySelectorAll('.tools-tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.tool-panel').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        document.getElementById('panel-'+b.dataset.tab).classList.add('active');
+    }));
+
+    const fmt=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+    const pct=(v)=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
+    const cls=(v)=>v>0?'gain-pos':v<0?'gain-neg':'';
+    const setLoading=(id)=>{document.getElementById(id).innerHTML='<div class="spinner-wrap"><div class="app-spinner lg text-primary"></div><p class="mt-2 text-muted">Scanning…</p></div>';};
+    const setError=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h4>Scan failed</h4><p>${msg||'Try refreshing.'}</p></div>`;};
+    const empty=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No results</h4><p>${msg||''}</p></div>`;};
+    function _upgradeGate(id,r,d){
+        if(r.status!==402 && (!d||d.error!=='upgrade_required')) return false;
+        const plan=(d&&d.required_plan)||'pro';
+        const planNice=plan.charAt(0).toUpperCase()+plan.slice(1);
+        document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-lock" style="color:#f59e0b"></i><h4>${planNice} feature</h4><p>${(d&&d.message)||'Upgrade your plan to unlock this scan.'}</p><a href="${(d&&d.upgrade_url)||'/billing'}" class="btn btn-primary btn-sm mt-2"><i class="fa-solid fa-rocket me-1"></i>Upgrade to ${planNice}</a></div>`;
+        if(window.PlanGate) window.PlanGate.show(d||{});
+        return true;
+    }
+
+    function kpi(box, items){
+        const el=document.getElementById(box);
+        el.innerHTML=items.map(i=>`<div class="kpi-box"><div class="lbl">${i.label}</div><div class="val" style="color:${i.color||'var(--text)'}">${i.value}</div></div>`).join('');
+        el.hidden=false;
+    }
+
+    // ============ ORB ============
+    async function loadORB(){
+        setLoading('orbContent');
+        document.getElementById('orbKpis').hidden=true;
+        try{
+            const m=document.getElementById('orbMin').value;
+            const r=await fetch(`/api/intraday-tools/orb?minutes=${m}&refresh=1`,{method:'POST'});
+            const d=await r.json();
+            if(_upgradeGate('orbContent',r,d))return;
+            if(d.error){setError('orbContent',d.detail);return;}
+            kpi('orbKpis',[
+                {label:'Breakout Up',value:d.breakout_up||0,color:'#16a34a'},
+                {label:'Breakout Down',value:d.breakout_down||0,color:'#dc2626'},
+                {label:'Inside Range',value:d.inside||0},
+                {label:`ORB Window`,value:`${d.orb_minutes} min`},
+            ]);
+            if(!d.stocks||!d.stocks.length){empty('orbContent','No stocks scanned.');return;}
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Status</th><th class="num">Price</th><th class="num">Day Change</th><th class="num">ORB Range</th><th class="num">Vol×</th><th>Score</th></tr></thead><tbody>';
+            for(const s of d.stocks){
+                const stat = s.status==='breakout_up'?'<span class="pill pill-up">UP</span>':s.status==='breakout_down'?'<span class="pill pill-dn">DOWN</span>':'<span class="pill pill-neutral">INSIDE</span>';
+                const sc = s.score||0;
+                const w = Math.min(100,Math.abs(sc));
+                const bar = `<span class="score-bar ${sc<0?'neg':''}"><span class="fill" style="width:${w}%"></span></span>${sc}`;
+                html+=`<tr><td><strong>${s.name}</strong></td><td>${stat}</td><td class="num">₹${fmt(s.price)}</td><td class="num ${cls(s.change_pct)}">${pct(s.change_pct)}</td><td class="num">${fmt(s.orb_low)}–${fmt(s.orb_high)}</td><td class="num">${fmt(s.vol_ratio)}x</td><td>${bar}</td></tr>`;
+            }
+            html+='</tbody></table></div>';
+            document.getElementById('orbContent').innerHTML=html;
+        }catch(e){setError('orbContent',e.message);}
+    }
+    { const _b=document.getElementById('orbScan'); if(_b) _b.addEventListener('click',loadORB); }
+    { const _m=document.getElementById('orbMin'); if(_m) _m.addEventListener('change',loadORB); }
+
+    // ============ RVOL ============
+    async function loadRVOL(){
+        setLoading('rvolContent');
+        document.getElementById('rvolKpis').hidden=true;
+        try{
+            const r=await fetch('/api/intraday-tools/rvol?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(_upgradeGate('rvolContent',r,d))return;
+            if(d.error){setError('rvolContent',d.detail);return;}
+            kpi('rvolKpis',[
+                {label:'Extreme (>3x)',value:d.extreme||0,color:'#dc2626'},
+                {label:'High (>2x)',value:d.high||0,color:'#ea580c'},
+                {label:'Elevated (>1.3x)',value:d.elevated||0,color:'#ca8a04'},
+                {label:'Scanned',value:(d.stocks||[]).length},
+            ]);
+            if(!d.stocks||!d.stocks.length){empty('rvolContent','No data.');return;}
+            const cells=d.stocks.map(s=>`
+                <div class="rvol-cell tier-${s.tier}" title="${s.symbol}">
+                    <div class="rv-name">${s.name}</div>
+                    <div class="rv-sub">₹${fmt(s.price)} <span class="${cls(s.change_pct)}">${pct(s.change_pct)}</span></div>
+                    <div class="rv-val">${fmt(s.rvol)}x</div>
+                </div>`).join('');
+            document.getElementById('rvolContent').innerHTML=`<div class="rvol-grid">${cells}</div>`;
+        }catch(e){setError('rvolContent',e.message);}
+    }
+    { const _b=document.getElementById('rvolScan'); if(_b) _b.addEventListener('click',loadRVOL); }
+
+    // ============ Gappers ============
+    async function loadGappers(){
+        setLoading('gappersContent');
+        document.getElementById('gappersKpis').hidden=true;
+        try{
+            const r=await fetch('/api/intraday-tools/gappers?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('gappersContent',d.detail);return;}
+            kpi('gappersKpis',[
+                {label:'Gap Up',value:d.gap_up||0,color:'#16a34a'},
+                {label:'Gap Down',value:d.gap_down||0,color:'#dc2626'},
+                {label:'Filled',value:d.filled||0,color:'#0ea5e9'},
+                {label:'Still Open',value:d.open_gaps||0,color:'#f59e0b'},
+            ]);
+            if(!d.stocks||!d.stocks.length){empty('gappersContent','No significant gaps today.');return;}
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Direction</th><th class="num">Gap %</th><th class="num">Prev Close</th><th class="num">Open</th><th class="num">Current</th><th>Filled?</th></tr></thead><tbody>';
+            for(const s of d.stocks){
+                const dir = s.direction==='gap_up'?'<span class="pill pill-up">GAP UP</span>':'<span class="pill pill-dn">GAP DOWN</span>';
+                const fil = s.filled?'<span class="pill pill-up"><i class="fa-solid fa-check"></i> Yes</span>':'<span class="pill pill-warn">Open</span>';
+                html+=`<tr><td><strong>${s.name}</strong></td><td>${dir}</td><td class="num ${cls(s.gap_pct)}"><strong>${pct(s.gap_pct)}</strong></td><td class="num">₹${fmt(s.prev_close)}</td><td class="num">₹${fmt(s.open)}</td><td class="num">₹${fmt(s.price)}</td><td>${fil}</td></tr>`;
+            }
+            html+='</tbody></table></div>';
+            document.getElementById('gappersContent').innerHTML=html;
+        }catch(e){setError('gappersContent',e.message);}
+    }
+    document.getElementById('gappersScan').addEventListener('click',loadGappers);
+
+    // ============ Pivots ============
+    async function loadPivots(){
+        let sym=(document.getElementById('pivotSymbol').value||'').trim().toUpperCase();
+        if(!sym){return;}
+        setLoading('pivotContent');
+        try{
+            const r=await fetch(`/api/intraday-tools/pivots?symbol=${encodeURIComponent(sym)}`);
+            const d=await r.json();
+            if(d.error){setError('pivotContent',d.error+(d.detail?': '+d.detail:''));return;}
+            const renderCol=(title,arr)=>{
+                const rows=arr.map(l=>{
+                    const near=Math.abs(l.distance_pct)<0.2?'current':'';
+                    const dir=l.distance_pct>0?'above':l.distance_pct<0?'below':'at';
+                    return `<div class="pivot-row ${near}"><span>${l.name}</span><span>${fmt(l.value)} <small class="text-muted">(${pct(l.distance_pct)} ${dir})</small></span></div>`;
+                }).join('');
+                return `<div class="pivot-col"><h4>${title}</h4>${rows}</div>`;
+            };
+            const conf=d.confluences&&d.confluences.length?
+                '<div style="margin-top:16px"><h4 style="font-size:.95rem;font-weight:700;margin:0 0 8px"><i class="fa-solid fa-bullseye me-1"></i>Confluence zones</h4>'+
+                d.confluences.map(c=>`<div class="confluence-card"><strong>₹${fmt(c.level)}</strong> <span class="pill pill-neutral">${c.strength} levels overlap</span> <small class="text-muted">${pct(c.distance_pct)} from CMP</small><div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">${c.members.join(' · ')}</div></div>`).join('')+'</div>'
+                :'<p class="text-muted mt-3"><em>No strong confluence detected (need ≥2 levels within 0.3%).</em></p>';
+            document.getElementById('pivotContent').innerHTML=`
+                <div class="tool-card"><strong>${d.name}</strong> · CMP <strong>₹${fmt(d.price)}</strong> · Prev Day H/L/C: ${fmt(d.prev_high)} / ${fmt(d.prev_low)} / ${fmt(d.prev_close)}</div>
+                <div class="pivot-grid">${renderCol('Classic',d.classic)}${renderCol('Fibonacci',d.fibonacci)}${renderCol('Camarilla',d.camarilla)}</div>
+                ${conf}`;
+        }catch(e){setError('pivotContent',e.message);}
+    }
+    document.getElementById('pivotGo').addEventListener('click',loadPivots);
+    document.getElementById('pivotSymbol').addEventListener('keydown',e=>{if(e.key==='Enter')loadPivots();});
+
+    // ============ Momentum ============
+    async function loadMomentum(){
+        setLoading('momContent');
+        document.getElementById('momKpis').hidden=true;
+        try{
+            const lb=document.getElementById('momLB').value;
+            const r=await fetch(`/api/intraday-tools/momentum?lookback=${lb}&refresh=1`,{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('momContent',d.detail);return;}
+            kpi('momKpis',[
+                {label:'Up Bursts',value:d.up||0,color:'#16a34a'},
+                {label:'Down Bursts',value:d.down||0,color:'#dc2626'},
+                {label:'Lookback',value:`${d.lookback_min} min`},
+                {label:'Total',value:(d.stocks||[]).length},
+            ]);
+            if(!d.stocks||!d.stocks.length){empty('momContent','No significant bursts.');return;}
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Direction</th><th class="num">Burst %</th><th class="num">Vol Thrust</th><th class="num">Day %</th><th class="num">Price</th><th class="num">Score</th></tr></thead><tbody>';
+            for(const s of d.stocks){
+                const dir = s.direction==='up'?'<span class="pill pill-up">UP</span>':'<span class="pill pill-dn">DOWN</span>';
+                html+=`<tr><td><strong>${s.name}</strong></td><td>${dir}</td><td class="num ${cls(s.burst_pct)}"><strong>${pct(s.burst_pct)}</strong></td><td class="num">${fmt(s.vol_thrust)}x</td><td class="num ${cls(s.day_change_pct)}">${pct(s.day_change_pct)}</td><td class="num">₹${fmt(s.price)}</td><td class="num"><strong>${s.score}</strong></td></tr>`;
+            }
+            html+='</tbody></table></div>';
+            document.getElementById('momContent').innerHTML=html;
+        }catch(e){setError('momContent',e.message);}
+    }
+    document.getElementById('momScan').addEventListener('click',loadMomentum);
+    document.getElementById('momLB').addEventListener('change',loadMomentum);
+
+    // ============ Basis ============
+    async function loadBasis(){
+        setLoading('basisContent');
+        try{
+            const r=await fetch('/api/intraday-tools/basis?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('basisContent',d.detail);return;}
+            if(!d.indices||!d.indices.length){empty('basisContent','No data.');return;}
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Index</th><th class="num">Spot</th><th class="num">Day %</th><th class="num">Fair Value (Carry)</th><th class="num">Days to Expiry</th><th>Expiry</th></tr></thead><tbody>';
+            for(const i of d.indices){
+                html+=`<tr><td><strong>${i.name}</strong></td><td class="num">${fmt(i.spot)}</td><td class="num ${cls(i.change_pct)}">${pct(i.change_pct)}</td><td class="num">${fmt(i.fair_value)}</td><td class="num">${i.days_to_expiry}</td><td>${i.expiry}</td></tr>`;
+            }
+            html+='</tbody></table></div><p class="text-muted mt-2" style="font-size:.78rem"><i class="fa-solid fa-circle-info me-1"></i>'+d.note+'</p>';
+            document.getElementById('basisContent').innerHTML=html;
+        }catch(e){setError('basisContent',e.message);}
+    }
+    document.getElementById('basisScan').addEventListener('click',loadBasis);
+
+    // ============ VWAP Deviation ============
+    async function loadVwap(){
+        setLoading('vwapContent');document.getElementById('vwapKpis').hidden=true;
+        try{
+            const minDev=document.getElementById('vwapMin').value||2;
+            const r=await fetch(`/api/intraday-tools/vwap?min_dev=${minDev}&refresh=1`,{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('vwapContent',d.detail);return;}
+            if(!d.stocks||!d.stocks.length){empty('vwapContent','No stocks exceed deviation threshold.');return;}
+            const k=document.getElementById('vwapKpis');
+            k.innerHTML=`<div class="kpi-box"><div class="lbl">Above VWAP</div><div class="val" style="color:#16a34a">${d.long_count}</div></div>
+                <div class="kpi-box"><div class="lbl">Below VWAP</div><div class="val" style="color:#dc2626">${d.short_count}</div></div>
+                <div class="kpi-box"><div class="lbl">Total</div><div class="val">${d.stocks.length}</div></div>
+                <div class="kpi-box"><div class="lbl">Scan time</div><div class="val" style="font-size:.85rem">${d.scan_time}</div></div>`;
+            k.hidden=false;
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Side</th><th>Stock</th><th class="num">LTP</th><th class="num">VWAP</th><th class="num">Deviation</th><th class="num">Vol×</th><th>Signal</th></tr></thead><tbody>';
+            d.stocks.forEach(s=>{
+                const sidePill=s.side==='long'?'pill-up':'pill-dn';
+                const sigPill=s.signal==='trend-continuation'?'pill-warn':'pill-neutral';
+                html+=`<tr><td><span class="pill ${sidePill}">${s.side==='long'?'ABOVE':'BELOW'}</span></td>`+
+                    `<td><strong>${s.name}</strong></td>`+
+                    `<td class="num">${fmt(s.ltp)}</td><td class="num">${fmt(s.vwap)}</td>`+
+                    `<td class="num ${cls(s.deviation_pct)}">${pct(s.deviation_pct)}</td>`+
+                    `<td class="num">${fmt(s.volume_ratio,2)}×</td>`+
+                    `<td><span class="pill ${sigPill}">${s.signal}</span></td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('vwapContent').innerHTML=html;
+        }catch(e){setError('vwapContent',e.message);}
+    }
+    document.getElementById('vwapScan').addEventListener('click',loadVwap);
+
+    // ============ Sector Rotation ============
+    async function loadRotation(){
+        setLoading('rotContent');document.getElementById('rotKpis').hidden=true;
+        try{
+            const r=await fetch('/api/intraday-tools/sector-rotation?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('rotContent',d.detail);return;}
+            if(!d.sectors||!d.sectors.length){empty('rotContent','No data.');return;}
+            const k=document.getElementById('rotKpis');
+            k.innerHTML=`<div class="kpi-box"><div class="lbl">Leader</div><div class="val" style="color:#16a34a;font-size:.95rem">${d.leader?d.leader.name+' '+pct(d.leader.day_change_pct):'—'}</div></div>
+                <div class="kpi-box"><div class="lbl">Laggard</div><div class="val" style="color:#dc2626;font-size:.95rem">${d.laggard?d.laggard.name+' '+pct(d.laggard.day_change_pct):'—'}</div></div>
+                <div class="kpi-box"><div class="lbl">Rotation Spread</div><div class="val">${fmt(d.rotation_spread_pct,2)}%</div></div>
+                <div class="kpi-box"><div class="lbl">Scan time</div><div class="val" style="font-size:.85rem">${d.scan_time}</div></div>`;
+            k.hidden=false;
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Sector Index</th><th class="num">LTP</th><th class="num">Day %</th><th class="num">1-Hour Momentum</th></tr></thead><tbody>';
+            d.sectors.forEach(s=>{
+                html+=`<tr><td><strong>${s.name}</strong></td><td class="num">${fmt(s.ltp)}</td>`+
+                    `<td class="num ${cls(s.day_change_pct)}">${pct(s.day_change_pct)}</td>`+
+                    `<td class="num ${cls(s.momentum_1h_pct)}">${pct(s.momentum_1h_pct)}</td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('rotContent').innerHTML=html;
+        }catch(e){setError('rotContent',e.message);}
+    }
+    document.getElementById('rotScan').addEventListener('click',loadRotation);
+
+    // ============ News Sentiment ============
+    async function loadNews(){
+        setLoading('newsContent');document.getElementById('newsKpis').hidden=true;
+        try{
+            const r=await fetch('/api/intraday-tools/news-sentiment?refresh=1',{method:'POST'});
+            const d=await r.json();
+            if(d.error){setError('newsContent',d.detail);return;}
+            if(!d.stocks||!d.stocks.length){empty('newsContent','No tickers have indexed news in the last 48h. Try refreshing the RAG ingest first.');return;}
+            const k=document.getElementById('newsKpis');
+            k.innerHTML=`<div class="kpi-box"><div class="lbl">Bullish</div><div class="val" style="color:#16a34a">${d.bullish}</div></div>
+                <div class="kpi-box"><div class="lbl">Bearish</div><div class="val" style="color:#dc2626">${d.bearish}</div></div>
+                <div class="kpi-box"><div class="lbl">Neutral</div><div class="val">${d.neutral}</div></div>
+                <div class="kpi-box"><div class="lbl">Tickers covered</div><div class="val">${d.stocks.length}</div></div>`;
+            k.hidden=false;
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Verdict</th><th class="num">Score</th><th class="num">News #</th><th>Latest Headline</th><th>Date</th></tr></thead><tbody>';
+            d.stocks.forEach(s=>{
+                const vp=s.verdict==='bullish'?'pill-up':s.verdict==='bearish'?'pill-dn':'pill-neutral';
+                const url=s.url?`<a href="${s.url}" target="_blank" style="text-decoration:none;color:inherit">${s.headline}<i class="fa-solid fa-up-right-from-square ms-1" style="font-size:.7rem;opacity:.6"></i></a>`:s.headline;
+                html+=`<tr><td><strong>${s.name}</strong></td>`+
+                    `<td><span class="pill ${vp}">${s.verdict}</span></td>`+
+                    `<td class="num">${fmt(s.sentiment_score,1)}</td>`+
+                    `<td class="num">${s.news_count}</td>`+
+                    `<td style="max-width:340px;font-size:.8rem">${url}</td>`+
+                    `<td><small class="text-muted">${s.published}</small></td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('newsContent').innerHTML=html;
+        }catch(e){setError('newsContent',e.message);}
+    }
+    document.getElementById('newsScan').addEventListener('click',loadNews);
+
+    // Initial load
+    loadORB();
+})();
+</script>
+
+<script>
+(function(){
+    const TOOL_HELP = {
+        orb: {
+            what: "Finds stocks that break their first-N-minute high or low <strong>with volume backing</strong> — the classic opening-range setup that often runs for the rest of the session.",
+            how: ["Pick a window — 15 min for liquid large-caps, 30/60 min for volatile mid/small-caps.","Click <em>Scan</em> after the window closes.","Focus on rows with RVOL ≥ 2 and a clean break (not just a wick poke)."],
+            tip: "Enter only after the breakout candle <strong>closes</strong> beyond the range, not on the wick."
+        },
+        rvol: {
+            what: "Today's volume vs the 20-day average <strong>at the same time of day</strong>. Hot tiles = unusual interest, often before the news catches up.",
+            how: ["Check mid-morning once patterns have settled.","Click <em>Refresh</em> and scan red / orange tiles first.","Cross-check the chart — RVOL alone isn't a signal."],
+            tip: "RVOL ≥ 3 with a fresh news catalyst is the highest-quality intraday setup."
+        },
+        gappers: {
+            what: "Pre-market gap-up / gap-down stocks with a live <strong>gap-fill tracker</strong>.",
+            how: ["Filter by direction (up / down / filled).","Plan a fade if the gap looks weak, or a continuation if volume confirms.","Watch the first 30 min — most fills happen there."],
+            tip: "If a gap isn't filled by 11 AM, the trend is usually real for the rest of the day."
+        },
+        pivots: {
+            what: "Daily Classic + Fibonacci + Camarilla pivot levels with auto-detected <strong>confluence zones</strong> (where 2+ methods overlap).",
+            how: ["Type a symbol and click <em>Compute</em>.","Use confluence zones as primary support / resistance.","Trade reversals at S/R, breakouts only when price closes through on volume."],
+            tip: "The strongest reactions usually happen at zones with <strong>3 overlapping</strong> levels."
+        },
+        momentum: {
+            what: "Stocks moving sharply over the last N minutes with <strong>above-average volume</strong>. Catches fresh trends as they form.",
+            how: ["Pick a lookback (15 / 30 / 60 / 120 min).","Click <em>Scan</em>.","Enter only when the stock's direction matches the index direction."],
+            tip: "Morning momentum bursts have far stronger follow-through than late-day ones."
+        },
+        basis: {
+            what: "Difference between the index spot and the <strong>theoretical fair value</strong> of its current-month future. Reveals institutional flow before price moves.",
+            how: ["Watch the basis live — wide premium = bullish flow, deep discount = bearish flow.","Combine with the FII net number for the strongest read."],
+            tip: "A sudden basis flip during the day often precedes a 1–2% intraday reversal."
+        },
+        vwap: {
+            what: "Stocks trading X% above or below their intraday <strong>VWAP</strong> — the institutional fair-price benchmark.",
+            how: ["Set the % threshold (try 2% to start).","Above-VWAP names are stronger, below-VWAP are weaker.","Best entries are pullbacks <em>back to</em> VWAP in trending names."],
+            tip: "Avoid extreme deviations — those are usually news-driven and reverse fast."
+        },
+        rotation: {
+            what: "Sector indices ranked by 1-hour <strong>momentum</strong>, showing where money is flowing right now.",
+            how: ["Click <em>Refresh</em>.","Focus on the top 2–3 sectors.","Drill into their leaders for individual entries."],
+            tip: "Sectors leading the morning usually lead the day; major rotation tends to start after 1 PM."
+        },
+        news: {
+            what: "Last 48h headlines per ticker, scored bullish or bearish via keyword sentiment (RAG ingest).",
+            how: ["Type a symbol.","Review the latest headlines.","Align news direction with the chart before trading."],
+            tip: "Single-headline pops fade fast; <strong>sustained</strong> bullish flow over 24h is the tradable signal."
+        }
+    };
+
+    function injectToolHelp(){
+        document.querySelectorAll('.tool-panel[id^="panel-"]').forEach(panel => {
+            const key = panel.id.replace(/^panel-/, '');
+            const meta = TOOL_HELP[key];
+            if (!meta) return;
+            if (panel.querySelector(':scope > .tool-help')) return;
+            const header = panel.querySelector(':scope > .tool-header');
+            if (!header) return;
+            const storageKey = 'toolHelp:' + key;
+            let stored = null;
+            try { stored = localStorage.getItem(storageKey); } catch(_){}
+            const isOpen = stored === 'open';
+            const det = document.createElement('details');
+            det.className = 'tool-help';
+            if (isOpen) det.open = true;
+            const stepsHtml = (meta.how || []).map(s => '<li>' + s + '</li>').join('');
+            const tipHtml = meta.tip ? '<div class="tool-help-tip"><strong>Tip:</strong> ' + meta.tip + '</div>' : '';
+            det.innerHTML =
+                '<summary><i class="fa-solid fa-circle-info"></i>How to use this tool</summary>' +
+                '<div class="tool-help-body">' +
+                    '<p><strong>What it does:</strong> ' + (meta.what || '') + '</p>' +
+                    (stepsHtml ? '<p><strong>How to use:</strong></p><ol>' + stepsHtml + '</ol>' : '') +
+                    tipHtml +
+                '</div>';
+            det.addEventListener('toggle', function(){
+                try { localStorage.setItem(storageKey, det.open ? 'open' : 'closed'); } catch(_){}
+            });
+            header.insertAdjacentElement('afterend', det);
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', injectToolHelp);
+    } else {
+        injectToolHelp();
+    }
+})();
+</script>
+{% endblock %}

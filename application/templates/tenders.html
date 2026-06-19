@@ -1,0 +1,193 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+.signal-section-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;font-size:1.05rem;font-weight:700;color:var(--text)}
+.signal-section-title .pill{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.3px}
+.signal-section-title .pill.hot{background:linear-gradient(135deg,#fee2e2,#fed7aa);color:#9a3412;border:1px solid #fdba74}
+.signal-section-title .pill.regular{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)}
+.signal-section-title .count-chip{font-size:.72rem;font-weight:600;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:8px}
+.signal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);margin:8px 0 16px}
+.tender-card.high-conviction{position:relative;border-width:2px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.tender-card.high-conviction.tender-bullish{border-color:#16a34a;background:linear-gradient(135deg,rgba(22,163,74,.04),rgba(22,163,74,.01))}
+.tender-card.high-conviction.tender-bearish{border-color:#dc2626;background:linear-gradient(135deg,rgba(220,38,38,.04),rgba(220,38,38,.01))}
+.tender-card .high-flag{position:absolute;top:-9px;right:12px;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:6px;text-transform:uppercase}
+.tender-card .high-flag.bull{background:#16a34a;color:#fff}
+.tender-card .high-flag.bear{background:#dc2626;color:#fff}
+.tender-card .catalyst-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.tender-card .catalyst-chip{font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--text-muted);text-transform:capitalize}
+.tender-card.high-conviction.tender-bullish .catalyst-chip{background:#dcfce7;color:#14532d}
+.tender-card.high-conviction.tender-bearish .catalyst-chip{background:#fee2e2;color:#7f1d1d}
+[data-theme="dark"] .signal-section-title .pill.hot{background:#3f1d11;color:#fed7aa;border-color:#7c2d12}
+[data-theme="dark"] .tender-card.high-conviction.tender-bullish .catalyst-chip{background:#064e3b;color:#a7f3d0}
+[data-theme="dark"] .tender-card.high-conviction.tender-bearish .catalyst-chip{background:#450a0a;color:#fecaca}
+.disclaimer-tip{font-size:.75rem;color:var(--text-muted);margin-top:6px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid #f59e0b}
+</style>
+<div class="tenders-page">
+    <header class="page-header">
+        <h1><i class="fa-solid fa-newspaper me-2"></i>Market news & sentiment</h1>
+        <p>AI-classified Indian stock news. {% if last_updated %}Updated {{ last_updated }}.{% endif %}</p>
+    </header>
+
+    {% set high_items = stocks | selectattr('conviction', 'equalto', 'high') | list %}
+    {% set normal_items = stocks | rejectattr('conviction', 'equalto', 'high') | list %}
+
+    <div class="tenders-header-row">
+        <div class="tenders-stats">
+            <span class="tender-stat"><i class="fa-solid fa-fire" style="color:#f97316"></i>&nbsp;High conviction: {{ high_items | length }}</span>
+            <span class="tender-stat"><span class="pip up"></span>Bullish: {{ stocks | selectattr('sentiment', 'equalto', 'bullish') | list | length }}</span>
+            <span class="tender-stat"><span class="pip down"></span>Bearish: {{ stocks | selectattr('sentiment', 'equalto', 'bearish') | list | length }}</span>
+            <span class="tender-stat"><span class="pip neutral"></span>Neutral: {{ stocks | selectattr('sentiment', 'equalto', 'neutral') | list | length }}</span>
+            <span class="tender-stat">Total: {{ stocks | length }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="refreshTendersBtn" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="tender-filter-bar">
+        <button class="tender-filter-btn active" data-filter="all">All</button>
+        <button class="tender-filter-btn" data-filter="high">High conviction</button>
+        <button class="tender-filter-btn" data-filter="bullish">Bullish</button>
+        <button class="tender-filter-btn" data-filter="bearish">Bearish</button>
+        <button class="tender-filter-btn" data-filter="neutral">Neutral</button>
+    </div>
+
+    {% if stocks %}
+
+    {# ── HIGH CONVICTION SECTION ─────────────────────────────────────── #}
+    {% if high_items %}
+    <div class="signal-section-title" data-section="high">
+        <i class="fa-solid fa-fire" style="color:#f97316"></i>
+        Sure-shot signals
+        <span class="pill hot">High conviction</span>
+        <span class="count-chip">{{ high_items | length }}</span>
+    </div>
+    <div class="disclaimer-tip">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        These headlines contain strong catalysts (buyback, order win, downgrade, fraud probe, etc.) that historically move the price the same day.
+        <strong>Always verify on the source before trading — this is signal, not advice.</strong>
+    </div>
+    <div class="tenders-grid" id="highConvictionGrid">
+        {% for stock in high_items %}
+        <div class="tender-card high-conviction {% if stock.sentiment == 'bullish' %}tender-bullish{% elif stock.sentiment == 'bearish' %}tender-bearish{% else %}tender-neutral{% endif %}" data-sentiment="{{ stock.sentiment }}" data-conviction="high" data-stock="{{ stock.stock }}" data-summary="{{ stock.summary }}" data-time="{{ stock.time | default('Recently') }}">
+            <span class="high-flag {% if stock.sentiment == 'bullish' %}bull{% else %}bear{% endif %}">
+                <i class="fa-solid fa-fire me-1"></i>{% if stock.sentiment == 'bullish' %}Strong buy signal{% else %}Strong sell signal{% endif %}
+            </span>
+            <div class="tender-card-header">
+                <span class="tender-stock-name">{{ stock.stock }}</span>
+                {% if stock.sentiment == "bullish" %}
+                    <span class="badge-soft badge-soft-success"><i class="fa-solid fa-arrow-up"></i> Bullish</span>
+                {% elif stock.sentiment == "bearish" %}
+                    <span class="badge-soft badge-soft-danger"><i class="fa-solid fa-arrow-down"></i> Bearish</span>
+                {% else %}
+                    <span class="badge-soft" style="background:var(--surface-2);color:var(--text-muted)"><i class="fa-solid fa-minus"></i> Neutral</span>
+                {% endif %}
+            </div>
+            <div class="tender-card-body">{{ stock.summary }}</div>
+            {% if stock.catalysts %}
+            <div class="catalyst-row">
+                {% for c in stock.catalysts %}<span class="catalyst-chip">{{ c }}</span>{% endfor %}
+            </div>
+            {% endif %}
+            <div class="tender-card-footer d-flex justify-content-between align-items-center mt-2">
+                <small class="text-muted"><i class="fa-regular fa-clock me-1"></i>{{ stock.time | default('Recently') }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="signal-divider"></div>
+    {% endif %}
+
+    {# ── REGULAR NEWS SECTION ────────────────────────────────────────── #}
+    {% if normal_items %}
+    <div class="signal-section-title" data-section="normal">
+        <i class="fa-regular fa-newspaper"></i>
+        Other market news
+        <span class="pill regular">Lower conviction</span>
+        <span class="count-chip">{{ normal_items | length }}</span>
+    </div>
+    <div class="tenders-grid" id="tendersGrid">
+        {% for stock in normal_items %}
+        <div class="tender-card {% if stock.sentiment == 'bullish' %}tender-bullish{% elif stock.sentiment == 'bearish' %}tender-bearish{% else %}tender-neutral{% endif %}" data-sentiment="{{ stock.sentiment }}" data-conviction="normal" data-stock="{{ stock.stock }}" data-summary="{{ stock.summary }}" data-time="{{ stock.time | default('Recently') }}">
+            <div class="tender-card-header">
+                <span class="tender-stock-name">{{ stock.stock }}</span>
+                {% if stock.sentiment == "bullish" %}
+                    <span class="badge-soft badge-soft-success"><i class="fa-solid fa-arrow-up"></i> Bullish</span>
+                {% elif stock.sentiment == "bearish" %}
+                    <span class="badge-soft badge-soft-danger"><i class="fa-solid fa-arrow-down"></i> Bearish</span>
+                {% else %}
+                    <span class="badge-soft" style="background:var(--surface-2);color:var(--text-muted)"><i class="fa-solid fa-minus"></i> Neutral</span>
+                {% endif %}
+            </div>
+            <div class="tender-card-body">{{ stock.summary }}</div>
+            <div class="tender-card-footer d-flex justify-content-between align-items-center mt-2">
+                <small class="text-muted"><i class="fa-regular fa-clock me-1"></i>{{ stock.time | default('Recently') }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="surface-card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+            <h4>No news available</h4>
+            {% if ai_configured is defined and not ai_configured %}
+            <p>AI service is not configured. Set <code>OPENAI_API_KEY</code> and <code>OPENAI_ENDPOINT</code> in your <code>.env</code> file to enable news classification.</p>
+            {% else %}
+            <p>Could not fetch market news right now. Click refresh to try again.</p>
+            <button id="emptyRefreshBtn" class="btn btn-primary"><i class="fa-solid fa-arrows-rotate me-1"></i>Try again</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.tender-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tender-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const f = btn.dataset.filter;
+        document.querySelectorAll('.tender-card').forEach(card => {
+            let show = true;
+            if (f === 'all') show = true;
+            else if (f === 'high') show = card.dataset.conviction === 'high';
+            else show = card.dataset.sentiment === f;
+            card.style.display = show ? '' : 'none';
+        });
+        // Hide section titles when their grid is empty after filter
+        document.querySelectorAll('[data-section]').forEach(title => {
+            const isHigh = title.dataset.section === 'high';
+            const grid = isHigh ? document.getElementById('highConvictionGrid') : document.getElementById('tendersGrid');
+            if (!grid) return;
+            const anyVisible = Array.from(grid.querySelectorAll('.tender-card')).some(c => c.style.display !== 'none');
+            title.style.display = anyVisible ? '' : 'none';
+            const sib = title.nextElementSibling;
+            if (sib && sib.classList.contains('disclaimer-tip')) sib.style.display = anyVisible ? '' : 'none';
+        });
+    });
+});
+
+document.getElementById('refreshTendersBtn').addEventListener('click', refreshTenders);
+const emptyBtn = document.getElementById('emptyRefreshBtn');
+if (emptyBtn) emptyBtn.addEventListener('click', refreshTenders);
+
+async function refreshTenders(e) {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Refreshing…';
+    try {
+        const r = await fetch('/api/tenders/refresh', { method: 'POST' });
+        if (r.ok) location.reload();
+        else { btn.disabled = false; btn.innerHTML = original; appAlert('Refresh failed.', 'danger'); }
+    } catch {
+        btn.disabled = false; btn.innerHTML = original; appAlert('Network error.', 'danger');
+    }
+}
+</script>
+{% endblock %}
