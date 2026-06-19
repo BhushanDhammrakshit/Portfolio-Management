@@ -15,6 +15,7 @@ from application.services.azure_table import (user_table_client,
                                               stocks_table_client)
 from application.services import verification
 from application.services import precompute
+from application.constants import PERSONAS, get_persona
 
 
 # ---------- Helpers ----------
@@ -26,6 +27,33 @@ def login_required(view):
             return redirect(url_for("logIn"))
         return view(*args, **kwargs)
     return wrapped
+
+
+# Endpoints a logged-in user may reach before choosing a persona.
+_PERSONA_EXEMPT_ENDPOINTS = {
+    "choose_persona", "set_persona", "logout", "static",
+    "verify_email", "verify_email_resend", "verify_email_cancel",
+}
+
+
+@app.before_request
+def _require_persona():
+    """Route logged-in users without a persona to the onboarding page.
+
+    Only applies to top-level HTML page navigations (GET requests that
+    accept HTML) so JSON/API/polling endpoints keep working normally.
+    """
+    if not session.get("user_id") or session.get("persona"):
+        return None
+    if request.method != "GET":
+        return None
+    endpoint = request.endpoint or ""
+    if endpoint in _PERSONA_EXEMPT_ENDPOINTS:
+        return None
+    # Skip blueprint API endpoints and anything that isn't asking for HTML.
+    if "." in endpoint or "text/html" not in (request.headers.get("Accept") or ""):
+        return None
+    return redirect(url_for("choose_persona"))
 
 
 def _clean_value(val):
@@ -73,6 +101,17 @@ def _fetch_user_by_email(email):
     users = list(user_table_client.query_entities(
         query_filter=f"Email eq '{email}'"))
     return users[0] if users else None
+
+
+def _persist_user_persona(email, persona_id):
+    """Save the chosen persona on the user's Azure Table entity."""
+    try:
+        user = _fetch_user_by_email(email)
+        if user:
+            user["Persona"] = persona_id
+            user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
+    except Exception as e:  # non-fatal: session still drives the UI
+        print(f"[persona] could not persist persona: {e}")
 
 
 def _fetch_user_stocks(user_id):
@@ -127,6 +166,7 @@ def logIn():
                 session["name"] = user.get("UserName", "User")
                 session["email"] = user.get("Email", email)
                 session["user_id"] = user.get("RowKey", "")
+                session["persona"] = (user.get("Persona") or "") or None
                 session["just_logged_in"] = True
                 return redirect(url_for("home"))
             return render_template("login.html",
@@ -227,6 +267,7 @@ def verify_email():
             session["name"] = session.pop("pending_verify_name", "User")
             session["email"] = session.pop("pending_verify_email")
             session["user_id"] = session.pop("pending_verify_user_id", "")
+            session["persona"] = None
             session["just_logged_in"] = True
             flash("Email verified \u2014 welcome aboard!", "success")
             return redirect(url_for("home"))
@@ -260,12 +301,49 @@ def verify_email_cancel():
 @app.route("/home")
 @login_required
 def home():
+    if not session.get("persona"):
+        return redirect(url_for("choose_persona"))
     stocks = _fetch_user_stocks(session["user_id"])
     just_logged_in = session.pop("just_logged_in", False)
     return render_template("home.html",
                            name=session["name"], email=session["email"],
                            title="Dashboard", stocks=stocks,
                            just_logged_in=just_logged_in)
+
+
+@app.route("/choose-persona")
+@login_required
+def choose_persona():
+    """Onboarding page: pick a persona (trader / swing / investor)."""
+    return render_template(
+        "choosePersona.html",
+        name=session.get("name"), email=session.get("email"),
+        personas=PERSONAS,
+        current_persona=session.get("persona"),
+        title="Welcome")
+
+
+@app.route("/set-persona", methods=["POST"])
+@login_required
+def set_persona():
+    """Persist the chosen persona and tailor the sidebar accordingly.
+
+    Used both for first-time onboarding and for switching personas later
+    from the topbar. Honours an optional ``next`` redirect target.
+    """
+    persona_id = (request.form.get("persona") or "").strip().lower()
+    if not get_persona(persona_id):
+        flash("Please choose a valid profile to continue.", "warning")
+        return redirect(url_for("choose_persona"))
+
+    session["persona"] = persona_id
+    _persist_user_persona(session["email"], persona_id)
+
+    # Only allow internal redirects to avoid open-redirect issues.
+    nxt = request.form.get("next") or ""
+    if nxt.startswith("/") and not nxt.startswith("//"):
+        return redirect(nxt)
+    return redirect(url_for("home"))
 
 
 @app.route("/portfolioAnalysis")
@@ -731,6 +809,9 @@ def tv_chart():
   .bar button{border:1px solid #d1d5db;background:#fff;color:#374151;
     padding:3px 8px;border-radius:6px;font-size:12px;cursor:pointer}
   .bar button.on{background:#4f46e5;color:#fff;border-color:#4f46e5}
+  .bar .sep{width:1px;height:18px;background:#e5e7eb;margin:0 4px}
+  .bar button.tg{border-color:#cbd5e1}
+  .bar button.tg.on{background:#0ea5e9;border-color:#0ea5e9}
   .bar .status{margin-left:auto;font-size:12px;color:#6b7280}
   #chart{position:absolute;left:0;right:0;bottom:0;top:38px}
   .ohlc{font-size:12px;color:#6b7280;margin-left:10px}
@@ -744,6 +825,9 @@ def tv_chart():
   <button data-tf="60">1h</button>
   <button data-tf="D">1D</button>
   <button data-tf="W">1W</button>
+  <span class="sep"></span>
+  <button id="btnVol" class="tg on" title="Toggle volume">Volume</button>
+  <button id="btnEma" class="tg on" title="Toggle 20 EMA">EMA 20</button>
   <span class="ohlc" id="ohlc"></span>
   <span class="status" id="status">Loading…</span>
 </div>
@@ -769,6 +853,20 @@ def tv_chart():
     priceFormat:{type:'volume'}, priceScaleId:'', color:'#94a3b8',
     scaleMargins:{top:0.8, bottom:0}
   });
+  const emaSeries = chart.addLineSeries({
+    color:'#f59e0b', lineWidth:2, priceLineVisible:false, lastValueVisible:false,
+    crosshairMarkerVisible:false
+  });
+  function computeEma(bars, period){
+    const k = 2/(period+1); let prev=null; const out=[];
+    for(let i=0;i<bars.length;i++){
+      const c = bars[i].c;
+      prev = (prev===null) ? c : (c*k + prev*(1-k));
+      out.push({time:bars[i].t, value:prev});
+    }
+    return out;
+  }
+  let showVol=true, showEma=true;
   const ohlcEl = document.getElementById('ohlc');
   const statusEl = document.getElementById('status');
   chart.subscribeCrosshairMove(p=>{
@@ -785,7 +883,7 @@ def tv_chart():
 
   function load(tf){
     curTf = tf;
-    document.querySelectorAll('.bar button').forEach(b=>{
+    document.querySelectorAll('.bar button[data-tf]').forEach(b=>{
       b.classList.toggle('on', b.dataset.tf===tf);
     });
     statusEl.textContent = 'Loading…';
@@ -793,17 +891,26 @@ def tv_chart():
       .then(r=>r.json()).then(j=>{
         if(!j.ok){ statusEl.textContent = j.error || 'No data'; return; }
         const bars = j.bars || [];
-        if(!bars.length){ statusEl.textContent='No data'; series.setData([]); volSeries.setData([]); return; }
+        if(!bars.length){ statusEl.textContent='No data'; series.setData([]); volSeries.setData([]); emaSeries.setData([]); return; }
         series.setData(bars.map(b=>({time:b.t, open:b.o, high:b.h, low:b.l, close:b.c})));
         volSeries.setData(bars.map(b=>({time:b.t, value:b.v||0,
           color: b.c>=b.o ? 'rgba(5,150,105,0.4)' : 'rgba(220,38,38,0.4)'})));
+        emaSeries.setData(computeEma(bars, 20));
         chart.timeScale().fitContent();
         statusEl.textContent = bars.length + ' bars · ' + (j.source || '');
       })
       .catch(e=>{ statusEl.textContent = 'Error: '+e.message; });
   }
-  document.querySelectorAll('.bar button').forEach(b=>{
+  document.querySelectorAll('.bar button[data-tf]').forEach(b=>{
     b.addEventListener('click', ()=>load(b.dataset.tf));
+  });
+  document.getElementById('btnVol').addEventListener('click', function(){
+    showVol=!showVol; this.classList.toggle('on', showVol);
+    volSeries.applyOptions({visible:showVol});
+  });
+  document.getElementById('btnEma').addEventListener('click', function(){
+    showEma=!showEma; this.classList.toggle('on', showEma);
+    emaSeries.applyOptions({visible:showEma});
   });
   load(curTf);
 })();
