@@ -81,14 +81,16 @@ INDIAVIX = "^INDIAVIX"
 _LIVE_KEY = "preopen:pulse:live"          # short TTL during pre-open
 _FROZEN_KEY_FMT = "preopen:pulse:frozen:{date}"  # 09:08 snapshot per day
 
-_LIVE_TTL = 30                # 30 s during pre-open
+_LIVE_TTL = 20                # 20 s during pre-open (matches series cadence)
 _OFFHOURS_TTL = 5 * 60        # 5 min outside pre-open
 _FROZEN_TTL = 24 * 3600       # one day
 
-# Per-day per-minute price series for the pre-open window (08:55 → 09:30).
+# Per-day price series for the pre-open window (08:55 → 09:30), one point
+# every 20 seconds.
 _SERIES_KEY_FMT = "preopen:series:{date}"
 _SERIES_TTL = 12 * 3600
-_SERIES_MAX_POINTS = 60   # 35 minutes + buffer
+_SERIES_BUCKET_SECONDS = 20
+_SERIES_MAX_POINTS = 120  # 35 min × 3 buckets/min + buffer
 _SERIES_STORE_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
     "_preopen_series.json",
@@ -480,19 +482,20 @@ def _compute_pulse() -> Dict[str, Any]:
     series = list(series or [])
 
     if _in_series_window(now) and sig_nifty.get("available"):
-        minute_bucket = now.strftime("%H:%M")
+        bucket_sec = (now.second // _SERIES_BUCKET_SECONDS) * _SERIES_BUCKET_SECONDS
+        bucket = f"{now.hour:02d}:{now.minute:02d}:{bucket_sec:02d}"
         prev_close = sig_nifty.get("prev_close")
         spot = sig_nifty.get("value")
         chg_pct = sig_nifty.get("change_pct")
         if spot is not None:
             point = {
-                "t": minute_bucket,
+                "t": bucket,
                 "spot": spot,
                 "prev_close": prev_close,
                 "change_pct": chg_pct,
                 "phase": phase_id,
             }
-            if series and series[-1].get("t") == minute_bucket:
+            if series and series[-1].get("t") == bucket:
                 series[-1] = point
             else:
                 series.append(point)
