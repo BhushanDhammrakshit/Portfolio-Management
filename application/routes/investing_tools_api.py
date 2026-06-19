@@ -207,6 +207,19 @@ def api_moat():
         return jsonify({"error": "failed", "detail": str(e)}), 500
 
 
+@investing_tools_api.route("/api/investing-tools/moat-scan", methods=["GET"])
+def api_moat_scan():
+    if not _auth_ok():
+        return jsonify({"error": "auth"}), 401
+    limit = request.args.get("limit", default=10, type=int) or 10
+    force = (request.args.get("refresh") or "") == "1"
+    try:
+        return jsonify(investing_tools.scan_moat_scores(limit, force=force))
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "failed", "detail": str(e)}), 500
+
+
 @investing_tools_api.route("/api/investing-tools/portfolio-health", methods=["GET", "POST"])
 def api_portfolio_health():
     if not _auth_ok():
