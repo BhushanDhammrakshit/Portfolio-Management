@@ -171,7 +171,10 @@
     <!-- Moat -->
     <section class="tool-panel" id="panel-moat">
         <div class="tool-header"><div><h2>Moat / Quality Composite</h2><p>5-pillar score: profitability, margins, leverage, cash gen, earnings consistency.</p></div>
-            <div class="tool-controls"><input id="moatSym" placeholder="Symbol" data-stock-suggest /><button class="btn btn-success btn-sm" id="moatGo">Score</button></div>
+            <div class="tool-controls"><input id="moatSym" placeholder="Symbol" data-stock-suggest /><button class="btn btn-success btn-sm" id="moatGo">Score</button>
+                <select id="moatTop" class="form-select form-select-sm" style="width:auto"><option value="10">Top 10</option><option value="20">Top 20</option></select>
+                <button class="btn btn-outline-primary btn-sm" id="moatScanGo">Scan all</button>
+            </div>
         </div>
         <div id="moatContent"></div>
     </section>
@@ -463,6 +466,29 @@
         }catch(e){setError('moatContent',e.message);}
     });
 
+    // ============ Moat — scan all (top picks) ============
+    document.getElementById('moatScanGo').addEventListener('click',async()=>{
+        const limit=parseInt(document.getElementById('moatTop').value,10)||10;
+        setLoading('moatContent');
+        try{
+            const r=await fetch(`/api/investing-tools/moat-scan?limit=${limit}`);
+            const d=await r.json();
+            if(d.error){setError('moatContent',d.error);return;}
+            const rows=d.stocks||[];
+            if(!rows.length){setError('moatContent','No stocks scored');return;}
+            const vColor=c=>c>=75?'#16a34a':c>=60?'#0ea5e9':c>=45?'#f59e0b':'#dc2626';
+            let html=`<div class="tool-card"><div class="d-flex justify-content-between flex-wrap align-items-center"><h5 style="margin:0">Top ${rows.length} by moat / quality score</h5><span class="text-muted" style="font-size:.8rem">${d.total_scanned} screened${d.as_of?' · '+d.as_of:''}</span></div></div>`;
+            html+='<div class="table-scroll"><table class="tool-table"><thead><tr><th>#</th><th>Stock</th><th>Verdict</th><th class="num">Score</th><th class="num">ROE</th><th class="num">ROCE</th><th class="num">Op&nbsp;Mgn</th><th class="num">D/E</th></tr></thead><tbody>';
+            rows.forEach((s,i)=>{
+                const m=s.metrics_snapshot||{};
+                const sym=(s.symbol||'').replace(/\.NS$|\.BO$/,'');
+                html+=`<tr><td class="num text-muted">${i+1}</td><td><a class="stock-cell" href="#" data-tv="${sym}"><strong>${s.name||sym}</strong></a></td><td><span class="text-muted" style="font-size:.85rem">${s.verdict||''}</span></td><td class="num"><strong style="color:${vColor(s.composite)}">${s.composite}</strong></td><td class="num">${fmt(m.roe,1)}</td><td class="num">${fmt(m.roce,1)}</td><td class="num">${fmt(m.op_margin,1)}</td><td class="num">${fmt(m.de,2)}</td></tr>`;
+            });
+            html+='</tbody></table></div>';
+            document.getElementById('moatContent').innerHTML=html;
+        }catch(e){setError('moatContent',e.message);}
+    });
+
     // ============ Portfolio Health ============
     document.getElementById('healthGo').addEventListener('click',async()=>{
         setLoading('healthContent');
@@ -486,13 +512,13 @@
             }
             html+='<h5 class="mt-3">Sector breakdown</h5><div class="table-scroll" style="max-height:300px"><table class="tool-table"><thead><tr><th>Sector</th><th class="num">Value</th><th class="num">% of Portfolio</th></tr></thead><tbody>';
             d.sector_breakdown.forEach(s=>{
-                html+=`<tr><td><strong>${s.sector}</strong></td><td class="num">${inr(s.value)}</td><td class="num">${fmt(s.pct,1)}%</td></tr>`;
+                html+=`<tr><td><span><strong>${s.sector}</strong></span></td><td class="num">${inr(s.value)}</td><td class="num">${fmt(s.pct,1)}%</td></tr>`;
             });
             html+='</tbody></table></div>';
             html+='<h5 class="mt-3">Holdings</h5><div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Sector</th><th class="num">Qty</th><th class="num">CMP</th><th class="num">Value</th><th class="num">P&amp;L %</th><th class="num">PE</th><th class="num">ROE</th><th>Score</th></tr></thead><tbody>';
             d.holdings.forEach(h=>{
                 const sc=h.score?`<span class="pill ${h.score>=70?'pill-up':h.score>=50?'pill-warn':'pill-dn'}">${h.score} ${h.verdict||''}</span>`:'—';
-                html+=`<tr><td><strong>${h.name}</strong></td><td><span class="tag">${h.sector}</span></td><td class="num">${fmt(h.qty,0)}</td><td class="num">${inr(h.cmp)}</td><td class="num">${inr(h.value)}</td><td class="num ${cls(h.pnl_pct)}">${pct(h.pnl_pct)}</td><td class="num">${fmt(h.pe,1)}</td><td class="num">${fmt(h.roe,1)}</td><td>${sc}</td></tr>`;
+                html+=`<tr><td><a class="stock-cell" href="#" data-tv="${h.symbol}"><strong>${h.name}</strong></a></td><td><span class="tag">${h.sector}</span></td><td class="num">${fmt(h.qty,0)}</td><td class="num">${inr(h.cmp)}</td><td class="num">${inr(h.value)}</td><td class="num ${cls(h.pnl_pct)}">${pct(h.pnl_pct)}</td><td class="num">${fmt(h.pe,1)}</td><td class="num">${fmt(h.roe,1)}</td><td>${sc}</td></tr>`;
             });
             html+='</tbody></table></div>';
             document.getElementById('healthContent').innerHTML=html;
