@@ -93,6 +93,42 @@ FYERS_TOKEN_REFRESH_HOUR_IST = int(os.getenv("FYERS_TOKEN_REFRESH_HOUR_IST", "7"
 FYERS_TOKEN_REFRESH_MINUTE_IST = int(os.getenv("FYERS_TOKEN_REFRESH_MINUTE_IST", "30"))
 
 
+# ── Upstox API (market data provider) ─────────────────────────────────
+# Upstox v2/v3 REST. Access tokens expire daily at 03:30 IST. The token
+# is obtained via the OAuth code exchange (/callback/upstox) or the
+# headless TOTP login in upstox_auth.py. Personal creds (mobile/pin/totp)
+# enable the automated daily refresh.
+UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY", "")
+UPSTOX_API_SECRET = os.getenv("UPSTOX_API_SECRET", "")
+UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
+UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN", "")
+UPSTOX_TOTP_SECRET = os.getenv("UPSTOX_TOTP_SECRET", "")
+UPSTOX_MOBILE = os.getenv("UPSTOX_MOBILE", "")
+UPSTOX_PIN = os.getenv("UPSTOX_PIN", "")
+UPSTOX_TOKEN_REFRESH_HOUR_IST = int(os.getenv("UPSTOX_TOKEN_REFRESH_HOUR_IST", "7"))
+UPSTOX_TOKEN_REFRESH_MINUTE_IST = int(os.getenv("UPSTOX_TOKEN_REFRESH_MINUTE_IST", "15"))
+
+# Runtime store for the Upstox access token (set by upstox_auth on refresh
+# or by the OAuth callback). Prefer this over the env-var value so refreshes
+# propagate without a restart.
+_upstox_runtime_token: dict[str, str] = {}
+_upstox_token_lock = threading.Lock()
+
+
+def set_upstox_token(token: str) -> None:
+    if not token:
+        return
+    with _upstox_token_lock:
+        _upstox_runtime_token["token"] = token
+
+
+def upstox_access_token() -> str:
+    """Active Upstox access token — runtime value wins over env var."""
+    with _upstox_token_lock:
+        tok = _upstox_runtime_token.get("token")
+    return tok or UPSTOX_ACCESS_TOKEN
+
+
 # ── Runtime token store (populated by fyers_auth.refresh_all_tokens) ──
 # Lets the daily refresher inject fresh tokens without restarting the
 # app. ``fyers_app_pool()`` prefers runtime tokens over the env-var
@@ -218,17 +254,6 @@ OHLC_NEGATIVE_TTL = int(os.getenv("OHLC_NEGATIVE_TTL", "900"))
 SWING_PRECOMPUTE_ENABLED = (os.getenv("SWING_PRECOMPUTE_ENABLED", "1") == "1")
 SWING_PRECOMPUTE_HOUR_IST = int(os.getenv("SWING_PRECOMPUTE_HOUR_IST", "8"))
 SWING_PRECOMPUTE_MINUTE_IST = int(os.getenv("SWING_PRECOMPUTE_MINUTE_IST", "0"))
-
-# ── Fyers WebSocket ticker (separate worker process) ──────────────────
-# Set to 1 only inside the dedicated ticker process (scripts/run_fyers_ws.py
-# / Azure WebJob). The Flask app reads ticks from Redis; it never opens a
-# WebSocket itself.
-FYERS_WS_ENABLED = (os.getenv("FYERS_WS_ENABLED", "0") == "1")
-# Max symbols per WS connection. Fyers reliably handles 300-500 in Lite mode.
-FYERS_WS_MAX_SYMBOLS_PER_CONN = int(os.getenv("FYERS_WS_MAX_SYMBOLS_PER_CONN", "200"))
-# How long a tick is considered fresh in Redis. Should be longer than the
-# longest expected market lull (e.g. illiquid symbol untouched for 1 min).
-FYERS_WS_TICK_TTL = int(os.getenv("FYERS_WS_TICK_TTL", "120"))
 
 # ── Payments (Razorpay) ───────────────────────────────────────────────
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
