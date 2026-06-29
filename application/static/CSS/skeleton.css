@@ -1,0 +1,100 @@
+/* PortfolioPro skeleton loaders & smooth fade-in.
+   Drop-in classes — no JS required for the visual effect.
+
+   Usage:
+     <div class="pp-skel pp-skel-card"></div>
+     <div class="pp-skel pp-skel-line"></div>
+     <div class="pp-skel pp-skel-line pp-skel-w-60"></div>
+     <div class="pp-skel pp-skel-circle pp-skel-32"></div>
+
+   When real data arrives, remove the .pp-skel class (or replace the
+   element) — pp-fade-in animates the new content in:
+
+     <div class="pp-fade-in">…rendered card…</div>
+*/
+.pp-skel{
+    position:relative;
+    display:block;
+    overflow:hidden;
+    background:linear-gradient(
+        90deg,
+        var(--skel-base, #e2e8f0) 0%,
+        var(--skel-shine, #f1f5f9) 50%,
+        var(--skel-base, #e2e8f0) 100%
+    );
+    background-size:200% 100%;
+    animation:pp-skel-shimmer 1.2s linear infinite;
+    border-radius:8px;
+    color:transparent !important;
+    user-select:none;
+    pointer-events:none;
+}
+.pp-skel *{visibility:hidden !important}
+
+[data-theme="dark"] .pp-skel{
+    --skel-base:#1e293b;
+    --skel-shine:#334155;
+}
+
+.pp-skel-line{height:14px;margin:6px 0;border-radius:4px}
+.pp-skel-line.pp-skel-sm{height:10px}
+.pp-skel-line.pp-skel-lg{height:20px;border-radius:6px}
+.pp-skel-w-30{width:30%}
+.pp-skel-w-40{width:40%}
+.pp-skel-w-50{width:50%}
+.pp-skel-w-60{width:60%}
+.pp-skel-w-70{width:70%}
+.pp-skel-w-80{width:80%}
+.pp-skel-w-100{width:100%}
+
+.pp-skel-card{height:120px;border-radius:12px}
+.pp-skel-card.pp-skel-tall{height:220px}
+.pp-skel-card.pp-skel-xl{height:360px}
+
+.pp-skel-circle{border-radius:50%}
+.pp-skel-24{width:24px;height:24px}
+.pp-skel-32{width:32px;height:32px}
+.pp-skel-48{width:48px;height:48px}
+
+/* Grid presets so a whole panel can be skeletoned in one wrap. */
+.pp-skel-grid{
+    display:grid;
+    gap:12px;
+    grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+}
+.pp-skel-grid .pp-skel-card{min-height:140px}
+
+.pp-skel-table{display:flex;flex-direction:column;gap:8px}
+.pp-skel-table .pp-skel-line{height:18px}
+
+@keyframes pp-skel-shimmer{
+    0%   {background-position:200% 0}
+    100% {background-position:-200% 0}
+}
+
+/* Smooth fade-in when real content replaces a skeleton. */
+.pp-fade-in{
+    animation:pp-fade-in .28s ease-out both;
+}
+@keyframes pp-fade-in{
+    from {opacity:0; transform:translateY(4px)}
+    to   {opacity:1; transform:translateY(0)}
+}
+
+/* Tiny "as of" badge for cached-but-stale data, paired with ppCache. */
+.pp-stale-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:.7rem;font-weight:600;letter-spacing:.02em;
+    color:var(--text-muted, #64748b);
+    background:var(--surface-2, #f1f5f9);
+    border:1px solid var(--border, #e5e7eb);
+    border-radius:999px;padding:2px 8px;
+    margin-left:6px;
+}
+.pp-stale-badge i{font-size:.7rem;opacity:.7}
+
+/* Reduce-motion: drop the shimmer to a static tint. */
+@media (prefers-reduced-motion: reduce){
+    .pp-skel{animation:none; background:var(--skel-base, #e2e8f0)}
+    .pp-fade-in{animation:none}
+}
