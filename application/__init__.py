@@ -56,6 +56,7 @@ from application.routes.option_chain_api import option_chain_api
 from application.routes.market_pulse_api import market_pulse_api
 from application.routes.global_markets_api import global_markets_api
 from application.routes.intraday_tools_api import intraday_tools_api
+from application.routes.fno_gap_api import fno_gap_api
 from application.routes.swing_tools_api import swing_tools_api
 from application.routes.investing_tools_api import investing_tools_api
 from application.routes.ai_tools_api import ai_tools_api
@@ -79,6 +80,7 @@ app.register_blueprint(option_chain_api)
 app.register_blueprint(market_pulse_api)
 app.register_blueprint(global_markets_api)
 app.register_blueprint(intraday_tools_api)
+app.register_blueprint(fno_gap_api)
 app.register_blueprint(swing_tools_api)
 app.register_blueprint(investing_tools_api)
 app.register_blueprint(ai_tools_api)
