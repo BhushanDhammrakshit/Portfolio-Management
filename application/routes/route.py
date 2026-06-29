@@ -1,4 +1,4 @@
-﻿"""Core HTML routes for Portfolio Manager."""
+"""Core HTML routes for Portfolio Manager."""
 import uuid
 import csv
 import io
@@ -151,6 +151,12 @@ def index():
     if "email" in session:
         return redirect(url_for("home"))
     return render_template("landing.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers auto-request /favicon.ico; serve the brand logo from /static.
+    return redirect(url_for("static", filename="logo.png"))
 
 
 @app.route("/login", methods=["GET", "POST"])
