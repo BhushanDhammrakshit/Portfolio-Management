@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B1024" />
+    <title>Welcome · Finance Candle</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        :root{
+            --bg:#0B1024;--panel:#141B33;--panel-2:#1A2240;
+            --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.16);
+            --ink:#F1F5F9;--muted:#94A3B8;
+            --primary:#6D6CF7;--primary-2:#8B5CF6;--accent:#22D3EE;--success:#10B981;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            background:var(--bg);color:var(--ink);min-height:100vh;position:relative;overflow-x:hidden;
+        }
+        body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(120px);opacity:.5;pointer-events:none;z-index:0}
+        body::before{top:-220px;left:-180px;width:600px;height:600px;background:radial-gradient(circle,var(--primary) 0%,transparent 70%)}
+        body::after{bottom:-240px;right:-200px;width:640px;height:640px;background:radial-gradient(circle,var(--primary-2) 0%,transparent 70%)}
+
+        .op-topbar{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:20px 32px}
+        .op-brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:800;font-size:1.1rem;letter-spacing:-.01em}
+        .op-brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--primary-2));display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 20px rgba(109,108,247,.4);overflow:hidden}
+        .op-brand .mark img{width:100%;height:100%;object-fit:contain;transform:scale(1.1)}
+        .op-brand .accent{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+        .op-logout{color:var(--muted);text-decoration:none;font-size:.88rem;font-weight:500;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;transition:.15s}
+        .op-logout:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+
+        .op-shell{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:20px 24px 64px;text-align:center}
+        .op-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(109,108,247,.12);border:1px solid rgba(109,108,247,.35);color:#C7CAFF;font-size:.78rem;font-weight:600;margin-bottom:18px}
+        .op-eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(34,211,238,.7);animation:opp 2s infinite}
+        @keyframes opp{0%{box-shadow:0 0 0 0 rgba(34,211,238,.7)}70%{box-shadow:0 0 0 10px rgba(34,211,238,0)}100%{box-shadow:0 0 0 0 rgba(34,211,238,0)}}
+        .op-shell h1{font-size:clamp(1.8rem,3.4vw,2.6rem);font-weight:800;line-height:1.12;letter-spacing:-.02em;margin:0 0 12px}
+        .op-shell h1 .grad{background:linear-gradient(135deg,#fff 0%,#C7CAFF 50%,var(--accent) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .op-sub{color:var(--muted);font-size:1.02rem;max-width:620px;margin:0 auto 36px;line-height:1.55}
+
+        .op-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:left}
+        @media (max-width:860px){.op-grid{grid-template-columns:1fr}}
+
+        .op-card{position:relative;display:flex;flex-direction:column;height:100%;margin:0;padding:0;border:0;background:transparent}
+        .op-card button{
+            width:100%;height:100%;text-align:left;cursor:pointer;
+            display:flex;flex-direction:column;gap:14px;
+            padding:26px 22px;border-radius:18px;
+            background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+            border:1px solid var(--border);color:var(--ink);
+            transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+        }
+        .op-card button:hover{transform:translateY(-6px);border-color:var(--border-2);box-shadow:0 24px 50px rgba(0,0,0,.45)}
+        .op-card.is-current button{border-color:rgba(109,108,247,.6);box-shadow:0 0 0 1px rgba(109,108,247,.4)}
+        .op-ico{width:54px;height:54px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+        .op-card.trader .op-ico{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+        .op-card.swing .op-ico{background:linear-gradient(135deg,#6D6CF7,#8B5CF6)}
+        .op-card.investor .op-ico{background:linear-gradient(135deg,#10B981,#0ea5e9)}
+        .op-name{font-size:1.2rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+        .op-badge{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:rgba(109,108,247,.18);color:#C7CAFF}
+        .op-tag{font-size:.82rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+        .op-desc{font-size:.92rem;color:var(--muted);line-height:1.55;flex:1 1 auto}
+        .op-cta{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem;color:#fff;margin-top:4px}
+        .op-cta i{transition:transform .18s ease}
+        .op-card button:hover .op-cta i{transform:translateX(4px)}
+
+        .op-foot{margin-top:34px;color:var(--muted);font-size:.84rem}
+        .op-foot i{color:var(--accent)}
+    </style>
+</head>
+<body>
+    <header class="op-topbar">
+        <a href="{{ url_for('home') }}" class="op-brand">
+            <span class="mark"><img src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
+            Finance<span class="accent">Candle</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="op-logout"><i class="fa-solid fa-right-from-bracket"></i> Sign out</a>
+    </header>
+
+    <main class="op-shell">
+        <span class="op-eyebrow"><span class="dot"></span> Personalize your workspace</span>
+        <h1>Hi {{ name or 'there' }}, <span class="grad">how do you trade?</span></h1>
+        <p class="op-sub">Pick the profile that fits you best. We'll tailor your sidebar to show only the tools that matter — you can switch anytime from the top bar.</p>
+
+        <div class="op-grid">
+            {% for pid, p in personas.items() %}
+            <form method="POST" action="{{ url_for('set_persona') }}" class="op-card {{ pid }}{% if current_persona == pid %} is-current{% endif %}">
+                <input type="hidden" name="persona" value="{{ pid }}">
+                <button type="submit">
+                    <span class="op-ico"><i class="fa-solid {{ p.icon }}"></i></span>
+                    <span class="op-name">{{ p.label }}{% if current_persona == pid %}<span class="op-badge">Current</span>{% endif %}</span>
+                    <span class="op-tag">{{ p.tagline }}</span>
+                    <span class="op-desc">{{ p.desc }}</span>
+                    <span class="op-cta">{% if current_persona == pid %}Keep this{% else %}Choose this{% endif %} <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+
+        <p class="op-foot"><i class="fa-solid fa-shield-halved"></i> Your choice only changes what you see — every tool stays available whenever you switch.</p>
+    </main>
+</body>
+</html>

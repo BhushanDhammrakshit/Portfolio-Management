@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+.mp-page{display:flex;flex-direction:column;gap:14px}
+.mp-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:4px}
+.mp-loading{padding:40px;text-align:center;color:var(--text-muted)}
+.mp-error{padding:18px;border:1px solid #dc2626;border-radius:8px;background:rgba(220,38,38,.05);color:#b91c1c}
+.mp-pos{color:#16a34a;font-weight:600}
+.mp-neg{color:#dc2626;font-weight:600}
+[data-theme="dark"] .mp-pos{color:#4ade80}
+[data-theme="dark"] .mp-neg{color:#f87171}
+.mp-empty{padding:24px;text-align:center;color:var(--text-muted);font-size:.85rem}
+
+/* Market breadth + movers panel */
+.mp-breadth-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.mp-breadth-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.mp-breadth-grid{display:grid;grid-template-columns:320px 1fr;gap:14px}
+@media (max-width:960px){.mp-breadth-grid{grid-template-columns:1fr}}
+.mp-breadth-meters{display:flex;flex-direction:column;gap:10px}
+.mp-breadth-row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center;font-size:.78rem}
+.mp-breadth-bar{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.mp-breadth-fill{height:100%;display:block}
+.mp-breadth-fill.adv{background:#16a34a}
+.mp-breadth-fill.dec{background:#dc2626}
+.mp-breadth-fill.unc{background:#94a3b8}
+.mp-movers-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:720px){.mp-movers-grid{grid-template-columns:1fr}}
+.mp-movers-box{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mp-movers-box h5{margin:0;padding:8px 10px;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2);font-weight:800}
+.mp-movers-box.g h5{color:#16a34a}
+.mp-movers-box.l h5{color:#dc2626}
+.mp-mini-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.mp-mini-table th,.mp-mini-table td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.mp-mini-table th:first-child,.mp-mini-table td:first-child{text-align:left}
+
+/* Corporate + reference panel */
+.mp-corp-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.mp-corp-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.mp-corp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:980px){.mp-corp-grid{grid-template-columns:1fr}}
+.mp-corp-col{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mp-corp-col h5{margin:0;padding:8px 10px;background:var(--surface-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800;color:var(--text)}
+.mp-corp-list{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
+.mp-corp-list li{padding:8px 10px;border-bottom:1px solid var(--border);font-size:.75rem;line-height:1.35}
+.mp-corp-list li .sym{font-weight:800;color:var(--text)}
+.mp-corp-list li .meta{font-size:.68rem;color:var(--text-muted)}
+.mp-corp-list a{color:var(--link,#2563eb);text-decoration:none}
+.mp-corp-list a:hover{text-decoration:underline}
+</style>
+
+<div class="mp-page">
+    <header class="mp-header">
+        <div>
+            <h1 style="margin:0"><i class="fa-solid fa-tower-broadcast me-2"></i>Market Pulse</h1>
+            <p class="text-muted" style="margin:4px 0 0;font-size:.85rem">
+                NSE-sourced market breadth, top movers, corporate announcements, actions and board meetings.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span id="mpAsOf" class="text-muted" style="font-size:.78rem"></span>
+            <button id="mpRefresh" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-rotate me-1"></i>Refresh
+            </button>
+        </div>
+    </header>
+
+    <div id="mpLoading" class="mp-loading">
+        <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
+        <p class="mt-2">Fetching live data from NSE…</p>
+    </div>
+
+    <div id="mpError" class="mp-error" hidden></div>
+
+    <div id="mpContent" hidden>
+        <div class="mp-breadth-panel">
+            <h6>
+                <span><i class="fa-solid fa-chart-pie me-1"></i>Market Breadth &amp; Movers (NIFTY 50)</span>
+                <span id="mpBreadthTs" style="text-transform:none;letter-spacing:0;color:var(--text)">—</span>
+            </h6>
+            <div class="mp-breadth-grid">
+                <div class="mp-breadth-meters">
+                    <div class="mp-breadth-row">
+                        <span>Advances</span>
+                        <span class="mp-breadth-bar"><span id="mpAdvFill" class="mp-breadth-fill adv" style="width:0%"></span></span>
+                        <strong id="mpAdvVal">0</strong>
+                    </div>
+                    <div class="mp-breadth-row">
+                        <span>Declines</span>
+                        <span class="mp-breadth-bar"><span id="mpDecFill" class="mp-breadth-fill dec" style="width:0%"></span></span>
+                        <strong id="mpDecVal">0</strong>
+                    </div>
+                    <div class="mp-breadth-row">
+                        <span>Unchanged</span>
+                        <span class="mp-breadth-bar"><span id="mpUncFill" class="mp-breadth-fill unc" style="width:0%"></span></span>
+                        <strong id="mpUncVal">0</strong>
+                    </div>
+                    <div style="font-size:.72rem;color:var(--text-muted)">
+                        NIFTY: <b id="mpBreadthNifty">—</b>
+                    </div>
+                </div>
+                <div class="mp-movers-grid">
+                    <div class="mp-movers-box g">
+                        <h5>Top Gainers</h5>
+                        <div id="mpTopGainers"></div>
+                    </div>
+                    <div class="mp-movers-box l">
+                        <h5>Top Losers</h5>
+                        <div id="mpTopLosers"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mp-corp-panel">
+            <h6><i class="fa-solid fa-building-columns me-1"></i>Corporate &amp; Reference Data (NSE)</h6>
+            <div class="mp-corp-grid">
+                <div class="mp-corp-col">
+                    <h5>Announcements</h5>
+                    <ul id="mpCorpAnnouncements" class="mp-corp-list"></ul>
+                </div>
+                <div class="mp-corp-col">
+                    <h5>Corporate Actions</h5>
+                    <ul id="mpCorpActions" class="mp-corp-list"></ul>
+                </div>
+                <div class="mp-corp-col">
+                    <h5>Board Meetings</h5>
+                    <ul id="mpCorpBoards" class="mp-corp-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function mpEscape(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+function setBusy(busy) {
+    document.getElementById('mpLoading').hidden = !busy;
+    if (busy) document.getElementById('mpError').hidden = true;
+}
+
+async function loadMarketPulse(refresh) {
+    setBusy(document.getElementById('mpContent').hidden);
+    const btn = document.getElementById('mpRefresh');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    try {
+        const url = '/api/market-pulse' + (refresh ? '?refresh=1' : '');
+        const r = await fetch(url);
+        const data = await r.json().catch(() => ({}));
+        if (data && data.error) throw new Error(data.error + (data.detail ? ' — ' + data.detail : ''));
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        renderBreadthMovers(data.market_breadth_movers || null);
+        renderCorporateReference(data.corporate_reference || null);
+        const ts = (data.market_breadth_movers || {}).timestamp
+                || (data.corporate_reference || {}).timestamp || '';
+        document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts) : '';
+        document.getElementById('mpContent').hidden = false;
+        document.getElementById('mpLoading').hidden = true;
+    } catch (e) {
+        const err = document.getElementById('mpError');
+        err.textContent = 'Failed to load market pulse: ' + (e.message || e);
+        err.hidden = false;
+        document.getElementById('mpLoading').hidden = true;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
+    }
+}
+
+function renderBreadthMovers(bm) {
+    const ts = document.getElementById('mpBreadthTs');
+    if (!bm) {
+        ts.textContent = 'No data';
+        document.getElementById('mpTopGainers').innerHTML = '<div class="mp-empty">No movers</div>';
+        document.getElementById('mpTopLosers').innerHTML = '<div class="mp-empty">No movers</div>';
+        return;
+    }
+    const adv = Number(bm.advances || 0);
+    const dec = Number(bm.declines || 0);
+    const unc = Number(bm.unchanged || 0);
+    const total = Math.max(adv + dec + unc, 1);
+    const pct = (n) => Math.max(2, (n / total) * 100);
+    document.getElementById('mpAdvFill').style.width = pct(adv).toFixed(1) + '%';
+    document.getElementById('mpDecFill').style.width = pct(dec).toFixed(1) + '%';
+    document.getElementById('mpUncFill').style.width = pct(unc).toFixed(1) + '%';
+    document.getElementById('mpAdvVal').textContent = adv.toLocaleString('en-IN');
+    document.getElementById('mpDecVal').textContent = dec.toLocaleString('en-IN');
+    document.getElementById('mpUncVal').textContent = unc.toLocaleString('en-IN');
+    ts.textContent = bm.timestamp || '—';
+
+    const nx = bm.nifty || {};
+    const p = Number(nx.pct_chg || 0);
+    document.getElementById('mpBreadthNifty').innerHTML =
+        `${Number(nx.last || 0).toLocaleString('en-IN')} ` +
+        `<span class="${p >= 0 ? 'mp-pos' : 'mp-neg'}">(${p >= 0 ? '+' : ''}${p.toFixed(2)}%)</span>`;
+
+    const table = (rows, emptyText) => {
+        if (!rows || !rows.length) return `<div class="mp-empty">${emptyText}</div>`;
+        return `<table class="mp-mini-table"><thead><tr><th>Symbol</th><th>LTP</th><th>%Chg</th><th>Vol</th></tr></thead><tbody>` +
+            rows.slice(0, 8).map(r => {
+                const pc = Number(r.pct_chg || 0);
+                return `<tr>
+                    <td><b>${mpEscape(r.symbol || '')}</b></td>
+                    <td>${Number(r.ltp || 0).toLocaleString('en-IN')}</td>
+                    <td class="${pc >= 0 ? 'mp-pos' : 'mp-neg'}">${pc >= 0 ? '+' : ''}${pc.toFixed(2)}%</td>
+                    <td>${Number(r.volume || 0).toLocaleString('en-IN')}</td>
+                </tr>`;
+            }).join('') + '</tbody></table>';
+    };
+    document.getElementById('mpTopGainers').innerHTML = table(bm.top_gainers || [], 'No gainers right now');
+    document.getElementById('mpTopLosers').innerHTML = table(bm.top_losers || [], 'No losers right now');
+}
+
+function renderCorporateReference(corp) {
+    const renderList = (id, items, fn, emptyText) => {
+        const el = document.getElementById(id);
+        if (!items || !items.length) {
+            el.innerHTML = `<li><span class="meta">${emptyText}</span></li>`;
+            return;
+        }
+        el.innerHTML = items.slice(0, 12).map(fn).join('');
+    };
+
+    if (!corp) {
+        renderList('mpCorpAnnouncements', [], () => '', 'No announcement data');
+        renderList('mpCorpActions', [], () => '', 'No corporate action data');
+        renderList('mpCorpBoards', [], () => '', 'No board meeting data');
+        return;
+    }
+
+    renderList(
+        'mpCorpAnnouncements',
+        corp.announcements || [],
+        (x) => `<li>
+            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.title || '')}</div>
+            <div class="meta">${mpEscape(x.when || '')}${x.url ? ` · <a href="${mpEscape(x.url)}" target="_blank" rel="noopener">Attachment</a>` : ''}</div>
+        </li>`,
+        'No announcements'
+    );
+    renderList(
+        'mpCorpActions',
+        corp.corporate_actions || [],
+        (x) => `<li>
+            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.subject || '')}</div>
+            <div class="meta">Ex-date: ${mpEscape(x.ex_date || '—')}${x.record_date ? ` · Record: ${mpEscape(x.record_date)}` : ''}</div>
+        </li>`,
+        'No corporate actions'
+    );
+    renderList(
+        'mpCorpBoards',
+        corp.board_meetings || [],
+        (x) => `<li>
+            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.purpose || '')}</div>
+            <div class="meta">${mpEscape(x.date || '—')} ${x.desc ? `· ${mpEscape(x.desc)}` : ''}</div>
+        </li>`,
+        'No board meetings'
+    );
+}
+
+document.getElementById('mpRefresh').addEventListener('click', () => loadMarketPulse(true));
+loadMarketPulse(false);
+// Auto-refresh every 90s while the tab is visible.
+setInterval(() => { if (!document.hidden) loadMarketPulse(false); }, 90_000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMarketPulse(false); });
+</script>
+{% endblock %}

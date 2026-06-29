@@ -1,0 +1,316 @@
+{% extends "layout.html" %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.fs-wrap{max-width:1180px;margin:0 auto}
+.fs-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:6px}
+.fs-head h2{font-size:1.4rem;font-weight:800;margin:0;display:flex;align-items:center;gap:10px}
+.fs-head p{font-size:.84rem;color:var(--text-muted);margin:4px 0 0;max-width:660px}
+.fs-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fs-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;text-decoration:none}
+.fs-btn:hover{background:var(--surface-2)}
+.fs-meta{font-size:.74rem;color:var(--text-muted);margin:10px 0 16px}
+/* KPI cards */
+.fs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 8px}
+.fs-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
+.fs-kpi .lbl{font-size:.64rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.fs-kpi .val{font-size:1.5rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.fs-kpi.hit .val{color:#16a34a}.fs-kpi.miss .val{color:#dc2626}.fs-kpi.pend .val{color:#b45309}
+.fs-acc{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none}
+.fs-acc .lbl{color:rgba(255,255,255,.85)}.fs-acc .val{color:#fff}
+.fs-accbar{height:8px;border-radius:5px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
+.fs-accbar > div{height:100%;background:#fff;border-radius:5px}
+/* tables */
+.sec-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;margin:22px 0 8px;display:flex;align-items:center;gap:8px}
+.fs-table{width:100%;font-size:.81rem;border-collapse:collapse}
+.fs-table th{background:var(--surface-2);text-align:left;padding:9px 10px;font-weight:600;color:var(--text-muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
+.fs-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.fs-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+.fs-sym{font-weight:700}.fs-sym .nm{display:block;font-weight:500;font-size:.69rem;color:var(--text-muted)}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.pill-up{background:rgba(22,163,74,.13);color:#16a34a}
+.pill-dn{background:rgba(220,38,38,.13);color:#dc2626}
+.pill-flat{background:rgba(100,116,139,.14);color:var(--text-muted)}
+.pos{color:#16a34a;font-weight:600}.neg{color:#dc2626;font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.64rem;font-weight:700;text-transform:uppercase}
+.tag-hit{background:rgba(22,163,74,.14);color:#16a34a}
+.tag-miss{background:rgba(220,38,38,.14);color:#dc2626}
+.tag-pend{background:rgba(245,158,11,.16);color:#b45309}
+.hr-cell{font-weight:800}
+.fs-empty{padding:34px;text-align:center;color:var(--text-muted)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:#6366f1;border-radius:50%;animation:fspin .7s linear infinite;vertical-align:-2px}
+@keyframes fspin{to{transform:rotate(360deg)}}
+.fs-tabs{display:flex;gap:6px;margin:0 0 4px;flex-wrap:wrap}
+.fs-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:.76rem;font-weight:600;cursor:pointer}
+.fs-tab.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-color:transparent}
+/* charts */
+.fs-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin:18px 0 4px}
+@media(max-width:760px){.fs-charts{grid-template-columns:1fr}}
+.fs-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.fs-card h4{margin:0 0 2px;font-size:.92rem;font-weight:800}
+.fs-card .hint{font-size:.72rem;color:var(--text-muted);margin:0 0 8px}
+.fs-canvas-wrap{position:relative;height:240px}
+.fs-corr{font-size:.78rem;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);line-height:1.45}
+.fs-corr b{font-weight:800}
+.disclaimer{font-size:.72rem;color:var(--text-muted);margin-top:20px;line-height:1.5}
+</style>
+
+<div class="fs-wrap">
+  <div class="fs-head">
+    <div>
+      <h2><i class="fa-solid fa-chart-pie"></i>F&amp;O Forecast Summary</h2>
+      <p>Track record of every saved F&amp;O gap forecast, graded against each stock's actual
+         next-session open. See overall accuracy, per-stock hit rates, and the latest predictions.</p>
+    </div>
+    <div class="fs-controls">
+      <a class="fs-btn" href="{{ url_for('fno_gap_api.fno_gap_page') }}"><i class="fa-solid fa-arrow-left"></i>Forecasts</a>
+      <button class="fs-btn" id="fsRefresh"><i class="fa-solid fa-rotate-right"></i>Refresh</button>
+    </div>
+  </div>
+  <div class="fs-meta" id="fsMeta"></div>
+
+  <div id="fsLock" style="display:none"></div>
+
+  <div id="fsBody">
+    <div class="fs-kpis" id="fsKpis">
+      <div class="fs-kpi"><div class="lbl">Loading…</div><div class="val"><span class="spin"></span></div></div>
+    </div>
+
+    <div class="fs-charts" id="fsCharts" style="display:none">
+      <div class="fs-card">
+        <h4>Does higher probability mean more hits?</h4>
+        <p class="hint">Next-day hit rate of directional (Gap Up / Gap Down) calls, grouped by the probability shown when the signal was given. Bars = hit rate; numbers in caption = calls graded.</p>
+        <div class="fs-canvas-wrap"><canvas id="fsProbChart"></canvas></div>
+        <div class="fs-corr" id="fsCorr"></div>
+      </div>
+      <div class="fs-card">
+        <h4>Directional outcomes</h4>
+        <p class="hint">All graded Gap Up / Gap Down calls across the universe.</p>
+        <div class="fs-canvas-wrap"><canvas id="fsOutcomeChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="fs-tabs" id="fsTabs" style="display:none">
+      <span class="fs-tab active" data-tab="stocks">Per-stock accuracy</span>
+      <span class="fs-tab" data-tab="forecasts">Graded forecasts</span>
+    </div>
+
+    <div id="fsStocksWrap">
+      <div class="sec-title"><i class="fa-solid fa-ranking-star"></i>Per-stock accuracy</div>
+      <div style="overflow-x:auto">
+        <table class="fs-table">
+          <thead><tr>
+            <th>Stock</th><th class="num">Signals</th><th class="num">Graded</th>
+            <th class="num">Hits</th><th class="num">Misses</th><th class="num">Pending</th>
+            <th class="num">Hit rate</th><th>Latest call</th>
+          </tr></thead>
+          <tbody id="fsStockRows">
+            <tr><td colspan="8" class="fs-empty"><span class="spin"></span> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="fsForecastsWrap" style="display:none">
+      <div class="sec-title"><i class="fa-solid fa-list-check"></i>Graded forecasts <span style="font-weight:500;text-transform:none;color:var(--text-muted)">· pending calls are on the forecast page</span></div>
+      <div style="overflow-x:auto">
+        <table class="fs-table">
+          <thead><tr>
+            <th>Date</th><th>Stock</th><th>Forecast</th><th class="num">Prob.</th>
+            <th class="num">Prev close</th><th class="num">Exp. pts</th>
+            <th class="num">Actual open</th><th class="num">Actual pts</th><th>Outcome</th>
+          </tr></thead>
+          <tbody id="fsForecastRows">
+            <tr><td colspan="9" class="fs-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    <i class="fa-solid fa-circle-info"></i>
+    Accuracy reflects directional (Gap Up / Gap Down) calls only; Flat calls and not-yet-graded
+    predictions are excluded from the hit rate. Predictions grade automatically once the next
+    session's open is available. Model estimates from public OI &amp; price data — not investment advice.
+  </p>
+</div>
+
+<script>
+(function(){
+  const kpisEl = document.getElementById('fsKpis');
+  const metaEl = document.getElementById('fsMeta');
+  const tabsEl = document.getElementById('fsTabs');
+  const lockEl = document.getElementById('fsLock');
+  const bodyEl = document.getElementById('fsBody');
+  const stockRowsEl = document.getElementById('fsStockRows');
+  const fcRowsEl = document.getElementById('fsForecastRows');
+  const stocksWrap = document.getElementById('fsStocksWrap');
+  const forecastsWrap = document.getElementById('fsForecastsWrap');
+  const chartsEl = document.getElementById('fsCharts');
+  const corrEl = document.getElementById('fsCorr');
+  let probChart=null, outcomeChart=null;
+
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = (n,d=2) => (n==null||isNaN(n))?'—':Number(n).toFixed(d);
+  const signCls = n => (n>0?'pos':(n<0?'neg':''));
+  const signTxt = (n,d=2) => (n==null||isNaN(n))?'—':((n>0?'+':'')+Number(n).toFixed(d));
+
+  function labelPill(label){
+    const L=(label||'').toUpperCase();
+    const c = L==='GAP UP'?'pill-up':(L==='GAP DOWN'?'pill-dn':'pill-flat');
+    return `<span class="pill ${c}">${esc(label||'—')}</span>`;
+  }
+  function outcomeTag(oc){
+    const O=(oc||'PENDING').toUpperCase();
+    if(O==='FLAT_OK') return '<span class="tag tag-hit">FLAT \u2713</span>';
+    if(O==='FLAT_MISS') return '<span class="tag tag-pend">FLAT \u2717</span>';
+    const t = O==='HIT'?'tag-hit':(O==='MISS'?'tag-miss':'tag-pend');
+    return `<span class="tag ${t}">${esc(O)}</span>`;
+  }
+  function hitRateCell(p){
+    if(p==null) return '<span style="color:var(--text-muted)">—</span>';
+    const col = p>=60?'#16a34a':(p>=45?'#b45309':'#dc2626');
+    return `<span class="hr-cell" style="color:${col}">${fmt(p,1)}%</span>`;
+  }
+
+  function showUpgrade(msg){
+    bodyEl.style.display='none';
+    lockEl.style.display='block';
+    lockEl.innerHTML = `<div class="upgrade-locked-card">
+      <div class="upgrade-locked-icon"><i class="fa-solid fa-lock"></i></div>
+      <h3 class="upgrade-locked-title">Elite feature</h3>
+      <p class="upgrade-locked-msg">${esc(msg||'Upgrade to Elite to view the F&O forecast summary.')}</p>
+      <a href="/billing?plan=elite" class="btn btn-primary upgrade-locked-btn"><i class="fa-solid fa-rocket me-1"></i>Upgrade to Elite</a>
+    </div>`;
+  }
+
+  function renderKpis(t){
+    kpisEl.innerHTML = `
+      <div class="fs-kpi fs-acc">
+        <div class="lbl">Overall hit rate</div>
+        <div class="val">${t.hit_rate_pct==null?'—':fmt(t.hit_rate_pct,1)+'%'}</div>
+        <div class="fs-accbar"><div style="width:${Math.max(0,Math.min(100,t.hit_rate_pct||0))}%"></div></div>
+      </div>
+      <div class="fs-kpi hit"><div class="lbl">Hits</div><div class="val">${t.hits||0}</div></div>
+      <div class="fs-kpi miss"><div class="lbl">Misses</div><div class="val">${t.misses||0}</div></div>
+      <div class="fs-kpi pend"><div class="lbl">Pending</div><div class="val">${t.pending||0}</div></div>
+      <div class="fs-kpi"><div class="lbl">Graded calls</div><div class="val">${t.evaluated||0}</div></div>
+      <div class="fs-kpi"><div class="lbl">Total signals</div><div class="val">${t.signals||0}</div></div>
+      <div class="fs-kpi"><div class="lbl">Stocks tracked</div><div class="val">${t.tracked_stocks||0}<span style="font-size:.8rem;color:var(--text-muted)">/${t.universe||0}</span></div></div>`;
+  }
+
+  function renderStocks(rows){
+    if(!rows.length){ stockRowsEl.innerHTML=`<tr><td colspan="8" class="fs-empty">No graded forecasts yet — check back after the next session.</td></tr>`; return; }
+    stockRowsEl.innerHTML = rows.map(s=>`
+      <tr>
+        <td class="fs-sym">${esc(s.symbol)}<span class="nm">${esc(s.name)}</span></td>
+        <td class="num">${s.signals||0}</td>
+        <td class="num">${s.evaluated||0}</td>
+        <td class="num pos">${s.hits||0}</td>
+        <td class="num neg">${s.misses||0}</td>
+        <td class="num">${s.pending||0}</td>
+        <td class="num">${hitRateCell(s.hit_rate_pct)}</td>
+        <td>${labelPill(s.latest_label)} <span style="color:var(--text-muted);font-size:.7rem">${s.latest_probability==null?'':esc(s.latest_probability)+'%'}</span></td>
+      </tr>`).join('');
+  }
+
+  function renderForecasts(rows){
+    if(!rows.length){ fcRowsEl.innerHTML=`<tr><td colspan="9" class="fs-empty">No graded forecasts yet \u2014 grade them with Refresh after the next session.</td></tr>`; return; }
+    fcRowsEl.innerHTML = rows.map(h=>`
+      <tr>
+        <td>${esc(h.date||'')}</td>
+        <td class="fs-sym">${esc(h.symbol)}</td>
+        <td>${labelPill(h.predicted)}</td>
+        <td class="num">${h.probability==null?'\u2014':esc(h.probability)+'%'}</td>
+        <td class="num">${fmt(h.prev_close)}</td>
+        <td class="num">${h.predicted_gap_points==null?'\u2014':signTxt(h.predicted_gap_points,0)}</td>
+        <td class="num">${fmt(h.actual_open)}</td>
+        <td class="num ${signCls(h.actual_gap_points)}">${h.actual_gap_points==null?'\u2014':signTxt(h.actual_gap_points,0)}</td>
+        <td>${outcomeTag(h.outcome)}</td>
+      </tr>`).join('');
+  }
+
+  function renderCharts(buckets, t){
+    buckets = buckets||[];
+    const graded = buckets.filter(b=>(b.evaluated||0)>0);
+    if(!graded.length){
+      chartsEl.style.display='none';
+      return;
+    }
+    chartsEl.style.display='grid';
+    const labels = buckets.map(b=>b.label);
+    const rates  = buckets.map(b=>b.hit_rate_pct==null?null:b.hit_rate_pct);
+    const counts = buckets.map(b=>b.evaluated||0);
+    const barCols = rates.map(r=> r==null?'rgba(148,163,184,.4)':(r>=60?'#16a34a':(r>=45?'#f59e0b':'#dc2626')));
+
+    if(probChart) probChart.destroy();
+    probChart = new Chart(document.getElementById('fsProbChart'),{
+      type:'bar',
+      data:{labels,datasets:[{label:'Hit rate %',data:rates,backgroundColor:barCols,borderRadius:6,maxBarThickness:54}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}},
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{afterLabel:(c)=>`Graded calls: ${counts[c.dataIndex]}`}}}}
+    });
+    // caption: graded counts per bucket + simple monotonic-trend read.
+    const parts = buckets.map(b=>`${b.label}: ${b.hit_rate_pct==null?'\u2014':b.hit_rate_pct+'%'} (${b.evaluated||0})`);
+    const valid = buckets.filter(b=>b.hit_rate_pct!=null);
+    let verdict='Not enough graded calls yet to judge the probability\u2013accuracy link.';
+    if(valid.length>=2){
+      const first=valid[0].hit_rate_pct, last=valid[valid.length-1].hit_rate_pct;
+      if(last>first+5) verdict='<b>Higher probability \u2192 higher hit rate</b> so far \u2014 the model\u2019s confidence is informative.';
+      else if(first>last+5) verdict='<b>Higher probability is not translating into more hits</b> yet \u2014 treat high-probability calls with caution.';
+      else verdict='Hit rate is <b>roughly flat across probability bands</b> so far \u2014 probability adds little signal yet.';
+    }
+    corrEl.innerHTML = verdict + '<br><span style="color:var(--text-muted)">'+parts.join(' \u00b7 ')+'</span>';
+
+    if(outcomeChart) outcomeChart.destroy();
+    outcomeChart = new Chart(document.getElementById('fsOutcomeChart'),{
+      type:'doughnut',
+      data:{labels:['Hits','Misses'],datasets:[{data:[t.hits||0,t.misses||0],backgroundColor:['#16a34a','#dc2626'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{legend:{position:'bottom'}}}
+    });
+  }
+
+  // tabs
+  tabsEl.querySelectorAll('.fs-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      tabsEl.querySelectorAll('.fs-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      const which = tab.getAttribute('data-tab');
+      stocksWrap.style.display = which==='stocks'?'block':'none';
+      forecastsWrap.style.display = which==='forecasts'?'block':'none';
+    });
+  });
+
+  async function load(force){
+    const btn = document.getElementById('fsRefresh');
+    const btnHtml = btn ? btn.innerHTML : '';
+    if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>Refreshing…'; }
+    try{
+      const r = await fetch('/api/fno-gap-forecast/summary'+(force?'?refresh=1':''));
+      if(r.status===402){ const j=await r.json(); showUpgrade(j.message); return; }
+      if(r.status===401){ window.location='/login'; return; }
+      const j = await r.json();
+      if(j.error){ kpisEl.innerHTML=`<div class="fs-empty">Could not load summary (${esc(j.detail||j.error)}).</div>`; return; }
+      renderKpis(j.totals||{});
+      renderCharts(j.probability_buckets||[], j.totals||{});
+      renderStocks(j.stocks||[]);
+      renderForecasts(j.forecasts||[]);
+      tabsEl.style.display='flex';
+      metaEl.innerHTML = `as of ${esc(j.as_of||'')}${j.cached?' · cached':''}`;
+    }catch(e){
+      kpisEl.innerHTML=`<div class="fs-empty">Network error loading summary.</div>`;
+    }finally{
+      if(btn){ btn.disabled=false; btn.innerHTML=btnHtml; }
+    }
+  }
+
+  document.getElementById('fsRefresh').addEventListener('click',()=>load(true));
+  load(false);
+})();
+</script>
+{% endblock %}
