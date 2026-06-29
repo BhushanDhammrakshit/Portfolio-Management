@@ -1,8 +1,18 @@
 import os
 from flask import Flask, render_template, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
+
+# Behind Azure App Service (and most PaaS), TLS is terminated at the edge and the
+# request reaches Gunicorn over plain HTTP. Trust the X-Forwarded-* headers so
+# Flask knows the original scheme was HTTPS — otherwise url_for(_external=True),
+# request.host_url and redirects emit http:// links, which browsers then block as
+# "mixed content" on an https:// page.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+# Default to https when generating external URLs outside a request context.
+app.config["PREFERRED_URL_SCHEME"] = "https"
 
 # Treat the app as "production" only when FLASK_DEBUG is explicitly off.
 # Anything else (FLASK_DEBUG=1, unset locally, or app.run(debug=True)) keeps
