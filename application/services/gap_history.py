@@ -118,15 +118,16 @@ def _today_ist() -> _dt.date:
 
 
 def _is_post_close_or_after_hours() -> bool:
-    """We only record after 13:30 IST when the signal has meaning
-    (matches the same gating used in option_chain._session_weight_now)."""
+    """Only allow recording between 13:30 and 15:30 IST.
+
+    Post-close and pre-open writes are disabled so a stale refresh
+    cannot overwrite the locked decision or corrupt PrevClose.
+    """
     now = _dt.datetime.now(_IST)
     mins = now.hour * 60 + now.minute
-    # 13:30 onward (still intraday but signal is active) OR post-close OR pre-open
-    market_open = 9 * 60 + 15
-    if mins < market_open:
-        return True  # pre-open: lock in yesterday's signal if we ever need to
-    return mins >= (13 * 60 + 30)
+    market_close = 15 * 60 + 30
+    # Only record during the active forecast window: 13:30 → 15:30.
+    return (13 * 60 + 30) <= mins <= market_close
 
 
 # ── Public: record (one upsert per render) ────────────────────────────
@@ -277,8 +278,13 @@ def evaluate_pending(symbol: str, *, force: bool = False) -> int:
                 if not prev_close:
                     continue
 
-                gap_pct = (next_open - float(prev_close)) / float(prev_close) * 100.0
-                gap_points = float(next_open) - float(prev_close)
+                # Prefer the official close from Yahoo history over the
+                # live-captured spot (eliminates cross-source price bias).
+                hist_close = _close_for_date(history, sig_date)
+                ref_close = hist_close if hist_close else float(prev_close)
+
+                gap_pct = (next_open - ref_close) / ref_close * 100.0
+                gap_points = float(next_open) - ref_close
                 if gap_pct >= _FLAT_TOLERANCE_PCT:
                     actual_dir = "GAP UP"
                 elif gap_pct <= -_FLAT_TOLERANCE_PCT:
@@ -288,7 +294,16 @@ def evaluate_pending(symbol: str, *, force: bool = False) -> int:
 
                 predicted = (r.get("PredictedLabel") or "").upper()
                 if predicted in ("GAP UP", "GAP DOWN"):
-                    outcome = "HIT" if predicted == actual_dir else "MISS"
+                    # Direction-match grading: HIT if predicted direction
+                    # matches actual direction OR actual is within dead-band.
+                    if predicted == actual_dir:
+                        outcome = "HIT"
+                    elif actual_dir == "FLAT":
+                        # Actual gap is tiny; predicted direction not wrong,
+                        # just not big enough — soft miss, not hard failure.
+                        outcome = "NEAR"
+                    else:
+                        outcome = "MISS"
                 else:
                     # Predicted FLAT (no clear bias) — count flat as correct.
                     outcome = "FLAT_OK" if actual_dir == "FLAT" else "FLAT_MISS"
