@@ -933,8 +933,8 @@ def _fmt_int(n: float) -> str:
 # are to the close — before 13:30 IST the forecast confidence is ~0
 # and ramps linearly to full confidence at 15:00 IST.
 
-_GAP_UP_TH = 0.25
-_GAP_DOWN_TH = -0.25
+_GAP_UP_TH = 0.18
+_GAP_DOWN_TH = -0.18
 
 # ── Decision-lock window (per user spec) ──
 # The forecast must be *decided* by 15:15 IST and held stable through the
@@ -1027,12 +1027,12 @@ def _session_weight_now() -> Tuple[float, str, bool]:
     mins = now.hour * 60 + now.minute
     market_open = 9 * 60 + 15
     market_close = 15 * 60 + 30
-    # Post-close (same calendar day, after 15:30) → use full intraday total.
+    # Post-close (after 15:30) — decision is already locked; do NOT update.
     if mins > market_close:
-        return 0.9, "Post-close — forecast for next open", True
-    # Pre-open (before 09:15) → still showing yesterday's close-based view.
+        return 0.0, "Post-close — decision was locked at 15:15", True
+    # Pre-open (before 09:15) — no new data; don't overwrite locked signal.
     if mins < market_open:
-        return 0.7, "Pre-open — based on previous close", True
+        return 0.0, "Pre-open — forecast inactive", True
     # Pre 13:30 → too early to forecast gap.
     start = 13 * 60 + 30   # 13:30
     full = _LOCK_MIN_OF_DAY  # 15:15 → full confidence (decision-lock time)
@@ -1171,6 +1171,20 @@ def _compute_gap_outlook(payload: Dict[str, Any],
         confidence=confidence,
         vix_change_pct=vix_chg_pct,
     )
+
+    # ── Magnitude-alignment gate ──────────────────────────────────────
+    # If the model predicts GAP UP/DOWN but the expected gap % is smaller
+    # than the grading dead-band (0.15%), force FLAT so we don't record a
+    # directional call the grader can never count as HIT.
+    _FLAT_DEAD_BAND = 0.15  # must match gap_history._FLAT_TOLERANCE_PCT
+    if label in ("GAP UP", "GAP DOWN"):
+        exp_pct_abs = abs(projected.get("expected_gap_pct") or 0)
+        if exp_pct_abs < _FLAT_DEAD_BAND:
+            label = "FLAT"
+            summary = (
+                "Directional lean is too weak to exceed the grading "
+                "threshold — calling FLAT."
+            )
 
     live = {
         "label": label,
