@@ -1,4 +1,4 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 {% block content %}
 <style>
 /* ── Page header ───────────────────────────────────────────── */
@@ -252,6 +252,9 @@ function renderCardBody(stock, data) {
         `;
     }
 
+    // Re-analyze button for stocks that already have results
+    const reAnalyzeBtn = `<div class="text-end mt-2"><button type="button" class="btn btn-outline-primary btn-sm pa-single-analyze" data-stock="${escapeHtml(stock.StockName)}"><i class="fa-solid fa-arrows-rotate me-1"></i>Re-analyze</button></div>`;
+
     const upsideCls = (data.upside_pct || 0) >= 0 ? 'gain-positive' : 'gain-negative';
     const upsideSign = (data.upside_pct || 0) >= 0 ? '+' : '';
     const drivers = (data.key_drivers || []).map(d => `<li>${escapeHtml(d)}</li>`).join('') || '<li class="text-muted">N/A</li>';
@@ -292,6 +295,7 @@ function renderCardBody(stock, data) {
         </details>
         ${renderSources(data.sources_used)}
         <div class="pa-disclaimer"><i class="fa-solid fa-triangle-exclamation me-1"></i>AI-generated educational content. Not investment advice. Not SEBI registered.</div>
+        ${reAnalyzeBtn}
     `;
 }
 
@@ -379,7 +383,7 @@ function renderCards() {
         card.dataset.idx = i;
         card.innerHTML = `
             <div class="pa-card-header">
-                <input type="checkbox" class="pa-card-checkbox" data-idx="${i}" ${selected.has(i) ? 'checked' : ''} title="Select">
+                <input type="checkbox" class="pa-card-checkbox" data-idx="${i}" ${selected.has(i) ? 'checked' : ''} ${data ? 'disabled' : ''} title="${data ? 'Already analyzed' : 'Select'}">
                 <div class="pa-card-action">${renderActionPill(data ? data.action : null)}</div>
                 <div class="pa-card-stock">
                     <div class="pa-card-name">${escapeHtml(s.StockName)}</div>
@@ -557,6 +561,15 @@ document.getElementById('paAnalyzeBtn').addEventListener('click', async () => {
 
     btn.disabled = true;
     progress.hidden = false;
+
+    // Mark individual analyze buttons as "Analyzing..." during bulk
+    document.querySelectorAll('.pa-single-analyze').forEach(b => {
+        const stockName = b.dataset.stock;
+        if (indices.some(i => stocks[i].StockName === stockName)) {
+            b.disabled = true;
+            b.innerHTML = '<span class="app-spinner me-1"></span>Analyzing\u2026';
+        }
+    });
 
     try {
         const r = await fetch('/api/stock_analysis/bulk', {
