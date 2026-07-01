@@ -187,6 +187,8 @@
                     tgt.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
+            state.items = [];
+            pop.innerHTML = '';
             close();
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
