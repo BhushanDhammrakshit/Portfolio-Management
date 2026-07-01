@@ -10,7 +10,7 @@
     {{ upgrade_card('elite', title='Volume Shockers — Elite feature', message='Live scan of NIFTY 50 / Bank NIFTY / FINNIFTY / SENSEX / NIFTY 200 for stocks trading 2–3× their 10-day average volume. Upgrade to Elite to unlock.') }}
 </div>
 {% else %}
-<script src="{{ url_for('static', filename='Scripts/ohlc_chart.js') }}"></script>
+
 <div class="volume-page">
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
         <div>
@@ -130,18 +130,7 @@
     </div>
 </div>
 
-<!-- Stock chart modal -->
-<div class="modal fade" id="volChartModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fa-solid fa-chart-line me-2 text-primary"></i><span id="volChartTitle">Stock</span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="volChartBody"></div>
-        </div>
-    </div>
-</div>
+
 
 <style>
 .vol-filter-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
@@ -188,7 +177,7 @@
 tr.row-stale td{opacity:.55;transition:opacity .25s}
 
 /* ── Candlestick chart (shared with intraday) ───────── */
-#volTable tbody tr{cursor:pointer}
+#volTable tbody tr{cursor:default}
 .detail-chart-wrap{margin:0 0 14px;background:var(--surface-2);border-radius:8px;padding:12px;border:1px solid var(--border);position:relative}
 .detail-chart-wrap canvas{display:block;width:100%;height:240px;cursor:crosshair}
 .detail-chart-meta{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:8px}
@@ -451,7 +440,6 @@ function _flash(td, dir) {
 function _buildRow(s, maxRatio) {
     const tr = document.createElement('tr');
     tr.dataset.symbol = s.symbol;
-    tr.addEventListener('click', () => openVolChart(tr));
     const cat = getCategory(s.vol_ratio);
     const col = _ratioColors(cat);
     const barPct = Math.min((s.vol_ratio / maxRatio) * 100, 100);
@@ -657,56 +645,6 @@ document.querySelectorAll('.tender-filter-btn').forEach(btn => {
 // Index filter
 document.getElementById('indexFilter').addEventListener('change', renderTable);
 
-// ── Click row → open candlestick chart modal ─────────────────────────
-function openVolChart(tr) {
-    const symbol = tr.dataset.symbol;
-    const name = tr.dataset.name || symbol;
-    const price = parseFloat(tr.dataset.price || '0');
-    const change = parseFloat(tr.dataset.change || '0');
-    const changeCls = change >= 0 ? 'gain-positive' : 'gain-negative';
-    document.getElementById('volChartTitle').textContent = `${symbol} — ${name}`;
-    document.getElementById('volChartBody').innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <span style="font-size:1.6rem;font-weight:800">₹${price.toLocaleString('en-IN')}</span>
-                <span class="${changeCls}" style="font-size:.95rem;font-weight:700;margin-left:8px">${change >= 0 ? '+' : ''}${change}%</span>
-            </div>
-            <span class="text-muted small">Tap a candle to inspect OHLC</span>
-        </div>
-        <div class="detail-chart-wrap" data-symbol="${symbol}">
-            <div class="candle-toolbar">
-                <span style="font-size:.7rem;color:var(--text-muted);font-weight:600;margin-right:2px">TF</span>
-                <button type="button" class="ct-btn" data-tf="5m">5m</button>
-                <button type="button" class="ct-btn active" data-tf="15m">15m</button>
-                <button type="button" class="ct-btn" data-tf="1h">1h</button>
-                <button type="button" class="ct-btn" data-tf="1d">1D</button>
-                <span style="width:10px"></span>
-                <button type="button" class="ct-btn active" data-range="all">All</button>
-                <button type="button" class="ct-btn" data-range="40">40</button>
-                <button type="button" class="ct-btn" data-range="20">20</button>
-                <button type="button" class="ct-btn" id="ctToggleMA">MA(5)</button>
-                <span class="ct-spacer"></span>
-                <span class="ct-readout" id="ctReadout">Loading…</span>
-            </div>
-            <canvas id="volCandleChart" width="600" height="220"></canvas>
-            <div class="candle-tooltip" id="candleTooltip"></div>
-            <div class="detail-chart-meta">
-                <span><i class="fa-solid fa-chart-line me-1"></i><span id="ctTfLabel">15-min candles</span> · <span id="ctBarCount">0</span> bars</span>
-                <span id="ctRangeLabel">—</span>
-            </div>
-        </div>`;
-    new bootstrap.Modal(document.getElementById('volChartModal')).show();
-    const modalEl = document.getElementById('volChartModal');
-    const onShown = () => {
-        modalEl.removeEventListener('shown.bs.modal', onShown);
-        const wrap = document.querySelector('#volChartBody .detail-chart-wrap');
-        const canvas = document.getElementById('volCandleChart');
-        if (wrap && canvas && window.OHLCChart) {
-            OHLCChart.mount({ wrap, canvas, symbol, initialTf: '15m' });
-        }
-    };
-    modalEl.addEventListener('shown.bs.modal', onShown);
-}
 </script>
 {% endif %}
 {% endblock %}
