@@ -224,5 +224,27 @@ def search(query: str) -> list[dict]:
             "exchange": q_.get("exchDisp") or q_.get("exchange") or "",
             "type": q_.get("typeDisp") or q_.get("quoteType") or "",
         })
-    results.sort(key=lambda r_: 0 if r_["symbol"].endswith((".NS", ".BO")) else 1)
+
+    q_upper = q.strip().upper()
+
+    def _rank(item):
+        sym_clean = item["symbol"].upper().replace(".NS", "").replace(".BO", "")
+        name_upper = (item.get("name") or "").upper()
+        # Indian exchange first
+        exchange_score = 0 if item["symbol"].endswith((".NS", ".BO")) else 2
+        # Exact symbol match
+        if sym_clean == q_upper:
+            return (exchange_score, 0)
+        # Symbol starts with query
+        if sym_clean.startswith(q_upper):
+            return (exchange_score, 1)
+        # Name starts with query
+        if name_upper.startswith(q_upper):
+            return (exchange_score, 2)
+        # Name contains query
+        if q_upper in name_upper:
+            return (exchange_score, 3)
+        return (exchange_score, 4)
+
+    results.sort(key=_rank)
     return results[:10]
