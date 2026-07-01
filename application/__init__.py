@@ -103,14 +103,22 @@ from application.routes import route  # noqa: F401, E402
 
 @app.errorhandler(404)
 def _not_found(_e):
-    return render_template("error.html", code=404,
-                           message="The page you are looking for does not exist."), 404
+    try:
+        return render_template("error.html", code=404,
+                               message="The page you are looking for does not exist."), 404
+    except Exception:
+        return ("<h1>404 - Page not found</h1>"
+                "<p><a href='/'>Back to home</a></p>"), 404
 
 
 @app.errorhandler(500)
 def _server_error(_e):
-    return render_template("error.html", code=500,
-                           message="Something went wrong. Please try again."), 500
+    try:
+        return render_template("error.html", code=500,
+                               message="Something went wrong. Please try again."), 500
+    except Exception:
+        return ("<h1>500 - Something went wrong</h1>"
+                "<p><a href='/'>Back to home</a></p>"), 500
 
 
 @app.context_processor
