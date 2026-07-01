@@ -1,7 +1,9 @@
 """Volume Shockers – compare today's volume to 10-day average."""
+import json
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, render_template, jsonify, session, redirect, url_for
 
@@ -11,6 +13,80 @@ from application.services.plans import requires_plan
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 volume_api = Blueprint("volume_api", __name__)
+
+# ── Indian market hours helper ───────────────────────────────────────────
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _is_market_open():
+    """Return True if Indian market is currently open (Mon-Fri 9:15–15:30 IST)."""
+    now = datetime.now(_IST)
+    if now.weekday() >= 5:  # Saturday / Sunday
+        return False
+    t = now.time()
+    from datetime import time as _dtime
+    return _dtime(9, 15) <= t <= _dtime(15, 30)
+
+
+# ── Azure Table cache for volume data ────────────────────────────────────
+_VOL_CACHE_TABLE = "VolumeAlertsCache"
+
+
+def _get_vol_cache_client():
+    """Lazily get/create the volume cache table client."""
+    from application.config import AZURE_TABLE_CONN_STR
+    if not AZURE_TABLE_CONN_STR:
+        return None
+    try:
+        from azure.data.tables import TableServiceClient
+        svc = TableServiceClient.from_connection_string(conn_str=AZURE_TABLE_CONN_STR)
+        svc.create_table_if_not_exists(table_name=_VOL_CACHE_TABLE)
+        return svc.get_table_client(table_name=_VOL_CACHE_TABLE)
+    except Exception as e:
+        print(f"[volume-cache] table init failed: {e}")
+        return None
+
+
+def _save_to_table(data):
+    """Persist the latest volume scan result to Azure Table Storage."""
+    client = _get_vol_cache_client()
+    if not client:
+        return
+    try:
+        today = datetime.now(_IST).strftime("%Y-%m-%d")
+        entity = {
+            "PartitionKey": "volume_scan",
+            "RowKey": today,
+            "payload": json.dumps(data, default=str),
+            "updated_at": datetime.now(_IST).isoformat(),
+        }
+        client.upsert_entity(entity)
+    except Exception as e:
+        print(f"[volume-cache] save failed: {e}")
+
+
+def _load_from_table():
+    """Load the most recent cached volume scan from Azure Table Storage."""
+    client = _get_vol_cache_client()
+    if not client:
+        return None
+    try:
+        today = datetime.now(_IST).strftime("%Y-%m-%d")
+        entity = client.get_entity(partition_key="volume_scan", row_key=today)
+        payload = entity.get("payload")
+        if payload:
+            return json.loads(payload)
+    except Exception:
+        # No cached data for today — try yesterday (weekend/holiday fallback)
+        try:
+            yesterday = (datetime.now(_IST) - timedelta(days=1)).strftime("%Y-%m-%d")
+            entity = client.get_entity(partition_key="volume_scan", row_key=yesterday)
+            payload = entity.get("payload")
+            if payload:
+                return json.loads(payload)
+        except Exception:
+            pass
+    return None
 
 # ── Stock universe (unique symbols across indices) ───────────────────────
 _NIFTY50 = [
@@ -182,8 +258,24 @@ def _load(force=False):
 
     Heavy per-symbol baselines (10-day avg vol, name) are warmed in parallel on
     the very first call only and reused for 30 minutes.
+
+    When the Indian market is closed, serves cached data from Azure Table
+    Storage (same data for all users) to avoid unnecessary API calls.
     """
     now = time.time()
+
+    # If market is closed and not forced, serve from Azure Table cache
+    if not force and not _is_market_open():
+        # Check in-memory cache first
+        if _CACHE["data"] and (now - _CACHE["ts"] < _CACHE_TTL):
+            return _CACHE["data"]
+        # Try Azure Table cache
+        cached = _load_from_table()
+        if cached:
+            _CACHE["data"] = cached
+            _CACHE["ts"] = now
+            return cached
+
     if not force and _CACHE["data"] and (now - _CACHE["ts"] < _CACHE_TTL):
         return _CACHE["data"]
 
@@ -238,6 +330,10 @@ def _load(force=False):
     data = {"stocks": stocks, "total": len(stocks), "ts": int(now)}
     _CACHE["data"] = data
     _CACHE["ts"] = now
+
+    # Persist to Azure Table so market-closed requests can serve cached data
+    _save_to_table(data)
+
     return data
 
 
