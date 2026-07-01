@@ -197,7 +197,7 @@
                     <li>
                         <form method="POST" action="{{ url_for('set_persona') }}" class="persona-switch-form">
                             <input type="hidden" name="persona" value="{{ pid }}">
-                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <input type="hidden" name="next" value="{{ url_for('home') }}">
                             <button type="submit" class="persona-switch-item {% if user_persona.id == pid %}active{% endif %}">
                                 <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
                                 <span class="persona-switch-item-text">
