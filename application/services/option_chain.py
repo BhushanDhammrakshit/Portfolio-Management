@@ -485,7 +485,7 @@ def _empty_leg() -> Dict[str, float]:
 
 _NSE_BASE = "https://www.nseindia.com"
 _NSE_HOME = f"{_NSE_BASE}/option-chain"
-_NSE_API = f"{_NSE_BASE}/api/option-chain-indices"
+_NSE_API = f"{_NSE_BASE}/api/option-chain-v3"
 
 _NSE_HEADERS = {
     "User-Agent": (
@@ -535,7 +535,8 @@ def _fetch_via_nse(retries: int = 1) -> Optional[Dict[str, Any]]:
     for attempt in range(retries + 1):
         try:
             s = _get_nse_session()
-            r = s.get(_NSE_API, params={"symbol": "NIFTY"}, timeout=_TIMEOUT)
+            r = s.get(_NSE_API, params={"type": "Indices", "symbol": "NIFTY"},
+                      timeout=_TIMEOUT)
             if r.status_code in (401, 403):
                 _invalidate_nse_session()
                 last_err = RuntimeError(f"HTTP {r.status_code}")
