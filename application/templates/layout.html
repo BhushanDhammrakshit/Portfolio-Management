@@ -35,7 +35,7 @@
 
 <aside class="app-sidebar" id="appSidebar">
     <div class="app-sidebar-brand">
-        <a href="{{ url_for('home') }}" class="brand-link">
+        <a href="/home" class="brand-link">
             <span class="brand-icon"><img class="brand-img" src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
             <span class="brand-text">Finance<span class="brand-accent">Candle</span></span>
         </a>
@@ -46,7 +46,7 @@
 
     <nav class="app-sidebar-nav" id="appSidebarNav">
         <button type="button" class="nav-group-label" data-group="workspace"><span>Workspace</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('home') }}" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
+        <a href="/home" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
             <i class="fa-solid fa-house"></i><span>Dashboard</span>
         </a>
         <a href="{{ url_for('portfolioAnalysis') }}" class="nav-item {% if title == 'Portfolio Analysis' %}active{% endif %}">
@@ -197,7 +197,7 @@
                     <li>
                         <form method="POST" action="{{ url_for('set_persona') }}" class="persona-switch-form">
                             <input type="hidden" name="persona" value="{{ pid }}">
-                            <input type="hidden" name="next" value="{{ url_for('home') }}">
+                            <input type="hidden" name="next" value="/home">
                             <button type="submit" class="persona-switch-item {% if user_persona.id == pid %}active{% endif %}">
                                 <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
                                 <span class="persona-switch-item-text">
