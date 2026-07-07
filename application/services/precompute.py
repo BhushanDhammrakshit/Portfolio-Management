@@ -494,7 +494,7 @@ def start_scheduler() -> None:
             sched.add_job(
                 refresh_fyers_tokens,
                 "cron",
-                day_of_week="mon-fri",
+                day_of_week="mon-sun",
                 hour=int(getattr(config, "FYERS_TOKEN_REFRESH_HOUR_IST", 7)),
                 minute=int(getattr(config, "FYERS_TOKEN_REFRESH_MINUTE_IST", 30)),
                 id="precompute_fyers_tokens",
