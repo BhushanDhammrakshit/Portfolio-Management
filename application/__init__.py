@@ -98,7 +98,15 @@ app.register_blueprint(mutual_funds_api)
 app.register_blueprint(health_api)
 
 # Plain routes registered against the app
-from application.routes import route  # noqa: F401, E402
+try:
+    from application.routes import route  # noqa: F401, E402
+except Exception as _route_err:
+    import logging as _logging
+    _logging.getLogger(__name__).critical(
+        "FATAL: application.routes.route failed to import — core "
+        "endpoints (home, login, signup) will be missing: %s", _route_err,
+        exc_info=True,
+    )
 
 
 @app.errorhandler(404)
