@@ -955,10 +955,11 @@ _SURGE_REL_FRAC = 0.5
 
 # Multi-factor weights for production-quality gap prediction.
 # All factor scores are normalized into [-1, +1] where +1 implies GAP UP.
-_GAP_W_OI = 0.55
-_GAP_W_TREND = 0.20
-_GAP_W_VIX = 0.15
-_GAP_W_PCR = 0.10
+_GAP_W_OI = 0.45
+_GAP_W_TREND = 0.17
+_GAP_W_VIX = 0.13
+_GAP_W_PCR = 0.08
+_GAP_W_FUT = 0.17  # NIFTY futures OI buildup (long/short positioning)
 
 
 def _label_from_raw(raw: float) -> str:
@@ -1099,6 +1100,18 @@ def _compute_gap_outlook(payload: Dict[str, Any],
     pcr_delta = (pcr_now - pcr_prev) if pcr_prev else 0.0
     pcr_raw = _clamp(pcr_delta / 0.12) if pcr_prev else 0.0
 
+    # ── Factor 5: NIFTY futures OI buildup (long/short) ───────────────
+    fut_raw = 0.0
+    fut_ok = False
+    try:
+        from application.services.oi_buildup import nifty_futures_buildup
+        fut_data = nifty_futures_buildup()
+        if fut_data and fut_data.get("bias") is not None:
+            fut_raw = _clamp(float(fut_data["bias"]))
+            fut_ok = True
+    except Exception:
+        pass
+
     # Compose available factors with normalized coverage so missing factors
     # do not skew direction but reduce confidence.
     factor_specs = [
@@ -1106,6 +1119,7 @@ def _compute_gap_outlook(payload: Dict[str, Any],
         ("trend", trend_raw, _GAP_W_TREND, (spot_now > 0 and prev_spot > 0)),
         ("vix", vix_raw, _GAP_W_VIX, bool(vix)),
         ("pcr", pcr_raw, _GAP_W_PCR, bool(pcr_prev)),
+        ("futures", fut_raw, _GAP_W_FUT, fut_ok),
     ]
     total_w = sum(w for _, _, w, _ in factor_specs)
     active_w = sum(w for _, _, w, ok in factor_specs if ok)
