@@ -184,6 +184,11 @@
         </button>
         <div class="topbar-title">{{ title or 'Dashboard' }}</div>
         <div class="topbar-actions">
+            {% if current_plan %}
+            <a href="{{ url_for('billing.billing_page') }}" class="plan-badge plan-badge-{{ current_plan.id }}" title="Your current plan — manage in Billing">
+                {% if current_plan.id == 'elite' %}<i class="fa-solid fa-gem plan-badge-icon"></i>{% elif current_plan.id == 'pro' %}<i class="fa-solid fa-bolt plan-badge-icon"></i>{% endif %}{{ current_plan.id }}
+            </a>
+            {% endif %}
             {% if user_persona %}
             <div class="persona-switch dropdown">
                 <button class="persona-switch-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Switch your workspace">
