@@ -297,3 +297,82 @@ def _empty_buckets() -> Dict[str, List[Dict[str, Any]]]:
         "short_covering": [],
         "long_unwinding": [],
     }
+
+
+# ── NIFTY futures buildup (for index gap forecast) ────────────────────
+
+_NIFTY_FUT_CACHE_KEY = "oi_buildup:nifty_futures:v1"
+_NIFTY_FUT_CACHE_TTL = 90  # seconds
+
+
+def nifty_futures_buildup(force: bool = False) -> Optional[Dict[str, Any]]:
+    """Return NIFTY futures OI buildup classification.
+
+    Extracts NIFTY from the same NSE OI-spurts feed that stocks use,
+    but without the index filter.  Returns::
+
+        {"symbol": "NIFTY", "price_chg_pct": ..., "oi_chg_pct": ...,
+         "bucket": "long_buildup"|..., "bias": float in [-1, +1]}
+
+    or ``None`` if data is unavailable.
+    """
+    if not force:
+        cached = shared_cache.jget(_NIFTY_FUT_CACHE_KEY)
+        if cached:
+            return cached
+
+    try:
+        snapshot = _fetch_snapshot()
+    except Exception as e:
+        log.debug("nifty_futures_buildup: fetch failed: %s", e)
+        return None
+
+    for c in snapshot:
+        sym = (c.get("symbol") or "").strip().upper()
+        if sym != "NIFTY":
+            continue
+
+        ltp = _to_float(c.get("underlyingValue"))
+        prev_close = _to_float(c.get("prev_close") or c.get("previousClose"))
+        oi = _to_int(c.get("openInterest") or c.get("latestOI"))
+        prev_oi = _to_int(c.get("prevOI") or c.get("previousOI"))
+
+        # Derive price change %
+        if ltp and prev_close and prev_close > 0:
+            price_chg_pct = (ltp - prev_close) / prev_close * 100.0
+        else:
+            price_chg_pct = _to_float(c.get("pChange")) or 0.0
+
+        # Derive OI change %
+        if oi and prev_oi and prev_oi > 0:
+            oi_chg_pct = (oi - prev_oi) / prev_oi * 100.0
+        else:
+            oi_chg_pct = _to_float(c.get("oiChange") or c.get("pchangeinOpenInterest")) or 0.0
+
+        bucket = _classify(price_chg_pct, oi_chg_pct)
+
+        # Bias: same mapping as fno_gap_forecast
+        _BIAS = {
+            "long_buildup": 1.0,
+            "short_covering": 0.6,
+            "short_buildup": -1.0,
+            "long_unwinding": -0.6,
+        }
+        # Scale by OI magnitude (bigger OI swing → stronger signal)
+        oi_mag = min(abs(oi_chg_pct) / 15.0, 1.0)
+        bias = _BIAS.get(bucket, 0.0) * oi_mag
+
+        result = {
+            "symbol": "NIFTY",
+            "price_chg_pct": round(price_chg_pct, 2),
+            "oi_chg_pct": round(oi_chg_pct, 2),
+            "bucket": bucket,
+            "bias": round(bias, 3),
+        }
+        try:
+            shared_cache.jset(_NIFTY_FUT_CACHE_KEY, result, ttl=_NIFTY_FUT_CACHE_TTL)
+        except Exception:
+            pass
+        return result
+
+    return None
