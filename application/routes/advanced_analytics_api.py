@@ -116,6 +116,25 @@ def get_advanced_analytics():
 
     # Daily returns
     try:
+        # A global dropna() would trim every symbol down to the *shortest*
+        # available history, so a single newly-listed stock (or a symbol with
+        # sparse data) could collapse the common window below the threshold and
+        # force the all-zero fallback for the whole portfolio. Instead, drop
+        # symbols that don't have enough history, keep the benchmark, and
+        # forward-fill small holiday/alignment gaps before computing returns.
+        port_cols = [c for c in close.columns if c != benchmark_symbol]
+        max_hist = max((close[c].notna().sum() for c in port_cols), default=0)
+        # Prefer ~3 months of data, but relax for young portfolios so we don't
+        # needlessly fall back when the best available history is still short.
+        min_points = min(60, max(20, int(max_hist * 0.5))) if max_hist else 60
+        keep = [c for c in port_cols if close[c].notna().sum() >= min_points]
+        if benchmark_symbol in close.columns and close[benchmark_symbol].notna().sum() >= 20:
+            keep.append(benchmark_symbol)
+        if keep:
+            close = close[keep]
+        # Fill interior gaps (holidays / provider misalignment) without
+        # fabricating leading history; leading NaNs are trimmed by dropna below.
+        close = close.ffill()
         returns_df = close.pct_change().dropna()
         if returns_df.empty or len(returns_df) < 10:
             return jsonify(_fallback_metrics(stock_data, total_value))
