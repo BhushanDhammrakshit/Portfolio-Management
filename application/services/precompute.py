@@ -280,6 +280,7 @@ def refresh_swing_scans() -> None:
         # 1. Warm OHLC table for the scan universe so the scan itself is
         #    served from cache. Done in parallel but capped to keep us
         #    well under the per-app Fyers throughput.
+        universe = []
         try:
             from application.services import ohlc_cache, swing_scanner
             universe = list(getattr(swing_scanner, "UNIVERSE", []))
@@ -292,6 +293,30 @@ def refresh_swing_scans() -> None:
                          len(universe))
         except Exception as e:  # noqa: BLE001
             log.warning("precompute.refresh_swing_scans: OHLC warm failed: %s", e)
+
+        # 1b. Warm every distinct symbol held in a user portfolio so the
+        #     advanced-analytics dashboard reads real history from cache even
+        #     when the live provider is unavailable during the day. Covers
+        #     obscure / BSE holdings that aren't in the scan universe.
+        try:
+            from application.services import ohlc_cache
+            from application.services.azure_table import stocks_table_client
+            held = set()
+            for r in stocks_table_client.list_entities():
+                sym = (r.get("Symbol") or "").strip()
+                if sym:
+                    held.add(sym)
+            held.add("^NSEI")  # benchmark used by the analytics dashboard
+            extra = [s for s in held if s not in set(universe)]
+            if extra:
+                with ThreadPoolExecutor(max_workers=4,
+                                        thread_name_prefix="ohlc-warm-port") as ex:
+                    list(ex.map(lambda s: _safe(ohlc_cache.warm, s, 400), extra))
+                log.info("precompute.refresh_swing_scans: warmed %d portfolio "
+                         "symbols", len(extra))
+        except Exception as e:  # noqa: BLE001
+            log.warning("precompute.refresh_swing_scans: portfolio OHLC warm "
+                        "failed: %s", e)
 
         # 2. Run every scan with force=True. Each one writes its own
         #    Redis payload, so live requests just `jget` it.
