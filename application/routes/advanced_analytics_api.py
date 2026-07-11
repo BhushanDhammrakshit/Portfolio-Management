@@ -44,13 +44,56 @@ def _fetch_stocks():
     return cleaned
 
 
+def _load_close_series(all_symbols, days=400):
+    """Return ``{symbol: Close Series}`` for daily candles, cache-first.
+
+    Each symbol is read through :func:`market_data.get_history`, which is
+    backed by the persistent Azure Table OHLC cache — so a symbol seeded on
+    an earlier trading day keeps working even when the live provider (Fyers
+    token / yfinance) is unavailable right now. If both the cache-refresh and
+    the live fetch come back empty, we fall back to *any* rows still sitting
+    in the cache (ignoring staleness) so the dashboard renders real numbers
+    instead of the all-zero placeholder.
+    """
+    from application.services import market_data, ohlc_cache
+
+    close_cols = {}
+    for sym in all_symbols:
+        if not sym:
+            continue
+        series = None
+        try:
+            df = market_data.get_history(sym, days=days, interval="1d")
+            if df is not None and not df.empty and "Close" in df.columns:
+                series = df["Close"]
+        except Exception as e:  # noqa: BLE001
+            print(f"[advanced_analytics] get_history failed for {sym}: {e}")
+
+        # Last resort: whatever we ever cached for this symbol.
+        if series is None or series.empty:
+            try:
+                cdf = ohlc_cache.load_cached(sym, days)
+                if cdf is not None and not cdf.empty and "Close" in cdf.columns:
+                    series = cdf["Close"]
+            except Exception:
+                pass
+
+        if series is None or series.empty:
+            continue
+        series = series.copy()
+        # Strip tz so symbols from different providers align on dates.
+        if getattr(series.index, "tz", None) is not None:
+            series.index = series.index.tz_localize(None)
+        close_cols[sym] = series
+    return close_cols
+
+
 @advanced_analytics_api.route("/api/advanced-analytics", methods=["GET"])
 @requires_plan("elite")
 @_login_required_api
 def get_advanced_analytics():
     """Compute advanced portfolio metrics using historical data."""
     import pandas as pd
-    from application.services import market_data
 
     stocks = _fetch_stocks()
     if not stocks:
@@ -88,30 +131,22 @@ def get_advanced_analytics():
             weights.append(sd["weight"])
 
     # Fetch 1-year historical data
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)
     benchmark_symbol = "^NSEI"  # NIFTY 50
 
     try:
         all_symbols = symbols + [benchmark_symbol]
-        per_sym = market_data.download_history(
-            all_symbols, start_date, end_date, interval="1d"
-        )
-        # Build a single Close DataFrame keyed by symbol.
-        close_cols = {}
-        for sym, df in per_sym.items():
-            if df is None or df.empty or "Close" not in df.columns:
-                continue
-            s = df["Close"].copy()
-            # Strip tz so symbols from different providers align on dates.
-            if getattr(s.index, "tz", None) is not None:
-                s.index = s.index.tz_localize(None)
-            close_cols[sym] = s
+        # Cache-first: read daily closes through the persistent Azure Table
+        # OHLC cache instead of a live batch download. This keeps the
+        # dashboard working on the deployed server even when the live sources
+        # are down for the moment — an expired Fyers token or yfinance being
+        # IP-blocked from the datacenter — as long as the nightly warm job (or
+        # any earlier request) has seeded the cache.
+        close_cols = _load_close_series(all_symbols, days=365)
         if not close_cols:
             return jsonify(_fallback_metrics(stock_data, total_value))
         close = pd.DataFrame(close_cols).sort_index()
     except Exception as e:
-        print(f"[advanced_analytics] history download error: {e}")
+        print(f"[advanced_analytics] history load error: {e}")
         return jsonify(_fallback_metrics(stock_data, total_value))
 
     # Daily returns
