@@ -38,6 +38,17 @@
     {% endif %}
 
     <div id="analyticsContent" hidden>
+        <!-- Shown when historical data was unavailable and only basic
+             (value/P&L) metrics could be computed. -->
+        <div id="analyticsFallbackBanner" class="alert alert-warning d-flex align-items-start gap-2 mb-3" hidden>
+            <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+            <div>
+                <strong>Historical data temporarily unavailable.</strong>
+                Risk metrics, charts and ratios need price history that couldn't be
+                loaded right now. Value and P&amp;L are still accurate. Please try
+                <a href="#" id="fallbackRetry">refreshing</a> in a little while.
+            </div>
+        </div>
         <!-- Health score hero (plain-English summary at a glance) -->
         <div class="surface-card health-hero p-3 mb-3" id="healthHero"></div>
 
@@ -440,6 +451,11 @@ function setUpdatedLabel(ts) {
 
 document.getElementById('loadAnalytics').addEventListener('click', loadData);
 
+document.addEventListener('click', (e) => {
+    const retry = e.target.closest('#fallbackRetry');
+    if (retry) { e.preventDefault(); try { ppCache.del('adv:analytics'); } catch (err) {} loadData(); }
+});
+
 async function loadData() {
     const btn = document.getElementById('loadAnalytics');
     const loading = document.getElementById('analyticsLoading');
@@ -497,6 +513,8 @@ async function loadData() {
 }
 
 function render(d) {
+    const fb = document.getElementById('analyticsFallbackBanner');
+    if (fb) fb.hidden = !d.fallback;
     renderHealthHero(d);
     renderPerfStrip(d);
     renderVerdict(d);
