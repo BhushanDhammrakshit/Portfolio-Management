@@ -301,10 +301,37 @@ def get_history_cached(
 
 def warm(symbol: str, days: int = 365) -> int:
     """Force a fetch + persist for ``symbol``. Used by the overnight
-    precompute job to seed/refresh the entire scanner universe."""
+    precompute job to seed/refresh the scanner universe and every user's
+    portfolio holdings.
+
+    Uses the explicit start/end ``download_history`` path (not the per-symbol
+    ``get_history``): Fyers' ``get_history`` inflates the requested window by
+    ~1.6x and then trips the broker's 366-day cap for a full year, whereas
+    ``download_history`` passes exact dates and both the primary and the
+    configured fallback are tried transparently — so a single expired broker
+    token doesn't leave the cache empty for the whole trading day."""
     from application.services import market_data
-    df = market_data._primary().get_history(symbol, days=days, interval="1d")  # noqa: SLF001
+    end = datetime.utcnow().date()
+    # Stay safely under the broker's 366-day range limit.
+    start = end - timedelta(days=min(int(days), 360))
+    df = None
+    try:
+        res = market_data.download_history([symbol], start, end, interval="1d")
+        df = res.get(symbol) if isinstance(res, dict) else None
+    except Exception as e:  # noqa: BLE001
+        log.debug("[ohlc] warm download failed for %s: %s", symbol, e)
     if df is None or df.empty:
         _mark_neg(symbol)
         return 0
     return _save(symbol, df)
+
+
+def load_cached(symbol: str, days: int) -> Optional[pd.DataFrame]:
+    """Return whatever daily candles we already have for ``symbol``,
+    ignoring staleness. Used as a last resort by the analytics dashboard so
+    it can still render from history captured on an earlier trading day even
+    when every live source (expired broker token, IP-blocked yfinance) fails
+    right now. Returns None when caching is unavailable."""
+    today = _ist_today()
+    start = today - timedelta(days=int(days) + 10)
+    return _load(symbol, start, today)
