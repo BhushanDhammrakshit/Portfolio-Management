@@ -230,6 +230,9 @@
                     <li><a class="dropdown-item" href="{{ url_for('profile_page') }}"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('billing.billing_page') }}"><i class="fa-solid fa-crown me-2"></i>Plans &amp; Billing{% if current_plan and current_plan.id != 'free' %} <span class="badge bg-success ms-1" style="font-size:.6rem;vertical-align:middle">{{ current_plan.name }}</span>{% endif %}</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fa-solid fa-gear me-2"></i>Settings</a></li>
+                    {% if is_admin %}
+                    <li><a class="dropdown-item" href="#" id="adminRefreshTokens"><i class="fa-solid fa-rotate me-2 text-warning"></i>Refresh Tokens</a></li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="themeToggleTop" role="menuitem">
@@ -502,6 +505,27 @@ button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;
   }
   bindLogout('logoutLink');
   bindLogout('logoutLinkTop');
+
+  // ── Admin: refresh tokens button ──────────────────────────────────
+  const _adminRefBtn = document.getElementById('adminRefreshTokens');
+  if (_adminRefBtn) {
+    _adminRefBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      _adminRefBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Refreshing…';
+      try {
+        const r = await fetch('/api/admin/refresh-tokens', { method: 'POST' });
+        const d = await r.json();
+        const fy = d.fyers || {};
+        const msg = fy.status === 'ok'
+          ? `Fyers: ${fy.refreshed}/${fy.total} refreshed` + (d.ohlc_warm ? `, ${d.ohlc_warm.symbols} symbols cached` : '')
+          : `Fyers: ${fy.status || 'error'}${fy.message ? ' — ' + fy.message : ''}`;
+        alert(msg);
+      } catch (err) {
+        alert('Refresh failed: ' + err.message);
+      }
+      _adminRefBtn.innerHTML = '<i class="fa-solid fa-rotate me-2 text-warning"></i>Refresh Tokens';
+    });
+  }
 
   // ── Theme toggle (in topbar user dropdown) ────────────────────────
   const themeToggleEl = document.getElementById('themeToggleTop');
