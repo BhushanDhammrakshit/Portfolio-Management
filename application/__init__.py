@@ -148,12 +148,21 @@ def _inject_globals():
 
     _persona_id = session.get("persona")
 
+    # Admin flag for template-gated UI (token refresh button, RAG panel, etc.)
+    _is_admin = False
+    if session.get("email"):
+        import os
+        _admin_emails = {e.strip().lower() for e in
+                         (os.getenv("ADMIN_EMAILS") or "").split(",") if e.strip()}
+        _is_admin = (not _admin_emails) or session["email"].lower() in _admin_emails
+
     return {
         "current_user": {
             "name": session.get("name"),
             "email": session.get("email"),
             "id": session.get("user_id"),
         },
+        "is_admin": _is_admin,
         "market_data_provider": provider_name(),
         "current_plan": plan_dict,
         "has_pro": _rank >= 1,
