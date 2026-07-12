@@ -500,6 +500,94 @@ def upstox_status():
     return jsonify({"connected": bool(config.upstox_access_token())})
 
 
+# ── Admin: manual token refresh ─────────────────────────────────────────
+
+@broker_api.route("/api/admin/refresh-tokens", methods=["POST"])
+@_login_required
+def admin_refresh_tokens():
+    """One-click token refresh for Fyers (and optionally Upstox).
+
+    Admin-only. Runs the same TOTP-based headless login that the daily
+    cron does, but on demand — useful right after a deploy or when you
+    notice stale data and don't want to wait for 07:30 IST.
+    """
+    if not _is_market_data_admin(session.get("email", "")):
+        return jsonify({"error": "admin required"}), 403
+
+    results = {}
+
+    # Fyers
+    try:
+        from application.services.providers import fyers_auth
+        tokens = fyers_auth.refresh_all_tokens()
+        ok = sum(1 for v in tokens.values() if v)
+        results["fyers"] = {
+            "refreshed": ok,
+            "total": len(tokens),
+            "status": "ok" if ok > 0 else "failed",
+        }
+    except Exception as e:
+        results["fyers"] = {"status": "error", "message": str(e)}
+
+    # Upstox (headless TOTP, if creds are configured)
+    try:
+        from application.services.providers import upstox_auth
+        if all(getattr(config, k, "") for k in
+               ("UPSTOX_API_KEY", "UPSTOX_API_SECRET", "UPSTOX_MOBILE",
+                "UPSTOX_PIN", "UPSTOX_TOTP_SECRET")):
+            tok = upstox_auth.refresh_access_token()
+            results["upstox"] = {"status": "ok" if tok else "failed"}
+        else:
+            results["upstox"] = {"status": "skipped", "message": "creds not configured"}
+    except Exception as e:
+        results["upstox"] = {"status": "error", "message": str(e)}
+
+    # Warm OHLC cache for portfolio symbols after a successful refresh
+    if results.get("fyers", {}).get("status") == "ok":
+        try:
+            from application.services import ohlc_cache
+            from application.services.azure_table import stocks_table_client
+            held = set()
+            for r in stocks_table_client.list_entities():
+                sym = (r.get("Symbol") or "").strip()
+                if sym:
+                    held.add(sym)
+            held.add("^NSEI")
+            warmed = 0
+            for sym in held:
+                try:
+                    n = ohlc_cache.warm(sym, 365)
+                    if n:
+                        warmed += 1
+                except Exception:
+                    pass
+            results["ohlc_warm"] = {"symbols": warmed}
+        except Exception as e:
+            results["ohlc_warm"] = {"status": "error", "message": str(e)}
+
+    return jsonify(results)
+
+
+@broker_api.route("/api/admin/token-status")
+@_login_required
+def admin_token_status():
+    """Quick status check: which market-data providers have valid tokens."""
+    if not _is_market_data_admin(session.get("email", "")):
+        return jsonify({"error": "admin required"}), 403
+
+    fyers_ok = bool(config.fyers_app_pool())
+    upstox_ok = bool(config.upstox_access_token())
+    dhan_ok = bool(config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN)
+
+    return jsonify({
+        "fyers": {"active": fyers_ok, "apps": len(config.fyers_app_pool())},
+        "upstox": {"active": upstox_ok},
+        "dhan": {"active": dhan_ok},
+        "provider": config.MARKET_DATA_PROVIDER,
+        "fallback": config.MARKET_DATA_FALLBACK,
+    })
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────
 
 def _fyers_to_yahoo(fy_symbol: str) -> str:
