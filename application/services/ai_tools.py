@@ -334,6 +334,22 @@ def run_strategy(rules: List[Dict[str, Any]],
         return {"error": "no valid rules",
                 "valid_metrics": sorted(VALID_METRICS),
                 "valid_ops": sorted(VALID_OPS)}
+    # The screen result is identical for every user with the same rule set and
+    # is expensive (scans up to ``universe_limit`` symbols). Cache it in Redis
+    # with a short TTL since the underlying metrics move intraday.
+    import hashlib as _hashlib
+
+    _sig = _hashlib.sha1(
+        (repr(sorted((r["metric"], r["op"], r["value"]) for r in norm_rules))
+         + f"|{universe_limit}").encode("utf-8")
+    ).hexdigest()[:16]
+    _key = f"aitools:strategy:v1:{_sig}"
+    try:
+        _cached = shared_cache.jget(_key)
+        if isinstance(_cached, dict):
+            return {**_cached, "cached": True}
+    except Exception:
+        pass
     from application.services.swing_scanner import UNIVERSE as _U
     universe = list(_U)[:universe_limit]
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -356,13 +372,18 @@ def run_strategy(rules: List[Dict[str, Any]],
                     **{k: round(v, 2) for k, v in vals.items()},
                 })
     matches.sort(key=lambda r: r.get("day_change_pct", 0), reverse=True)
-    return {
+    result = {
         "rules": norm_rules,
         "matches": matches,
         "match_count": len(matches),
         "screened": len(universe),
         "scan_time": _dt.datetime.now(_IST).strftime("%d %b %Y, %I:%M %p IST"),
     }
+    try:
+        shared_cache.jset(_key, result, ttl=5 * 60)  # 5 minutes
+    except Exception:
+        pass
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════
