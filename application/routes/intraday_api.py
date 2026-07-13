@@ -360,6 +360,17 @@ def intraday_candles():
     cfg = _TF_CONFIG.get(tf)
     if not cfg:
         return jsonify({"ok": False, "error": "invalid tf"}), 400
+    # Candle data for a given (symbol, timeframe) is identical for every user,
+    # so cache the shaped payload in Redis. Intraday timeframes use a short
+    # TTL; daily bars are stable for much longer.
+    _ttl = 60 if tf in ("5m", "15m") else (300 if tf == "1h" else 15 * 60)
+    _key = f"candles:{symbol}:{tf}"
+    try:
+        _cached = shared_cache.jget(_key)
+        if isinstance(_cached, dict):
+            return jsonify(_cached)
+    except Exception:
+        pass
     try:
         df = market_data.get_history(symbol, days=cfg["days"], interval=cfg["interval"])
     except Exception as e:
@@ -379,4 +390,10 @@ def intraday_candles():
             })
         except (ValueError, KeyError):
             continue
-    return jsonify({"ok": True, "symbol": symbol, "tf": tf, "candles": out})
+    payload = {"ok": True, "symbol": symbol, "tf": tf, "candles": out}
+    if out:
+        try:
+            shared_cache.jset(_key, payload, ttl=_ttl)
+        except Exception:
+            pass
+    return jsonify(payload)
