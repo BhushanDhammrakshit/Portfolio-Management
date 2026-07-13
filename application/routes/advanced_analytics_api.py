@@ -8,6 +8,27 @@ from application.services.plans import requires_plan
 
 advanced_analytics_api = Blueprint("advanced_analytics_api", __name__)
 
+# Per-user analytics cache TTL. Long enough to absorb repeated dashboard
+# opens / tab switches, short enough that intraday price moves refresh.
+_ANALYTICS_TTL = 15 * 60  # 15 minutes
+
+
+def _holdings_signature(stocks) -> str:
+    """Stable short hash of the holdings that changes on any edit."""
+    import hashlib
+
+    parts = []
+    for s in sorted(stocks, key=lambda x: (x.get("Symbol") or x.get("StockName") or "")):
+        parts.append("{}|{}|{}|{}".format(
+            (s.get("Symbol") or s.get("StockName") or "").strip().upper(),
+            s.get("Quantity") or 0,
+            s.get("PurchasePrice") or 0,
+            s.get("CurrentPrice") or 0,
+        ))
+    raw = ";".join(parts).encode("utf-8")
+    return hashlib.sha1(raw).hexdigest()[:16]
+
+
 
 def _login_required_api(f):
     from functools import wraps
@@ -98,6 +119,25 @@ def get_advanced_analytics():
     stocks = _fetch_stocks()
     if not stocks:
         return jsonify({"error": "no_stocks", "message": "Add stocks to see analytics."})
+
+    # Per-user cache. The key embeds a signature of the holdings so any
+    # portfolio edit (add / update / delete) produces a fresh key
+    # automatically, while a short TTL bounds how stale the market-derived
+    # metrics can get. Repeated dashboard opens within the window are served
+    # straight from Redis instead of re-downloading 400 days of history.
+    from flask import request as _req
+    from application.services import cache as shared_cache
+
+    _force = _req.args.get("refresh") == "1"
+    _sig = _holdings_signature(stocks)
+    _cache_key = f"analytics:{session['user_id']}:{_sig}"
+    if not _force:
+        try:
+            _cached = shared_cache.jget(_cache_key)
+            if isinstance(_cached, dict):
+                return jsonify({**_cached, "cached": True})
+        except Exception:
+            pass
 
     # Gather symbols and weights
     symbols = []
@@ -397,6 +437,10 @@ def get_advanced_analytics():
         result["risk_metrics"], result["diversification"],
         monthly_returns,
     )
+    try:
+        shared_cache.jset(_cache_key, result, ttl=_ANALYTICS_TTL)
+    except Exception:
+        pass
     return jsonify(result)
 
 
