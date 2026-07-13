@@ -195,6 +195,32 @@ def screener(strategy: str = "magic_formula", force: bool = False) -> Dict[str, 
 def dcf_value(symbol: str, growth_pct: float = 12.0,
               terminal_pct: float = 4.0, discount_pct: float = 11.0,
               years: int = 10) -> Dict[str, Any]:
+    # DCF is a pure function of the (daily-stable) fundamentals + the
+    # assumption set, so cache the computed valuation in Redis keyed by the
+    # symbol and rounded assumptions.
+    _key = "invtools:dcf:v1:{}:{}:{}:{}:{}".format(
+        symbol.upper(), round(float(growth_pct), 2), round(float(terminal_pct), 2),
+        round(float(discount_pct), 2), int(years))
+    try:
+        cached = shared_cache.jget(_key)
+        if isinstance(cached, dict):
+            return cached
+    except Exception:
+        pass
+    out = _dcf_value_compute(symbol, growth_pct, terminal_pct, discount_pct, years)
+    # Only cache successful valuations — errors are often transient (missing
+    # fundamentals right after a token expiry), so don't pin them.
+    if isinstance(out, dict) and not out.get("error"):
+        try:
+            shared_cache.jset(_key, out, ttl=60 * 60)  # 1 hour
+        except Exception:
+            pass
+    return out
+
+
+def _dcf_value_compute(symbol: str, growth_pct: float = 12.0,
+                       terminal_pct: float = 4.0, discount_pct: float = 11.0,
+                       years: int = 10) -> Dict[str, Any]:
     p = _flatten_fundamentals(symbol)
     if not p:
         return {"error": "fundamentals unavailable", "symbol": symbol}
