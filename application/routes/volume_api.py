@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from flask import Blueprint, render_template, jsonify, session, redirect, url_for
 
 from application.services import market_data
+from application.services import cache as shared_cache
 from application.services.plans import requires_plan
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -226,14 +227,35 @@ def _build_baseline(symbol):
         return None
 
 
+_BASELINE_KEY = "volume:baseline:{symbol}"
+# Shared Redis key for the full live scan payload (global — same for all users).
+_LIVE_KEY = "volume:scan:live:v1"
+
+
 def _get_baseline(symbol):
     now = time.time()
+    # 1. Per-worker in-process cache (fastest, avoids Redis round-trips).
     cached = _BASELINE_CACHE.get(symbol)
     if cached and now - cached["ts"] < _BASELINE_TTL:
         return cached["data"]
+    # 2. Shared Redis cache — baselines are identical for every user/worker,
+    #    so the first worker to build one serves all the others.
+    try:
+        shared = shared_cache.jget(_BASELINE_KEY.format(symbol=symbol))
+        if shared:
+            _BASELINE_CACHE[symbol] = {"data": shared, "ts": now}
+            return shared
+    except Exception:
+        pass
+    # 3. Build fresh (heavy: 10-day history + company info).
     data = _build_baseline(symbol)
     if data:
         _BASELINE_CACHE[symbol] = {"data": data, "ts": now}
+        try:
+            shared_cache.jset(_BASELINE_KEY.format(symbol=symbol),
+                              data, ttl=_BASELINE_TTL)
+        except Exception:
+            pass
     return data
 
 
@@ -278,6 +300,18 @@ def _load(force=False):
 
     if not force and _CACHE["data"] and (now - _CACHE["ts"] < _CACHE_TTL):
         return _CACHE["data"]
+
+    # Shared Redis cache (all workers): the live scan is identical for every
+    # user, so the first worker to build it within the TTL serves the rest.
+    if not force:
+        try:
+            shared = shared_cache.jget(_LIVE_KEY)
+            if shared and (now - shared.get("ts", 0) < _CACHE_TTL):
+                _CACHE["data"] = shared
+                _CACHE["ts"] = now
+                return shared
+        except Exception:
+            pass
 
     # Warm baselines that have expired (only the first scan does the bulk work)
     missing = [s for s in ALL_SYMBOLS
@@ -333,6 +367,12 @@ def _load(force=False):
 
     # Persist to Azure Table so market-closed requests can serve cached data
     _save_to_table(data)
+
+    # Share the live scan with other workers via Redis (short TTL).
+    try:
+        shared_cache.jset(_LIVE_KEY, data, ttl=_CACHE_TTL)
+    except Exception:
+        pass
 
     return data
 
