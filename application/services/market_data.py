@@ -225,12 +225,7 @@ def get_quotes(symbols: Iterable[str]) -> dict[str, dict]:
     return result
 
 
-def get_info(symbol: str) -> Optional[dict]:
-    """Get name/sector/industry/market-cap.
-
-    Dhan does not expose sector or market cap, so when the primary is Dhan
-    we always merge in yfinance metadata when available.
-    """
+def _get_info_live(symbol: str) -> Optional[dict]:
     primary = _primary()
     out = None
     try:
@@ -260,7 +255,46 @@ def get_info(symbol: str) -> Optional[dict]:
     return out
 
 
-def search(query: str) -> list[dict]:
+def get_info(symbol: str) -> Optional[dict]:
+    """Get name/sector/industry/market-cap.
+
+    Company metadata (name / sector / industry / market-cap) does not change
+    intraday, so the result is persisted per symbol in Azure Table Storage
+    (via ``snapshot_store``) with a Redis read-through cache in front. It is
+    only rebuilt when the snapshot is missing or an explicit refresh is
+    requested elsewhere, which keeps the heavy provider lookups off the hot
+    request path.
+
+    Dhan does not expose sector or market cap, so when the primary is Dhan
+    we always merge in yfinance metadata when available.
+    """
+    if not symbol:
+        return None
+    try:
+        from application.services import snapshot_store
+
+        key = f"info:{symbol.upper()}"
+        snap = snapshot_store.get(key)
+        if snap is not None and snap.get("payload"):
+            return snap["payload"]
+        live = _get_info_live(symbol)
+        if live:
+            try:
+                snapshot_store.put(key, live)
+            except Exception:
+                pass
+        return live
+    except Exception as e:
+        log.debug("get_info cache path failed (%s); serving live", e)
+        return _get_info_live(symbol)
+
+
+# Symbol search results are stable within a trading day (the tradable
+# universe doesn't change intraday), so cache them in Redis for a few hours.
+_SEARCH_CACHE_TTL = 6 * 60 * 60
+
+
+def _search_live(query: str) -> list[dict]:
     primary = _primary()
     try:
         results = primary.search(query) or []
@@ -277,3 +311,25 @@ def search(query: str) -> list[dict]:
     except Exception as e:
         log.warning("search fallback failed: %s", e)
         return []
+
+
+def search(query: str) -> list[dict]:
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    from application.services import cache as shared_cache
+
+    key = f"search:{q}"
+    try:
+        cached = shared_cache.jget(key)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+    results = _search_live(query)
+    if results:
+        try:
+            shared_cache.jset(key, results, ttl=_SEARCH_CACHE_TTL)
+        except Exception:
+            pass
+    return results
