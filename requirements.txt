@@ -14,6 +14,9 @@ APScheduler>=3.10.4
 redis>=5.0.0
 Flask-Caching>=2.1.0
 Flask-Compress>=1.14
+# TrueData licensed market-data feed (REST history + quotes, live websocket
+# for option chain). Long-lived username/password auth — no daily token dance.
+truedata>=7.0.0
 # Selenium drives the headless Upstox OAuth login (mobile → TOTP → PIN) so
 # the daily Upstox market-data token refreshes without manual intervention.
 # Requires a Chrome/Chromium binary in the runtime (set UPSTOX_CHROME_BINARY
