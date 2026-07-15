@@ -36,6 +36,7 @@ from application.services import quote_cache
 from application.services.providers import (
     dhan_provider,
     fyers_provider,
+    truedata_provider,
     upstox_provider,
     yfinance_provider,
 )
@@ -45,6 +46,7 @@ log = logging.getLogger(__name__)
 _PROVIDERS = {
     "dhan": dhan_provider,
     "fyers": fyers_provider,
+    "truedata": truedata_provider,
     "upstox": upstox_provider,
     "yfinance": yfinance_provider,
 }
@@ -56,7 +58,13 @@ def _quote_cache_enabled() -> bool:
     The cache itself splits load across Dhan, Fyers and Upstox (whichever
     are available) and shields upstream from concurrent users via a 15 s
     TTL plus single-flight locking.
+
+    When TrueData is the active provider we bypass this broker-only cache so
+    quotes are served by the TrueData REST feed (with yfinance fallback)
+    rather than a stale/blocked broker token.
     """
+    if provider_name() == "truedata":
+        return False
     have_dhan = bool(config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN)
     have_fyers = bool(config.FYERS_APP_ID and config.FYERS_ACCESS_TOKEN)
     have_upstox = bool(config.UPSTOX_API_KEY and config.upstox_access_token())
