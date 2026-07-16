@@ -82,19 +82,49 @@
     {% endif %}
 </header>
 
-{# ── Usage meters ─────────────────────────────────────────────── #}
-<div class="bill-usage">
-    <h5><i class="fa-solid fa-gauge-high"></i>This month's usage</h5>
-    {% for m in meters %}
-    <div class="usage-row {{ 'unlim' if m.limit is none else '' }}">
-        <div class="usage-label">{{ m.label }}</div>
-        <div class="usage-count">{{ m.used }} <span class="of">/ {{ m.limit_display }}</span></div>
-        <div class="usage-bar">
-            <div class="usage-bar-fill {{ 'danger' if m.danger else '' }}" style="width:{{ m.pct }}%"></div>
-        </div>
+{# ── Refer & Earn (moved here from bottom) ────────────────────── #}
+<style>
+.ref-section{margin-bottom:18px;padding:24px;border-radius:14px;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(168,85,247,.06));border:1px solid rgba(99,102,241,.22)}
+.ref-title{font-size:1.1rem;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.ref-title i{color:#f59e0b}
+.ref-sub{color:var(--text-muted);font-size:.88rem;margin:0 0 16px}
+.ref-code-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.ref-code{font-family:monospace;font-size:1.05rem;font-weight:700;padding:9px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border-strong);letter-spacing:.04em}
+.ref-copy-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s}
+.ref-copy-btn:hover{background:#6366f1;color:#fff;border-color:#6366f1}
+.ref-share-btn{padding:7px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s}
+.ref-share-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(99,102,241,.4)}
+.ref-stats{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0}
+.ref-stat{text-align:center}
+.ref-stat-val{font-size:1.3rem;font-weight:800;color:#6366f1}
+.ref-stat-lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.ref-rewards{font-size:.82rem;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.ref-rewards strong{color:var(--text)}
+.ref-table{width:100%;font-size:.82rem;margin-top:12px;border-collapse:collapse}
+.ref-table th{text-align:left;font-weight:700;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted)}
+.ref-table td{padding:5px 7px;border-bottom:1px solid var(--border)}
+.ref-status{display:inline-block;padding:2px 7px;border-radius:6px;font-size:.68rem;font-weight:700;text-transform:uppercase}
+.ref-status-pending{background:#fef3c7;color:#92400e}
+.ref-status-credited{background:#d1fae5;color:#065f46}
+.ref-status-linked{background:#e0e7ff;color:#3730a3}
+</style>
+<section class="ref-section" id="refSection">
+    <h3 class="ref-title"><i class="fa-solid fa-gift"></i> Refer & Earn</h3>
+    <p class="ref-sub">Invite friends and earn ₹80 for every Pro signup, ₹200 for Elite. Credits apply to your next bill.</p>
+    <div class="ref-code-box">
+        <span class="ref-code" id="refCode">Loading...</span>
+        <button type="button" class="ref-copy-btn" id="refCopyCode" title="Copy code"><i class="fa-solid fa-copy me-1"></i>Copy</button>
+        <button type="button" class="ref-share-btn" id="refShareLink"><i class="fa-solid fa-share-nodes me-1"></i>Share link</button>
     </div>
-    {% endfor %}
-</div>
+    <div class="ref-stats" id="refStats"></div>
+    <div class="ref-rewards">
+        <strong>Rewards:</strong> ₹80 per Pro referral · ₹200 per Elite referral · 14-day cooldown · Max 50/month
+    </div>
+    <table class="ref-table" id="refTable" style="display:none">
+        <thead><tr><th>Referred</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="refTableBody"></tbody>
+    </table>
+</section>
 
 {# ── Cycle toggle ─────────────────────────────────────────────── #}
 <div class="bill-cycle" role="tablist" id="cycleToggle">
@@ -346,4 +376,49 @@ document.querySelectorAll('.js-downgrade-form').forEach(form => {
 });
 </script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(function(){
+    let _refLink = '';
+    fetch('/api/billing/referral').then(r=>r.json()).then(d=>{
+        document.getElementById('refCode').textContent = d.code || '—';
+        _refLink = d.link || '';
+        const statsHtml = `
+            <div class="ref-stat"><div class="ref-stat-val">${d.count||0}</div><div class="ref-stat-lbl">Referrals</div></div>
+            <div class="ref-stat"><div class="ref-stat-val">₹${d.pending||0}</div><div class="ref-stat-lbl">Pending</div></div>
+            <div class="ref-stat"><div class="ref-stat-val">₹${d.credited||0}</div><div class="ref-stat-lbl">Credited</div></div>
+            <div class="ref-stat"><div class="ref-stat-val">₹${d.total_earned||0}</div><div class="ref-stat-lbl">Total Earned</div></div>
+        `;
+        document.getElementById('refStats').innerHTML = statsHtml;
+        const refs = d.referrals || [];
+        if (refs.length) {
+            const tbody = document.getElementById('refTableBody');
+            tbody.innerHTML = refs.map(r => `<tr>
+                <td>${r.email||'—'}</td>
+                <td>${(r.plan||'—').toUpperCase()}</td>
+                <td>₹${r.amount||0}</td>
+                <td><span class="ref-status ref-status-${r.status}">${r.status}</span></td>
+                <td>${r.purchase_date||'—'}</td>
+            </tr>`).join('');
+            document.getElementById('refTable').style.display = '';
+        }
+    }).catch(()=>{});
+    document.getElementById('refCopyCode').addEventListener('click', function(){
+        const code = document.getElementById('refCode').textContent;
+        navigator.clipboard.writeText(code).then(()=>{
+            this.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied!';
+            setTimeout(()=>{ this.innerHTML = '<i class="fa-solid fa-copy me-1"></i>Copy'; }, 2000);
+        });
+    });
+    document.getElementById('refShareLink').addEventListener('click', function(){
+        if (navigator.share && _refLink) {
+            navigator.share({ title: 'Finance Candle — 7-day Elite trial', text: 'Try Finance Candle free for 7 days! Use my referral link:', url: _refLink });
+        } else if (_refLink) {
+            navigator.clipboard.writeText(_refLink).then(()=>{
+                this.innerHTML = '<i class="fa-solid fa-check me-1"></i>Link copied!';
+                setTimeout(()=>{ this.innerHTML = '<i class="fa-solid fa-share-nodes me-1"></i>Share link'; }, 2000);
+            });
+        }
+    });
+})();
+</script>
 {% endblock %}
