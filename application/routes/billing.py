@@ -121,6 +121,17 @@ def usage_json():
     })
 
 
+@billing_bp.route("/api/billing/referral")
+@_login_required
+def referral_stats_json():
+    """Referral program stats for the current user."""
+    from application.services import referral
+    stats = referral.get_referral_stats(session["user_id"])
+    # Build shareable link
+    stats["link"] = f"{request.host_url.rstrip('/')}/signup?ref={stats.get('code', '')}"
+    return jsonify(stats)
+
+
 @billing_bp.route("/api/billing/coupon/validate", methods=["POST"])
 @_login_required
 def coupon_validate():
@@ -217,6 +228,14 @@ def _activate_paid_plan_from_meta(meta: dict) -> bool:
         return False
     months = 12 if cycle == "annual" else 1
     plans.set_user_plan(user, plan_id, months=months)
+
+    # Award referral credit to whoever referred this user.
+    try:
+        from application.services import referral
+        referral.create_credit(referred_user_id=uid, plan_id=plan_id)
+    except Exception as e:
+        print(f"[referral] create_credit on payment failed: {e}")
+
     return True
 
 
