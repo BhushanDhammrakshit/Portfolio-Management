@@ -347,6 +347,7 @@
     </header>
 
     <div class="auth-shell">
+        {% block auth_hero %}
         <aside class="auth-hero">
             <span class="eyebrow"><span class="dot"></span> Built for Indian traders</span>
             <h1>Your <span class="grad">trading edge</span><br/>starts with one login.</h1>
@@ -359,10 +360,11 @@
             </ul>
             <div class="trust-row">
                 <span><i class="fa-solid fa-circle-check"></i> Fyers &amp; Dhan</span>
-                <span><i class="fa-solid fa-circle-check"></i> 15-day Pro trial</span>
+                <span><i class="fa-solid fa-circle-check"></i> 7-day Elite trial</span>
                 <span><i class="fa-solid fa-circle-check"></i> No credit card</span>
             </div>
         </aside>
+        {% endblock %}
         <main class="auth-form-area">
             <div style="width:100%;max-width:560px">
                 {% block content %}{% endblock %}
