@@ -1639,6 +1639,7 @@ function renderBlockDeals(blk) {
             <th>Time</th>
             <th>Type · Strike</th>
             <th>Action</th>
+            <th>Sentiment</th>
             <th>Notional</th>
             <th>Volume</th>
             <th>OI</th>
@@ -1651,11 +1652,23 @@ function renderBlockDeals(blk) {
         ${deals.map(d => {
             const distSign = d.dist_pct >= 0 ? '+' : '';
             const chgCls = d.price_chg >= 0 ? 'gain-positive' : 'gain-negative';
+            // Sentiment: based on type (CE/PE) + direction (BUY/WRITE/COVER/UNWIND)
+            const dir = (d.direction || '').toUpperCase();
+            const typ = (d.type || '').toUpperCase();
+            let sentiment = 'Neutral', isBullish = false, isBearish = false;
+            if (typ === 'CE' && (dir === 'BUY' || dir === 'COVER')) { isBullish = true; sentiment = 'Bullish'; }
+            else if (typ === 'CE' && dir === 'WRITE') { isBearish = true; sentiment = 'Bearish'; }
+            else if (typ === 'CE' && dir === 'UNWIND') { isBearish = true; sentiment = 'Bearish'; }
+            else if (typ === 'PE' && (dir === 'BUY' || dir === 'COVER')) { isBearish = true; sentiment = 'Bearish'; }
+            else if (typ === 'PE' && dir === 'WRITE') { isBullish = true; sentiment = 'Bullish'; }
+            else if (typ === 'PE' && dir === 'UNWIND') { isBullish = true; sentiment = 'Bullish'; }
+            const sentCls = isBullish ? 'gain-positive' : (isBearish ? 'gain-negative' : '');
             return `<tr>
                 <td style="color:var(--text-muted);font-size:.72rem">${escapeHtml(d.date || '')}</td>
                 <td style="color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums">${escapeHtml(d.time || '')}</td>
                 <td><span class="oc-block-tag ${d.type === 'CE' ? 'ce' : 'pe'}">${d.type}</span> <b>${fmtN(d.strike)}</b> <span style="color:var(--text-muted);font-size:.7rem">(${distSign}${d.dist_pct}%)</span></td>
                 <td><span class="oc-block-dir ${d.direction}">${d.direction}</span></td>
+                <td style="font-weight:700" class="${sentCls}"><i class="fa-solid ${isBullish ? 'fa-arrow-trend-up' : (isBearish ? 'fa-arrow-trend-down' : 'fa-minus')} me-1"></i>${sentiment}</td>
                 <td><b>${fmtINR(d.notional_cr)}</b></td>
                 <td>${fmtN(d.vol)}</td>
                 <td>${fmtN(d.oi)}</td>
