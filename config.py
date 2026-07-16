@@ -29,9 +29,9 @@ RAG_ENABLE_SCHEDULER = (os.getenv("RAG_ENABLE_SCHEDULER", "1") == "1")
 EMAIL_PROVIDER = (os.getenv("EMAIL_PROVIDER") or "console").lower()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "")
-EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "HM2 Portfolio Manager")
+EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Finance Candle")
 EMAIL_REPLY_TO = os.getenv("EMAIL_REPLY_TO", "")
-APP_NAME = os.getenv("APP_NAME", "HM2 Portfolio Manager")
+APP_NAME = os.getenv("APP_NAME", "Finance Candle")
 EMAIL_VERIFICATION_TABLE = os.getenv("EMAIL_VERIFICATION_TABLE", "EmailVerifications")
 OTP_TTL_MINUTES = int(os.getenv("OTP_TTL_MINUTES", "10"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "5"))
@@ -42,14 +42,26 @@ OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60")
 #   "fyers"    → Fyers API v3 (requires FYERS_APP_ID + FYERS_ACCESS_TOKEN)
 #   "dhan"     → DhanHQ v2 REST API (requires DHAN_CLIENT_ID + DHAN_ACCESS_TOKEN
 #                AND a paid Data APIs subscription on the Dhan account)
+#   "truedata" → TrueData licensed feed (requires TRUEDATA_USERNAME + PASSWORD;
+#                stable login, no daily token expiry — recommended for prod)
 #   "yfinance" → Yahoo Finance via yfinance package (unlicensed, dev only)
 MARKET_DATA_PROVIDER = (os.getenv("MARKET_DATA_PROVIDER") or "yfinance").lower()
 # When the primary provider fails or doesn't support a call (e.g. search,
 # company info), fall back to this provider. Set to "" / "none" to disable.
 MARKET_DATA_FALLBACK = (os.getenv("MARKET_DATA_FALLBACK") or "yfinance").lower()
 
+# ── TrueData (licensed market-data vendor) ────────────────────────────
+# Username / password issued by TrueData on subscription. Used by the
+# truedata_provider (REST history + quotes) and the live option-chain
+# streamer. No daily token dance — these credentials are long-lived.
+TRUEDATA_USERNAME = os.getenv("TRUEDATA_USERNAME", "")
+TRUEDATA_PASSWORD = os.getenv("TRUEDATA_PASSWORD", "")
+TRUEDATA_LIVE_PORT = int(os.getenv("TRUEDATA_LIVE_PORT", "8082"))
+
 DHAN_CLIENT_ID = os.getenv("DHAN_CLIENT_ID", "")
 DHAN_ACCESS_TOKEN = os.getenv("DHAN_ACCESS_TOKEN", "")
+DHAN_PIN = os.getenv("DHAN_PIN", "")
+DHAN_TOTP_SECRET = os.getenv("DHAN_TOTP_SECRET", "")
 
 FYERS_APP_ID = os.getenv("FYERS_APP_ID", "")
 FYERS_ACCESS_TOKEN = os.getenv("FYERS_ACCESS_TOKEN", "")
