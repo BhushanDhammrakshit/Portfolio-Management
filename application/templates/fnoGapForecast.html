@@ -212,9 +212,11 @@
   function histRow(h){
     const oc = (h.outcome||'PENDING').toUpperCase();
     const tag = oc==='HIT'?'tag-hit':(oc==='MISS'?'tag-miss':'tag-pend');
+    const prob = h.probability!=null ? h.probability+'%' : '—';
     return `<tr>
       <td>${esc(h.date||'')}</td>
       <td>${labelPill(h.predicted||'')}</td>
+      <td>${prob}</td>
       <td>${h.actual_direction?labelPill(h.actual_direction):'<span class="tag tag-pend">pending</span>'}</td>
       <td class="${signCls(h.actual_gap_pct)}">${signTxt(h.actual_gap_pct)}</td>
       <td><span class="tag ${tag}">${esc(oc)}</span></td>
@@ -251,7 +253,7 @@
 
     let histHtml = `<div class="sec-title">Signal accuracy${hr!=null?(' · '+hr+'% hit-rate ('+(st.hits||0)+'/'+(st.directional_evaluated||0)+')'):''}</div>`;
     if((hist.items||[]).length){
-      histHtml += `<table class="hist-table"><thead><tr><th>Date</th><th>Predicted</th><th>Actual</th><th>Gap%</th><th>Result</th></tr></thead>
+      histHtml += `<table class="hist-table"><thead><tr><th>Date</th><th>Predicted</th><th>Prob%</th><th>Actual</th><th>Gap%</th><th>Result</th></tr></thead>
         <tbody>${hist.items.map(histRow).join('')}</tbody></table>`;
     } else {
       histHtml += `<p class="sub">No graded predictions yet — check back after the next session's open.</p>`;
