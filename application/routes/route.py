@@ -246,6 +246,23 @@ def signup():
             from application.services.plans import start_trial
             start_trial(entity)
             user_table_client.create_entity(entity=entity)
+
+            # Link referral if a code was provided.
+            ref_code = (request.form.get("ref") or request.args.get("ref") or "").strip()
+            if ref_code:
+                try:
+                    from application.services import referral
+                    referrer = referral.resolve_referrer(ref_code)
+                    if referrer and referrer.get("RowKey") != entity["RowKey"]:
+                        referral.link_referral(
+                            referrer_user_id=referrer["RowKey"],
+                            referred_user_id=entity["RowKey"],
+                            referred_email=email,
+                            referral_code=ref_code,
+                        )
+                except Exception as e:
+                    print(f"[referral] link failed: {e}")
+
             # Stash pending state and trigger OTP. Do NOT log the user in yet.
             session["pending_verify_email"] = email
             session["pending_verify_user_id"] = entity["RowKey"]
@@ -530,9 +547,30 @@ def profile_page():
         "gender": user.get("Gender", ""),
         "location": user.get("Location", ""),
     }
+
+    # Usage meters for the profile page
+    from application.services import plans as _plans
+    plan = _plans.get_user_plan(user)
+    usage = _plans.get_usage(session["user_id"])
+    limits = plan.get("limits", {})
+    meters = []
+    for key, label in [
+        ("ai_single", "Single-stock AI analyses"),
+        ("ai_bulk", "Bulk AI analyses"),
+        ("ai_chat_daily", "AI Assistant chats today"),
+    ]:
+        used = usage.get(key, 0)
+        limit = limits.get(key)
+        pct = 0 if limit is None or limit == 0 else min(100, int(used / limit * 100))
+        meters.append({
+            "key": key, "label": label, "used": used, "limit": limit,
+            "limit_display": "Unlimited" if limit is None else str(limit),
+            "pct": pct, "danger": pct >= 90,
+        })
+
     return render_template("profile.html", user=profile, stocks=stocks,
                            name=profile["name"], email=profile["email"],
-                           title="My Account")
+                           meters=meters, title="My Account")
 
 
 @app.route("/settings", methods=["GET", "POST"])
