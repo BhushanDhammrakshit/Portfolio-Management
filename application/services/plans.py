@@ -209,6 +209,50 @@ def get_plan(plan_id: Optional[str]) -> dict:
     return PLANS.get((plan_id or "free").lower(), PLANS["free"])
 
 
+# ── 7-day Elite trial for new users ─────────────────────────────────────
+
+_TRIAL_DAYS = 7
+_TRIAL_PLAN = "elite"
+
+
+def start_trial(user_entity: dict) -> dict:
+    """Activate a 7-day Elite trial for a newly signed-up user.
+
+    Sets Plan=elite with a 7-day expiry and marks TrialUsed=True so the
+    trial cannot be re-triggered. Caller must persist the entity.
+    Returns the updated entity (in-memory only — caller persists).
+    """
+    if user_entity.get("TrialUsed"):
+        return user_entity  # already used, no-op
+    user_entity["Plan"] = _TRIAL_PLAN
+    user_entity["PlanExpiresOn"] = (date.today() + timedelta(days=_TRIAL_DAYS)).isoformat()
+    user_entity["TrialUsed"] = True
+    return user_entity
+
+
+def is_on_trial(user_entity: Optional[dict]) -> bool:
+    """True if the user is currently in their free trial period."""
+    if not user_entity:
+        return False
+    return (
+        bool(user_entity.get("TrialUsed"))
+        and (user_entity.get("Plan") or "").lower() in ("pro", "elite")
+        and _is_active(user_entity.get("PlanExpiresOn"))
+    )
+
+
+def trial_days_remaining(user_entity: Optional[dict]) -> int:
+    """Days left in the trial (0 if not on trial or expired)."""
+    if not user_entity or not is_on_trial(user_entity):
+        return 0
+    try:
+        exp = datetime.fromisoformat(user_entity["PlanExpiresOn"]).date()
+        remaining = (exp - date.today()).days
+        return max(0, remaining)
+    except (TypeError, ValueError, KeyError):
+        return 0
+
+
 # ── User plan helpers (read/write Azure Table) ──────────────────────────
 
 def _is_active(expires_on: Optional[str]) -> bool:
