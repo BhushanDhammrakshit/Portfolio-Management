@@ -533,13 +533,28 @@ def get_forecast_detail(symbol: str, force_refresh: bool = False) -> Dict[str, A
     except Exception:
         pass
 
+    # Try Dhan first (stable), then Fyers fallback.
+    chain = None
     try:
-        chain = _fetch_stock_chain(meta["fyers"])
+        from application.services.option_chain import _fetch_stock_chain_dhan
+        chain = _fetch_stock_chain_dhan(symbol)
     except Exception as e:  # noqa: BLE001
-        log.warning("fno_gap_forecast.detail(%s) chain failed: %s", symbol, e)
-        chain = None
+        log.debug("fno_gap_forecast.detail(%s) dhan chain: %s", symbol, e)
+    if not chain:
+        try:
+            chain = _fetch_stock_chain(meta["fyers"])
+        except Exception as e:  # noqa: BLE001
+            log.warning("fno_gap_forecast.detail(%s) chain failed: %s", symbol, e)
+            chain = None
 
     if not chain:
+        # Market closed or chain unavailable — serve the last cached detail
+        # (which has the probability from the last session) + fresh history.
+        cached = shared_cache.jget(cache_key)
+        if isinstance(cached, dict) and cached.get("label"):
+            cached["cached"] = True
+            cached["history"] = _history_block(meta["pkey"])
+            return cached
         return {
             "error": "chain_unavailable",
             "detail": ("Option chain for this stock is unavailable right now "
