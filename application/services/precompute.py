@@ -413,6 +413,26 @@ def refresh_upstox_token() -> None:
             log.warning("precompute.refresh_upstox_token failed: %s", e)
 
 
+def refresh_dhan_token() -> None:
+    """Refresh the Dhan daily access token via TOTP.
+
+    Tries renew first (lightweight, extends by 24h); falls back to full
+    TOTP-based refresh if the current token is already expired.
+    """
+    if not cache.try_become_leader(ttl=10 * 60):
+        return
+    with cache.lock("refresh:dhan_token", ttl=5 * 60) as got:
+        if not got:
+            return
+        try:
+            from application.services.providers import dhan_auth
+            tok = dhan_auth.renew_access_token()
+            log.info("precompute.refresh_dhan_token: %s",
+                     "ok" if tok else "failed (degrading to yfinance)")
+        except Exception as e:  # noqa: BLE001
+            log.warning("precompute.refresh_dhan_token failed: %s", e)
+
+
 
 # ── Public read helpers (used by routes) ───────────────────────────────
 
@@ -586,6 +606,40 @@ def start_scheduler() -> None:
                     )
             except Exception as e:  # noqa: BLE001
                 log.debug("precompute: upstox token bootstrap check failed: %s", e)
+
+        # Daily Dhan token refresh — 07:00 IST, before market open.
+        # Dhan tokens expire every 24h; this renews (or full-refreshes via
+        # TOTP) so the app never loses data access.
+        if all(getattr(config, k, "") for k in (
+            "DHAN_CLIENT_ID", "DHAN_PIN", "DHAN_TOTP_SECRET",
+        )):
+            sched.add_job(
+                refresh_dhan_token,
+                "cron",
+                day_of_week="mon-sun",
+                hour=7,
+                minute=0,
+                id="precompute_dhan_token",
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=60 * 60,
+            )
+            # Startup: load cached token from Redis; if expired, refresh now.
+            try:
+                from application.services.providers import dhan_auth
+                if not dhan_auth.load_token_from_redis():
+                    log.info("precompute: no Dhan token in Redis — scheduling "
+                             "startup refresh")
+                    sched.add_job(
+                        refresh_dhan_token,
+                        "date",
+                        run_date=_dt.datetime.now(_IST) + _dt.timedelta(seconds=10),
+                        id="precompute_dhan_token_startup",
+                        replace_existing=True,
+                    )
+            except Exception as e:  # noqa: BLE001
+                log.debug("precompute: dhan token bootstrap failed: %s", e)
 
         sched.start()
         _scheduler = sched
