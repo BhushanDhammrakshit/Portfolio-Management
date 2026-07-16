@@ -205,4 +205,32 @@
         </div>
     </div>
 </div>
+
+{# ── This month's usage ───────────────────────────────────────── #}
+<style>
+.usage-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-top:18px}
+.usage-section h5{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.usage-section h5 i{color:var(--primary)}
+.usage-row{display:grid;grid-template-columns:1fr auto;gap:6px 14px;margin-bottom:14px}
+.usage-row:last-child{margin-bottom:0}
+.usage-label{font-size:.85rem;font-weight:600;color:var(--text)}
+.usage-count{font-size:.82rem;font-weight:700;color:var(--text)}
+.usage-count .of{color:var(--text-muted);font-weight:500}
+.usage-bar{grid-column:1/-1;height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.usage-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .4s}
+.usage-bar-fill.danger{background:linear-gradient(90deg,#f59e0b,#dc2626)}
+.usage-row.unlim .usage-bar-fill{width:25%;opacity:.4;background:linear-gradient(90deg,#16a34a,#22c55e)}
+</style>
+<div class="usage-section">
+    <h5><i class="fa-solid fa-gauge-high"></i>This month's usage</h5>
+    {% for m in meters %}
+    <div class="usage-row {{ 'unlim' if m.limit is none else '' }}">
+        <div class="usage-label">{{ m.label }}</div>
+        <div class="usage-count">{{ m.used }} <span class="of">/ {{ m.limit_display }}</span></div>
+        <div class="usage-bar">
+            <div class="usage-bar-fill {{ 'danger' if m.danger else '' }}" style="width:{{ m.pct }}%"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}
