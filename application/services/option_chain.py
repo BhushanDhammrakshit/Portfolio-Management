@@ -332,10 +332,224 @@ def get_nifty_option_chain(force_refresh: bool = False) -> Dict[str, Any]:
     return payload
 
 
+# ── Dhan source ────────────────────────────────────────────────────────
+
+_DHAN_BASE = "https://api.dhan.co/v2"
+_DHAN_NIFTY_SCRIP = 13
+_DHAN_NIFTY_SEG = "IDX_I"
+
+
+def _dhan_headers() -> Dict[str, str]:
+    return {
+        "access-token": config.DHAN_ACCESS_TOKEN,
+        "client-id": config.DHAN_CLIENT_ID,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+
+def _fetch_via_dhan() -> Optional[Dict[str, Any]]:
+    """Fetch NIFTY option chain from Dhan Data API."""
+    # 1. Get nearest expiry
+    exp_r = requests.post(
+        f"{_DHAN_BASE}/optionchain/expirylist",
+        json={"UnderlyingScrip": _DHAN_NIFTY_SCRIP, "UnderlyingSeg": _DHAN_NIFTY_SEG},
+        headers=_dhan_headers(), timeout=_TIMEOUT,
+    )
+    if exp_r.status_code >= 400:
+        raise RuntimeError(f"Dhan expirylist HTTP {exp_r.status_code}: {exp_r.text[:200]}")
+    exp_body = exp_r.json() or {}
+    expiries = exp_body.get("data") or []
+    if not expiries:
+        return None
+    nearest_expiry = expiries[0]
+
+    # 2. Fetch option chain for nearest expiry
+    oc_r = requests.post(
+        f"{_DHAN_BASE}/optionchain",
+        json={
+            "UnderlyingScrip": _DHAN_NIFTY_SCRIP,
+            "UnderlyingSeg": _DHAN_NIFTY_SEG,
+            "Expiry": nearest_expiry,
+        },
+        headers=_dhan_headers(), timeout=_TIMEOUT,
+    )
+    if oc_r.status_code >= 400:
+        raise RuntimeError(f"Dhan optionchain HTTP {oc_r.status_code}: {oc_r.text[:200]}")
+    body = oc_r.json() or {}
+    if body.get("status") != "success":
+        raise RuntimeError(f"Dhan optionchain error: {str(body)[:200]}")
+    data = body.get("data") or {}
+    oc = data.get("oc") or {}
+    spot = _num(data.get("last_price"))
+    if not oc or not spot:
+        return None
+
+    # 3. Normalize to the same format the UI expects
+    rows: List[Dict[str, Any]] = []
+    for strike_str, sides in sorted(oc.items(), key=lambda x: float(x[0])):
+        try:
+            strike_f = float(strike_str)
+        except (TypeError, ValueError):
+            continue
+        row: Dict[str, Any] = {"strike": strike_f}
+        for side_key, out_key in (("ce", "ce"), ("pe", "pe")):
+            s = sides.get(side_key)
+            if s:
+                prev_oi = _num(s.get("previous_oi"))
+                cur_oi = _num(s.get("oi"))
+                prev_close = _num(s.get("previous_close_price"))
+                ltp = _num(s.get("last_price"))
+                row[out_key] = {
+                    "oi": cur_oi,
+                    "oi_chg": cur_oi - prev_oi,
+                    "iv": _num(s.get("implied_volatility")),
+                    "ltp": ltp,
+                    "vol": _num(s.get("volume")),
+                    "chg": round(ltp - prev_close, 2) if prev_close else 0.0,
+                    "pct_chg": round((ltp - prev_close) / prev_close * 100, 2) if prev_close else 0.0,
+                }
+            else:
+                row[out_key] = _empty_leg()
+        rows.append(row)
+
+    totals = _totals(rows)
+    pcr = (totals["pe_oi"] / totals["ce_oi"]) if totals["ce_oi"] else 0.0
+
+    try:
+        exp_label = _dt.datetime.strptime(nearest_expiry, "%Y-%m-%d").strftime("%d %b %Y")
+    except Exception:
+        exp_label = nearest_expiry
+
+    # Filter to strikes that have meaningful OI (at least one side > 0).
+    # Totals are computed from the full chain for accuracy; rows sent to the
+    # UI only include strikes with data so the chart isn't cluttered.
+    oi_rows = [r for r in rows if r["ce"]["oi"] > 0 or r["pe"]["oi"] > 0]
+
+    return {
+        "symbol": "NIFTY",
+        "spot": round(spot, 2),
+        "expiry": exp_label,
+        "expiries": expiries,
+        "rows": oi_rows,
+        "totals": totals,
+        "pcr": round(pcr, 3),
+        "as_of": _dt.datetime.now(_IST).strftime("%d %b %Y, %I:%M %p IST"),
+        "source": "dhan",
+    }
+
+
+def _fetch_stock_chain_dhan(symbol: str, strikecount: int = 15) -> Optional[Dict[str, Any]]:
+    """Fetch a single stock's option chain from Dhan Data API.
+
+    ``symbol`` is the bare NSE symbol (e.g. 'RELIANCE'). We resolve the
+    Dhan security_id via the scrip master and call the same option-chain
+    endpoint used for NIFTY.
+    """
+    if not (config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN):
+        return None
+    try:
+        from application.services.dhan_symbols import resolve
+        _seg, sec_id, _name = resolve(f"{symbol}.NS")
+    except Exception:
+        return None
+
+    # Get nearest expiry for this underlying
+    try:
+        exp_r = requests.post(
+            f"{_DHAN_BASE}/optionchain/expirylist",
+            json={"UnderlyingScrip": int(sec_id), "UnderlyingSeg": "NSE_FNO"},
+            headers=_dhan_headers(), timeout=_TIMEOUT,
+        )
+        if exp_r.status_code >= 400:
+            return None
+        expiries = (exp_r.json() or {}).get("data") or []
+        if not expiries:
+            return None
+    except Exception:
+        return None
+
+    nearest_expiry = expiries[0]
+    try:
+        oc_r = requests.post(
+            f"{_DHAN_BASE}/optionchain",
+            json={
+                "UnderlyingScrip": int(sec_id),
+                "UnderlyingSeg": "NSE_FNO",
+                "Expiry": nearest_expiry,
+            },
+            headers=_dhan_headers(), timeout=_TIMEOUT,
+        )
+        if oc_r.status_code >= 400:
+            return None
+        body = oc_r.json() or {}
+        if body.get("status") != "success":
+            return None
+    except Exception:
+        return None
+
+    data = body.get("data") or {}
+    oc = data.get("oc") or {}
+    spot = _num(data.get("last_price"))
+    if not oc or not spot:
+        return None
+
+    rows: List[Dict[str, Any]] = []
+    for strike_str, sides in sorted(oc.items(), key=lambda x: float(x[0])):
+        try:
+            strike_f = float(strike_str)
+        except (TypeError, ValueError):
+            continue
+        row: Dict[str, Any] = {"strike": strike_f}
+        for side_key, out_key in (("ce", "ce"), ("pe", "pe")):
+            s = sides.get(side_key)
+            if s:
+                prev_oi = _num(s.get("previous_oi"))
+                cur_oi = _num(s.get("oi"))
+                row[out_key] = {
+                    "oi": cur_oi,
+                    "oi_chg": cur_oi - prev_oi,
+                    "iv": _num(s.get("implied_volatility")),
+                    "ltp": _num(s.get("last_price")),
+                    "vol": _num(s.get("volume")),
+                }
+            else:
+                row[out_key] = _empty_leg()
+        rows.append(row)
+
+    totals = _totals(rows)
+    pcr = (totals["pe_oi"] / totals["ce_oi"]) if totals["ce_oi"] else 0.0
+
+    try:
+        exp_label = _dt.datetime.strptime(nearest_expiry, "%Y-%m-%d").strftime("%d %b %Y")
+    except Exception:
+        exp_label = nearest_expiry
+
+    oi_rows = [r for r in rows if r["ce"]["oi"] > 0 or r["pe"]["oi"] > 0]
+
+    return {
+        "spot": round(spot, 2),
+        "rows": oi_rows,
+        "totals": totals,
+        "pcr": round(pcr, 3),
+        "expiry": exp_label,
+    }
+
+
 # ── Source dispatch ────────────────────────────────────────────────────
 
 def _fetch_payload() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     errors: List[str] = []
+
+    # Dhan Data API option chain (stable, no daily token expiry issues).
+    if config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN:
+        try:
+            data = _fetch_via_dhan()
+            if data:
+                return data, None
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"dhan: {e}")
+            log.warning("option_chain.dhan failed: %s", e)
 
     if config.FYERS_APP_ID and config.FYERS_ACCESS_TOKEN:
         try:
@@ -1370,8 +1584,22 @@ def _fetch_india_vix() -> Optional[Dict[str, Any]]:
     value = chg = pct = 0.0
     ok = False
 
-    # Try Fyers first.
-    if config.FYERS_APP_ID and config.FYERS_ACCESS_TOKEN:
+    # Try Dhan quote for India VIX first (stable, no token expiry).
+    if config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN:
+        try:
+            from application.services import market_data
+            q = market_data.get_quote("^INDIAVIX")
+            if q and q.get("price"):
+                value = _num(q["price"])
+                chg = _num(q.get("change"))
+                pct = _num(q.get("change_pct"))
+                if value:
+                    ok = True
+        except Exception as e:  # noqa: BLE001
+            log.debug("vix.dhan failed: %s", e)
+
+    # Try Fyers if Dhan didn't work.
+    if not ok and config.FYERS_APP_ID and config.FYERS_ACCESS_TOKEN:
         try:
             r = requests.get(
                 _FY_BASE + "/data/quotes",
