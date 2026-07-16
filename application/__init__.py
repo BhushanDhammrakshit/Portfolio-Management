@@ -148,6 +148,18 @@ def _inject_globals():
 
     _persona_id = session.get("persona")
 
+    # Trial status for UI banners.
+    _on_trial = False
+    _trial_days = 0
+    if session.get("user_id"):
+        try:
+            from application.routes.route import _fetch_user_by_email
+            _user_ent = _fetch_user_by_email(session.get("email"))
+            _on_trial = plans.is_on_trial(_user_ent)
+            _trial_days = plans.trial_days_remaining(_user_ent)
+        except Exception:
+            pass
+
     # Admin flag for template-gated UI (token refresh button, RAG panel, etc.)
     _is_admin = False
     if session.get("email"):
@@ -167,6 +179,8 @@ def _inject_globals():
         "current_plan": plan_dict,
         "has_pro": _rank >= 1,
         "has_elite": _rank >= 2,
+        "on_trial": _on_trial,
+        "trial_days_remaining": _trial_days,
         "user_persona": get_persona(_persona_id),
         "persona_groups": persona_groups(_persona_id),
         "all_personas": PERSONAS,
