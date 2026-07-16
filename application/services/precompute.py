@@ -433,6 +433,19 @@ def refresh_dhan_token() -> None:
             log.warning("precompute.refresh_dhan_token failed: %s", e)
 
 
+def mature_referral_credits() -> None:
+    """Move referral credits past the 14-day cooldown to 'credited' status."""
+    if not cache.try_become_leader(ttl=5 * 60):
+        return
+    try:
+        from application.services import referral
+        n = referral.mature_pending_credits()
+        if n:
+            log.info("precompute.mature_referral_credits: %d matured", n)
+    except Exception as e:  # noqa: BLE001
+        log.warning("precompute.mature_referral_credits failed: %s", e)
+
+
 
 # ── Public read helpers (used by routes) ───────────────────────────────
 
@@ -640,6 +653,20 @@ def start_scheduler() -> None:
                     )
             except Exception as e:  # noqa: BLE001
                 log.debug("precompute: dhan token bootstrap failed: %s", e)
+
+        # Daily referral credit maturation — 08:00 IST.
+        sched.add_job(
+            mature_referral_credits,
+            "cron",
+            day_of_week="mon-sun",
+            hour=8,
+            minute=0,
+            id="precompute_referral_mature",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=60 * 60,
+        )
 
         sched.start()
         _scheduler = sched
