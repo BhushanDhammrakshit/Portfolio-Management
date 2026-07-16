@@ -134,6 +134,13 @@
                 </div>
             </div>
             <button type="submit" class="btn btn-primary auth-submit mt-3">Start my 7-day Elite trial <i class="fa-solid fa-arrow-right ms-1"></i></button>
+            <div class="mt-2">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="ref" name="ref" placeholder="Referral code (optional)"
+                           value="{{ request.args.get('ref', '') }}" />
+                    <label for="ref"><i class="fa-solid fa-user-plus me-1"></i> Referral code (optional)</label>
+                </div>
+            </div>
         </form>
 
         <div class="alert alert-info mt-3 small mb-0" role="alert">
