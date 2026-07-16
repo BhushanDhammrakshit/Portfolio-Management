@@ -1,71 +1,150 @@
 {% extends "guest_layout.html" %}
-{% block content %}
-<div class="auth-card auth-card-wide">
-    <div class="auth-card-header">
-        <h2>Create your account</h2>
-        <p>Start tracking your investments in minutes</p>
-    </div>
 
-    {% if error %}
-    <div class="alert alert-danger" role="alert"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>
-    {% endif %}
-
-    <form method="POST" action="{{ url_for('signup') }}" class="auth-form" novalidate>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <input type="text" class="form-control" id="name" name="name" placeholder="Full name" required />
-                    <label for="name"><i class="fa-solid fa-user me-1"></i> Full name</label>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]{10}" placeholder="10-digit number" required />
-                    <label for="phone"><i class="fa-solid fa-phone me-1"></i> Phone (10 digits)</label>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required />
-                    <label for="email"><i class="fa-solid fa-envelope me-1"></i> Email</label>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="6" required />
-                    <label for="password"><i class="fa-solid fa-lock me-1"></i> Password (min 6 chars)</label>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <select class="form-select" id="gender" name="gender" required>
-                        <option value="" disabled selected>Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <label for="gender"><i class="fa-solid fa-venus-mars me-1"></i> Gender</label>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-floating">
-                    <input type="text" class="form-control" id="location" name="location" placeholder="City" required />
-                    <label for="location"><i class="fa-solid fa-location-dot me-1"></i> City</label>
-                </div>
-            </div>
+{% block auth_hero %}
+<style>
+    .trial-hero {
+        position: relative;
+        display: flex; flex-direction: column;
+        padding: 30px 28px;
+        border-radius: 20px;
+        background:
+            radial-gradient(120% 140% at 0% 0%, rgba(99,102,241,.38), transparent 55%),
+            radial-gradient(120% 140% at 100% 100%, rgba(168,85,247,.32), transparent 55%),
+            linear-gradient(135deg, #1b1f3a, #12152b);
+        border: 1px solid rgba(129,140,248,.35);
+        box-shadow: 0 22px 60px -20px rgba(99,102,241,.6);
+        overflow: hidden;
+    }
+    .trial-hero::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.06) 50%, transparent 70%);
+    }
+    .trial-badge {
+        display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+        padding: 5px 12px; border-radius: 999px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #1a1206; font-weight: 800; font-size: .72rem;
+        letter-spacing: .06em; text-transform: uppercase;
+        box-shadow: 0 4px 14px rgba(245,158,11,.45);
+    }
+    .trial-title {
+        margin: 16px 0 6px; color: #fff;
+        font-size: 1.7rem; font-weight: 900; letter-spacing: -.02em;
+        line-height: 1.18;
+    }
+    .trial-title .grad {
+        background: linear-gradient(135deg, #a5b4fc, #e9d5ff);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .trial-sub { color: #c7d2fe; font-size: .95rem; margin: 0 0 18px; }
+    .trial-feats {
+        display: grid; grid-template-columns: 1fr; gap: 11px;
+        margin: 0 0 auto; padding: 0; list-style: none;
+    }
+    .trial-feats li {
+        display: flex; align-items: center; gap: 10px;
+        color: #e2e8f0; font-size: .9rem; font-weight: 500;
+    }
+    .trial-feats i { color: #34d399; font-size: .85rem; }
+    .trial-foot {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+        margin-top: 22px; padding-top: 16px;
+        border-top: 1px solid rgba(148,163,184,.18);
+        color: #94a3b8; font-size: .8rem;
+    }
+    .trial-foot span { display: inline-flex; align-items: center; gap: 6px; }
+    .trial-foot i { color: #a5b4fc; }
+</style>
+<aside class="auth-hero">
+    <div class="trial-hero">
+        <span class="trial-badge"><i class="fa-solid fa-crown"></i> Limited-time welcome offer</span>
+        <h2 class="trial-title">Your <span class="grad">7-day Elite pass</span> is ready.</h2>
+        <p class="trial-sub">Unlock the entire platform — worth <strong style="color:#fff;">₹999/mo</strong> — free for a week. No card required.</p>
+        <ul class="trial-feats">
+            <li><i class="fa-solid fa-circle-check"></i> NIFTY options analytics &amp; OI</li>
+            <li><i class="fa-solid fa-circle-check"></i> AI portfolio analyst</li>
+            <li><i class="fa-solid fa-circle-check"></i> Swing &amp; intraday scanners</li>
+            <li><i class="fa-solid fa-circle-check"></i> Advanced risk metrics (Sharpe, VaR)</li>
+            <li><i class="fa-solid fa-circle-check"></i> Volume &amp; gap alerts</li>
+            <li><i class="fa-solid fa-circle-check"></i> Unlimited AI insights</li>
+        </ul>
+        <div class="trial-foot">
+            <span><i class="fa-solid fa-bolt"></i> Instant access</span>
+            <span><i class="fa-solid fa-shield-halved"></i> No card needed</span>
+            <span><i class="fa-solid fa-xmark"></i> Cancel anytime</span>
         </div>
-        <button type="submit" class="btn btn-primary auth-submit mt-3">Create account <i class="fa-solid fa-arrow-right ms-1"></i></button>
-    </form>
-
-    <div class="alert alert-info mt-3 small mb-0" role="alert">
-        <i class="fa-solid fa-envelope-circle-check me-1"></i>
-        We'll email you a 6-digit code to verify your address.
-        <strong>Don't see it?</strong> Please check your <strong>Spam</strong>,
-        <strong>Junk</strong> or <strong>Promotions</strong> folder and mark it as
-        "Not spam" so future emails reach your inbox.
     </div>
+</aside>
+{% endblock %}
 
-    <div class="auth-divider"><span>Already have an account?</span></div>
-    <a href="{{ url_for('logIn') }}" class="btn btn-outline-primary auth-secondary">Sign in instead</a>
-</div>
+{% block content %}
+    <div class="auth-card auth-card-wide">
+        <div class="auth-card-header">
+            <h2>Create your account</h2>
+            <p>Takes under a minute — start exploring instantly</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('signup') }}" class="auth-form" novalidate>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Full name" required />
+                        <label for="name"><i class="fa-solid fa-user me-1"></i> Full name</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]{10}" placeholder="10-digit number" required />
+                        <label for="phone"><i class="fa-solid fa-phone me-1"></i> Phone (10 digits)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required />
+                        <label for="email"><i class="fa-solid fa-envelope me-1"></i> Email</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="6" required />
+                        <label for="password"><i class="fa-solid fa-lock me-1"></i> Password (min 6 chars)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <select class="form-select" id="gender" name="gender" required>
+                            <option value="" disabled selected>Select</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <label for="gender"><i class="fa-solid fa-venus-mars me-1"></i> Gender</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="location" name="location" placeholder="City" required />
+                        <label for="location"><i class="fa-solid fa-location-dot me-1"></i> City</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary auth-submit mt-3">Start my 7-day Elite trial <i class="fa-solid fa-arrow-right ms-1"></i></button>
+        </form>
+
+        <div class="alert alert-info mt-3 small mb-0" role="alert">
+            <i class="fa-solid fa-envelope-circle-check me-1"></i>
+            We'll email you a 6-digit code to verify your address.
+            <strong>Don't see it?</strong> Please check your <strong>Spam</strong>,
+            <strong>Junk</strong> or <strong>Promotions</strong> folder and mark it as
+            "Not spam" so future emails reach your inbox.
+        </div>
+
+        <div class="auth-divider"><span>Already have an account?</span></div>
+        <a href="{{ url_for('logIn') }}" class="btn btn-outline-primary auth-secondary">Sign in instead</a>
+    </div>
 {% endblock %}
