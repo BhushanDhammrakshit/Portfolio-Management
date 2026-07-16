@@ -240,7 +240,11 @@ def signup():
                 "EmailVerified": False,
                 "Plan": "free",
                 "PlanExpiresOn": "",
+                "TrialUsed": False,
             }
+            # Activate 7-day Elite trial for the new user.
+            from application.services.plans import start_trial
+            start_trial(entity)
             user_table_client.create_entity(entity=entity)
             # Stash pending state and trigger OTP. Do NOT log the user in yet.
             session["pending_verify_email"] = email
