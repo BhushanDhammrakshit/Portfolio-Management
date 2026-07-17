@@ -348,7 +348,7 @@ def _dhan_headers() -> Dict[str, str]:
     }
 
 
-def _fetch_via_dhan() -> Optional[Dict[str, Any]]:
+def _fetch_via_dhan(_retried: bool = False) -> Optional[Dict[str, Any]]:
     """Fetch NIFTY option chain from Dhan Data API."""
     # 1. Get nearest expiry
     exp_r = requests.post(
@@ -356,6 +356,14 @@ def _fetch_via_dhan() -> Optional[Dict[str, Any]]:
         json={"UnderlyingScrip": _DHAN_NIFTY_SCRIP, "UnderlyingSeg": _DHAN_NIFTY_SEG},
         headers=_dhan_headers(), timeout=_TIMEOUT,
     )
+    # Auto-refresh on 401 (token expired) — single retry.
+    if exp_r.status_code == 401 and not _retried:
+        try:
+            from application.services.providers import dhan_auth
+            if dhan_auth.refresh_access_token():
+                return _fetch_via_dhan(_retried=True)
+        except Exception:
+            pass
     if exp_r.status_code >= 400:
         raise RuntimeError(f"Dhan expirylist HTTP {exp_r.status_code}: {exp_r.text[:200]}")
     exp_body = exp_r.json() or {}
