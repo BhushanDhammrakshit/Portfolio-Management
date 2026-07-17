@@ -60,13 +60,21 @@ def _headers() -> dict:
     }
 
 
-def _post(path: str, payload: dict) -> dict:
+def _post(path: str, payload: dict, _retried: bool = False) -> dict:
     url = f"{_BASE}{path}"
     r = _HTTP.post(url, json=payload, headers=_headers(), timeout=_TIMEOUT)
     if r.status_code == 429:
         # Simple retry-once on rate limit.
         time.sleep(1.1)
         r = _HTTP.post(url, json=payload, headers=_headers(), timeout=_TIMEOUT)
+    # Auto-refresh on 401 (token expired daily) — single retry.
+    if r.status_code == 401 and not _retried:
+        try:
+            from application.services.providers import dhan_auth
+            if dhan_auth.refresh_access_token():
+                return _post(path, payload, _retried=True)
+        except Exception:
+            pass
     if r.status_code >= 400:
         raise DhanError(f"Dhan {path} HTTP {r.status_code}: {r.text[:300]}")
     try:
