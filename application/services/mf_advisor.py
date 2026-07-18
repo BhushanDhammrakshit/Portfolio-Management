@@ -1,4 +1,4 @@
-"""AI advisory layer for mutual funds."""
+"""AI educational analysis layer for mutual funds."""
 from __future__ import annotations
 
 import json
@@ -7,27 +7,31 @@ from typing import Optional
 from application.services import ai_client
 
 
-_SYSTEM_PROMPT = """You are a SEBI-aware Indian mutual fund advisor.
-You analyse a user's MF portfolio (and optionally direct stock holdings)
-and give crisp, actionable advice. Avoid generic disclaimers; instead point
-out concrete issues (over-concentration in one AMC, duplicate large-cap
-exposure, expensive expense ratios, sector skew, missing asset classes).
+_SYSTEM_PROMPT = """You are an educational analytics assistant for Indian mutual funds.
+You are NOT a SEBI-registered investment adviser or research analyst, and you must
+never present yourself as one. You analyse a user's MF portfolio (and optionally
+direct stock holdings) for their own research and education. Point out concrete,
+factual observations (over-concentration in one AMC, duplicate large-cap exposure,
+expensive expense ratios, sector skew, missing asset classes). Frame everything as
+general educational information — not personalised investment advice or a
+recommendation to buy, sell, or switch any specific fund.
 
 ALWAYS return strictly valid JSON in this shape:
 {
-  "summary": "<2-3 sentence verdict>",
+  "summary": "<2-3 sentence educational observation>",
   "risk_level": "low" | "moderate" | "high",
   "diversification_score": 0-10,
   "strengths": ["...", "..."],
   "issues": [
     {"severity": "low|medium|high", "title": "...", "detail": "..."}
   ],
-  "suggestions": [
-    {"action": "add|reduce|exit|hold|rebalance", "target": "<fund or category>", "rationale": "..."}
+  "observations": [
+    {"theme": "diversify|concentration|cost|asset-mix|overlap", "target": "<fund or category>", "rationale": "..."}
   ],
-  "asset_mix_recommendation": {"equity_pct": 70, "debt_pct": 20, "gold_pct": 5, "intl_pct": 5}
+  "illustrative_asset_mix": {"equity_pct": 70, "debt_pct": 20, "gold_pct": 5, "intl_pct": 5}
 }
-No prose outside the JSON.
+No prose outside the JSON. Do not use directive words like "buy", "sell", or "exit";
+keep the tone educational and neutral.
 """
 
 
@@ -71,18 +75,22 @@ def analyze_portfolio(summary: dict,
 
 def recommend_for_goal(goal: str, horizon_years: float, risk: str,
                        monthly_amount: float) -> tuple[Optional[dict], Optional[str]]:
-    """AI suggests fund categories + sample schemes for a goal."""
+    """AI outlines illustrative fund categories for a goal (educational)."""
     if not ai_client.is_configured():
         return None, "AI is not configured."
 
-    sys = """You are an Indian MF advisor. Recommend an asset allocation
-and 3–5 specific scheme categories (NOT scheme names, just categories like
+    sys = """You are an educational analytics assistant for Indian mutual funds.
+You are NOT a SEBI-registered investment adviser and must not present yourself as
+one. For the user's own research and education, outline an illustrative asset
+allocation and 3–5 scheme CATEGORIES (NOT scheme names, just categories like
 'Large Cap Index Fund', 'Flexi Cap', 'Short Duration Debt') with a sample
-allocation %, suitable for the user's goal.
+allocation %, generally associated with the user's stated goal and horizon. This
+is general educational information, not personalised investment advice or a
+recommendation to invest in any specific product.
 
 Return strict JSON:
 {
-  "verdict": "<one-line>",
+  "verdict": "<one-line educational summary>",
   "asset_mix": {"equity_pct": 60, "debt_pct": 30, "gold_pct": 5, "intl_pct": 5},
   "categories": [
     {"category": "...", "allocation_pct": 30, "rationale": "..."}
