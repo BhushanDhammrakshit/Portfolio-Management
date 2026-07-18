@@ -1495,5 +1495,73 @@ html, body { max-width: 100%; overflow-x: hidden; }
     .tool-help-body { padding: 4px 12px 12px 12px; }
 }
 
+/* =========================================================================
+   Global mobile polish — site-wide safety net (applies to every page that
+   uses layout.html). Catches overflow, oversized media, cramped topbar and
+   long-word breaks that individual templates may miss.
+   ========================================================================= */
+
+/* 1) Never let media / embeds / preformatted text force horizontal scroll */
+img, svg, video, canvas, iframe, table { max-width: 100%; }
+pre, code { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+
+/* 2) Any element that opts into horizontal scrolling gets smooth touch scroll */
+.table-responsive, .fa-table-scroll, .oc-table-wrap, [class*="-tablewrap"] {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet & phone (≤ 991.98px) */
+@media (max-width: 991.98px) {
+    /* Break long words (symbols, emails, URLs) instead of overflowing */
+    .surface-card, .app-content, .page-header, .holding-name,
+    .stock-detail-value, .dash-card-value { overflow-wrap: anywhere; }
+}
+
+/* Phone (≤ 576px): tighten the top bar so actions never collide */
+@media (max-width: 576px) {
+    .app-topbar { gap: 6px; }
+    .topbar-actions { gap: 6px; }
+    .topbar-title {
+        font-size: .92rem; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; max-width: 40vw;
+    }
+    /* Plan badge: keep it, just make it compact */
+    .plan-badge { padding: 5px 9px; font-size: .6rem; letter-spacing: .04em; }
+    .plan-badge::after { display: none; } /* drop shimmer to save paint */
+    /* Persona switch: icon only */
+    .persona-switch-btn { padding: 6px 8px; }
+    .persona-switch-chev { display: none; }
+    /* Add-stock CTA already icon-only via existing rules */
+    .topbar-user-btn { padding: 5px 8px; }
+
+    /* Section spacing breathes less */
+    .page-header { margin-bottom: 14px; }
+
+    /* Bootstrap grid gutters can push content wide; keep rows in bounds */
+    .row { --bs-gutter-x: .75rem; }
+
+    /* Dropdown menus: keep within viewport */
+    .dropdown-menu { max-width: calc(100vw - 24px); }
+    .persona-switch-menu { max-width: calc(100vw - 24px); }
+}
+
+/* Very small phone (≤ 400px): hide plan badge text-shimmer heavy bits,
+   shrink avatars a touch so the row always fits. */
+@media (max-width: 400px) {
+    .topbar-title { max-width: 34vw; }
+    .user-avatar-sm { width: 28px; height: 28px; font-size: .8rem; }
+    .persona-switch-ico { font-size: .85rem; }
+}
+
+/* Make any bare/unwrapped data table scroll horizontally on phones instead of
+   forcing the whole page to overflow. */
+@media (max-width: 768px) {
+    .app-content table:not(.oc-table):not(.fa-table) {
+        display: block; width: 100%; overflow-x: auto;
+        -webkit-overflow-scrolling: touch; white-space: nowrap;
+    }
+    /* Common KPI / stat grids that stay multi-column: cap at 2 on phones */
+    .fa-pillars, .rrg-quads-top, .signal-indicators { grid-template-columns: repeat(2, 1fr) !important; }
+}
 
 
