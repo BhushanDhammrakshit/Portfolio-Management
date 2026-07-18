@@ -264,7 +264,7 @@
 <div class="fa-tabs" role="tablist">
     <button class="fa-tab active" data-tab="portfolio" type="button" role="tab">Portfolio</button>
     <button class="fa-tab" data-tab="lookup" type="button" role="tab">Lookup any stock</button>
-    <button class="fa-tab" data-tab="screener" type="button" role="tab">Top picks</button>
+    {% if is_admin %}<button class="fa-tab" data-tab="screener" type="button" role="tab">Top picks</button>{% endif %}
 </div>
 
 <!-- ── Portfolio tab ───────────────────────────────────────── -->
@@ -328,14 +328,14 @@
 
 <!-- ── Screener (Top picks) tab ────────────────────────────── -->
 <div id="tab-screener" class="fa-tab-pane" style="display:none">
-    {% if has_elite %}
+    {% if is_admin %}
     <div class="fa-toolbar">
         <label class="fa-hint" for="faScreenerMin" style="display:flex;align-items:center;gap:8px;height:40px;margin:0">
             <span>Min score</span>
             <select id="faScreenerMin" class="fa-btn" style="padding:0 10px;font-weight:600">
                 <option value="80" selected>80+ (premier)</option>
                 <option value="70">70+</option>
-                <option value="65">65+ (buy & above)</option>
+                <option value="65">65+ (bullish & above)</option>
                 <option value="50">50+</option>
             </select>
         </label>
@@ -353,8 +353,6 @@
             Pick a score threshold and click <strong>Find top picks</strong>.
         </div>
     </div>
-    {% else %}
-    {{ upgrade_card('elite', title='Top Picks screener — Elite feature', message='Scan a curated NSE universe for stocks with composite fundamentals score above your threshold. Upgrade to Elite to unlock.') }}
     {% endif %}
 </div>
 
@@ -406,11 +404,11 @@
     }
     function scoreClass(verdict) {
         const v = (verdict || '').toLowerCase();
-        if (v.includes('strong buy')) return 'score-strong-buy';
-        if (v === 'buy') return 'score-buy';
-        if (v === 'hold') return 'score-hold';
-        if (v === 'avoid') return 'score-avoid';
-        if (v.includes('sell')) return 'score-sell';
+        if (v.includes('strongly bullish')) return 'score-strong-buy';
+        if (v.includes('bullish')) return 'score-buy';
+        if (v.includes('neutral')) return 'score-hold';
+        if (v.includes('cautious')) return 'score-avoid';
+        if (v.includes('bearish')) return 'score-sell';
         return 'score-na';
     }
     function gainClass(v) {
