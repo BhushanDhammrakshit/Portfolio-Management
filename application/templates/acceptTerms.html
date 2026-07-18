@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B1024" />
+    <title>Terms &amp; Disclaimer · Finance Candle</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        :root{
+            --bg:#0B1024;--panel:#141B33;--panel-2:#1A2240;
+            --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.16);
+            --ink:#F1F5F9;--muted:#94A3B8;
+            --primary:#6D6CF7;--primary-2:#8B5CF6;--accent:#22D3EE;--success:#10B981;--amber:#F59E0B;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            background:var(--bg);color:var(--ink);min-height:100vh;position:relative;overflow-x:hidden;
+        }
+        body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(120px);opacity:.5;pointer-events:none;z-index:0}
+        body::before{top:-220px;left:-180px;width:600px;height:600px;background:radial-gradient(circle,var(--primary) 0%,transparent 70%)}
+        body::after{bottom:-240px;right:-200px;width:640px;height:640px;background:radial-gradient(circle,var(--primary-2) 0%,transparent 70%)}
+
+        .op-topbar{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:20px 32px}
+        .op-brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:800;font-size:1.1rem;letter-spacing:-.01em}
+        .op-brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--primary-2));display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 20px rgba(109,108,247,.4);overflow:hidden}
+        .op-brand .mark img{width:100%;height:100%;object-fit:contain;transform:scale(1.1)}
+        .op-brand .accent{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+        .op-logout{color:var(--muted);text-decoration:none;font-size:.88rem;font-weight:500;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;transition:.15s}
+        .op-logout:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+
+        .op-shell{position:relative;z-index:2;max-width:760px;margin:0 auto;padding:12px 24px 64px}
+        .op-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#FCD34D;font-size:.78rem;font-weight:600;margin-bottom:16px}
+        .op-title{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+        .op-sub{color:var(--muted);font-size:.95rem;margin:0 0 22px}
+
+        .terms-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px 26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+        .terms-scroll{max-height:340px;overflow-y:auto;padding:4px 14px 4px 2px;margin:0 0 18px;border:1px solid var(--border);border-radius:12px;background:var(--panel-2)}
+        .terms-scroll::-webkit-scrollbar{width:8px}
+        .terms-scroll::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:8px}
+        .terms-scroll{padding:16px 18px}
+        .terms-scroll h6{color:var(--ink);font-weight:700;font-size:.92rem;margin:16px 0 6px}
+        .terms-scroll h6:first-child{margin-top:0}
+        .terms-scroll p,.terms-scroll li{color:var(--muted);font-size:.86rem;line-height:1.55}
+        .terms-scroll ul{padding-left:18px;margin:0 0 8px}
+        .terms-scroll strong{color:var(--ink)}
+
+        .terms-check{display:flex;gap:10px;align-items:flex-start;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+        .terms-check input{margin-top:3px;width:18px;height:18px;flex:0 0 auto;accent-color:var(--primary)}
+        .terms-check label{font-size:.86rem;color:var(--ink);line-height:1.5}
+        .terms-check label strong{color:#FCD34D}
+
+        .op-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+        .btn-accept{border:none;border-radius:10px;padding:12px 24px;font-weight:700;font-size:.95rem;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary-2));box-shadow:0 8px 24px rgba(109,108,247,.35);cursor:pointer;transition:.15s}
+        .btn-accept:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+        .btn-accept:not(:disabled):hover{transform:translateY(-1px)}
+        .alert-slim{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#FCD34D;border-radius:10px;padding:10px 14px;font-size:.85rem;margin-bottom:16px}
+    </style>
+</head>
+<body>
+    <div class="op-topbar">
+        <a class="op-brand" href="#">
+            <span class="mark"><img src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
+            Finance<span class="accent">Candle</span>
+        </a>
+        <a class="op-logout" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</a>
+    </div>
+
+    <div class="op-shell">
+        <span class="op-eyebrow"><i class="fa-solid fa-shield-halved"></i> One-time acknowledgement</span>
+        <h1 class="op-title">Before you continue, {{ name or 'there' }}</h1>
+        <p class="op-sub">We've updated how we describe our platform. Please read and accept the Terms of Use &amp; Disclaimer to keep using Finance Candle.</p>
+
+        {% with msgs = get_flashed_messages(with_categories=true) %}
+          {% if msgs %}
+            {% for cat, msg in msgs %}
+              <div class="alert-slim"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ msg }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="terms-card">
+            <div class="terms-scroll">
+                <h6>1. What Finance Candle is</h6>
+                <p>Finance Candle is an <strong>analytics and education platform</strong>. It is
+                <strong>not</strong> a SEBI-registered Investment Adviser or Research Analyst, and
+                it does not provide personalised investment advice.</p>
+
+                <h6>2. Not investment advice</h6>
+                <p>All content on the platform — including scores, screeners, signals, technical
+                setups, sentiment labels (bullish/bearish), option-flow data, AI-generated
+                commentary and portfolio analysis — is provided for <strong>informational and
+                educational purposes only</strong>. Nothing on the platform is a recommendation,
+                solicitation, or offer to buy, sell, or hold any security or financial product.</p>
+
+                <h6>3. Market data &amp; institutional flow</h6>
+                <ul>
+                    <li>Data may be delayed, incomplete, or inaccurate, and is sourced from
+                    third-party providers.</li>
+                    <li>Labels describing large/institutional activity (e.g. "Institutional flow")
+                    describe <strong>observed market behaviour</strong> and are not a suggestion
+                    for you to act.</li>
+                </ul>
+
+                <h6>4. Your responsibility</h6>
+                <p>You are solely responsible for your own investment decisions. Do your own
+                research and consult a <strong>SEBI-registered adviser</strong> before investing.
+                Investments in securities are subject to market risks; past performance is not
+                indicative of future results.</p>
+
+                <h6>5. No liability</h6>
+                <p>Finance Candle and its team are not liable for any loss or damage arising from
+                the use of the platform or reliance on any content within it.</p>
+
+                <h6>6. Subscriptions</h6>
+                <p>Paid plans provide access to analytics and educational tools only — never to
+                buy/sell calls or guaranteed outcomes.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('submit_terms') }}">
+                <div class="terms-check">
+                    <input type="checkbox" id="agree_terms" name="agree_terms" value="yes" />
+                    <label for="agree_terms">
+                        I have read and agree to the Terms of Use &amp; Disclaimer. I understand
+                        Finance Candle is an <strong>analytics &amp; education platform, not a
+                        SEBI-registered adviser or research analyst</strong>, and that all content
+                        is informational only and <strong>not investment advice</strong>.
+                    </label>
+                </div>
+                <div class="op-actions">
+                    <button type="submit" id="acceptBtn" class="btn-accept" disabled>
+                        Accept &amp; continue <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </button>
+                    <a class="op-logout" href="{{ url_for('logout') }}">Not now — log out</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var chk = document.getElementById('agree_terms');
+            var btn = document.getElementById('acceptBtn');
+            if (chk && btn) {
+                chk.addEventListener('change', function () {
+                    btn.disabled = !chk.checked;
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
