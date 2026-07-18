@@ -2,6 +2,7 @@
 import uuid
 import csv
 import io
+from datetime import datetime
 from functools import wraps
 
 from flask import (render_template, request, redirect, session, url_for,
@@ -33,7 +34,35 @@ def login_required(view):
 _PERSONA_EXEMPT_ENDPOINTS = {
     "choose_persona", "set_persona", "logout", "static",
     "verify_email", "verify_email_resend", "verify_email_cancel",
+    "accept_terms", "submit_terms",
 }
+
+# Endpoints a logged-in user may reach before accepting the Terms & Disclaimer.
+_TERMS_EXEMPT_ENDPOINTS = {
+    "accept_terms", "submit_terms", "logout", "static",
+    "verify_email", "verify_email_resend", "verify_email_cancel",
+}
+
+
+@app.before_request
+def _require_terms():
+    """Force logged-in users who haven't accepted the Terms & Disclaimer to
+    the acceptance page before they can access anything else.
+
+    This gate runs before the persona gate so pre-existing users (created
+    before the Terms flow existed) are asked to accept once. Only applies to
+    top-level HTML page navigations so JSON/API endpoints keep working.
+    """
+    if not session.get("user_id") or session.get("terms_accepted"):
+        return None
+    if request.method != "GET":
+        return None
+    endpoint = request.endpoint or ""
+    if endpoint in _TERMS_EXEMPT_ENDPOINTS:
+        return None
+    if "." in endpoint or "text/html" not in (request.headers.get("Accept") or ""):
+        return None
+    return redirect(url_for("accept_terms"))
 
 
 @app.before_request
@@ -191,6 +220,7 @@ def logIn():
                 session["email"] = user.get("Email", email)
                 session["user_id"] = user.get("RowKey", "")
                 session["persona"] = (user.get("Persona") or "") or None
+                session["terms_accepted"] = bool(user.get("TermsAccepted"))
                 session["just_logged_in"] = True
                 return redirect(url_for("home"))
             return render_template("login.html",
@@ -224,6 +254,10 @@ def signup():
         if len(password) < 6:
             return render_template("signup.html",
                                    error="Password must be at least 6 characters.")
+        if (request.form.get("agree_terms") or "").lower() != "yes":
+            return render_template(
+                "signup.html",
+                error="Please accept the Terms of Use & Disclaimer to continue.")
         try:
             if _fetch_user_by_email(email):
                 return render_template("signup.html",
@@ -241,6 +275,8 @@ def signup():
                 "Plan": "free",
                 "PlanExpiresOn": "",
                 "TrialUsed": False,
+                "TermsAccepted": True,
+                "TermsAcceptedOn": datetime.utcnow().isoformat() + "Z",
             }
             # Activate 7-day Elite trial for the new user.
             from application.services.plans import start_trial
@@ -313,6 +349,8 @@ def verify_email():
             session["email"] = session.pop("pending_verify_email")
             session["user_id"] = session.pop("pending_verify_user_id", "")
             session["persona"] = None
+            # New signups accept the Terms & Disclaimer during registration.
+            session["terms_accepted"] = True
             session["just_logged_in"] = True
             flash("Email verified \u2014 welcome aboard!", "success")
             return redirect(url_for("home"))
@@ -496,6 +534,40 @@ def set_persona():
     nxt = request.form.get("next") or ""
     if nxt.startswith("/") and not nxt.startswith("//"):
         return redirect(nxt)
+    return redirect(url_for("home"))
+
+
+@app.route("/terms")
+@login_required
+def accept_terms():
+    """Terms & Disclaimer acceptance page for users who haven't accepted yet."""
+    if session.get("terms_accepted"):
+        return redirect(url_for("home"))
+    return render_template(
+        "acceptTerms.html",
+        name=session.get("name"), email=session.get("email"),
+        title="Terms & Disclaimer")
+
+
+@app.route("/terms/accept", methods=["POST"])
+@login_required
+def submit_terms():
+    """Persist Terms & Disclaimer acceptance for the current user."""
+    if (request.form.get("agree_terms") or "").lower() != "yes":
+        flash("Please accept the Terms of Use & Disclaimer to continue.", "warning")
+        return redirect(url_for("accept_terms"))
+    try:
+        user = _fetch_user_by_email(session["email"])
+        if user:
+            user["TermsAccepted"] = True
+            user["TermsAcceptedOn"] = datetime.utcnow().isoformat() + "Z"
+            user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
+    except Exception as e:
+        print(f"[terms] persist error: {e}")
+        flash("Could not save your acceptance. Please try again.", "danger")
+        return redirect(url_for("accept_terms"))
+
+    session["terms_accepted"] = True
     return redirect(url_for("home"))
 
 
