@@ -1057,7 +1057,7 @@ a.plan-badge-elite:hover {
 }
 
 /* Ambient radial glow under the app */
-[data-theme="dark"] body { position: relative; overflow-x: hidden; }
+[data-theme="dark"] body { position: relative; overflow-x: clip; }
 [data-theme="dark"] body::before,
 [data-theme="dark"] body::after {
     content: ""; position: fixed; border-radius: 50%;
@@ -1305,8 +1305,14 @@ a.plan-badge-elite:hover {
    in below the listed breakpoints.
    ========================================================================= */
 
-/* Stop pages from ever overflowing horizontally on phones. */
-html, body { max-width: 100%; overflow-x: hidden; }
+/* Stop pages from ever overflowing horizontally on phones.
+   IMPORTANT: Do NOT use `overflow-x: hidden` on html/body — iOS Safari
+   (WebKit) treats it as a full scroll-lock on both axes, killing vertical
+   touch scrolling entirely. `overflow-x: clip` clips horizontal overflow
+   without creating a new scroll container, so touch scrolling works on
+   both iOS and Android. Supported in Safari 16+, Chrome 90+, Firefox 81+. */
+html { max-width: 100%; }
+body { max-width: 100%; overflow-x: clip; }
 
 /* Tablet (≤ 991.98px) */
 @media (max-width: 991.98px) {
