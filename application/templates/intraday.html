@@ -220,6 +220,21 @@
 [data-theme="dark"] .swing-grade-badge.a { background:rgba(22,163,74,.22); color:#4ade80; }
 [data-theme="dark"] .swing-grade-badge.b { background:rgba(59,130,246,.22); color:#60a5fa; }
 [data-theme="dark"] .swing-grade-badge.watch { background:rgba(245,158,11,.22); color:#fbbf24; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .intraday-grid { grid-template-columns: 1fr; gap: 12px; }
+    .signal-card { padding: 14px; }
+    .mode-toggle-row { gap: 6px; }
+    .mode-btn { padding: 7px 12px; font-size: .74rem; }
+}
+@media (max-width: 480px) {
+    .swing-plan-grid { grid-template-columns: repeat(2, 1fr); }
+    .signal-stock-name { font-size: .98rem; }
+    .signal-price { font-size: 1.08rem; }
+    .detail-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .mode-btn { flex: 1 1 auto; text-align: center; }
+}
 </style>
 
 <script>
@@ -472,7 +487,7 @@ function showSwingDetail(idx) {
             </div>
             <span class="swing-grade-badge ${gradeKey}" style="font-size:.85rem;padding:6px 18px">${s.grade} · Score ${s.score}</span>
         </div>
-        <div class="swing-plan-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+        <div class="swing-plan-grid" style="margin-bottom:14px">
             <div class="swing-plan-cell entry"><small>Entry</small><strong>${fmt(s.entry)}</strong></div>
             <div class="swing-plan-cell stop"><small>Stop −${s.stop_pct}%</small><strong>${fmt(s.stop)}</strong></div>
             <div class="swing-plan-cell target"><small>Target +${s.target_pct}%</small><strong>${fmt(s.target)}</strong></div>
