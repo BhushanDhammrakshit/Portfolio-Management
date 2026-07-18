@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Optional
 
@@ -34,6 +35,20 @@ from application.services.rag import retriever as rag_retriever
 log = logging.getLogger(__name__)
 
 fundamentals_api = Blueprint("fundamentals_api", __name__)
+
+
+def _is_admin(email: str) -> bool:
+    """Admin gate for internal-only tools (e.g. curated Top Picks screener).
+
+    Controlled by the ADMIN_EMAILS env var (comma-separated). If no admin
+    emails are configured, no one is treated as admin for these tools.
+    """
+    if not email:
+        return False
+    admin_emails = {e.strip().lower()
+                    for e in (os.getenv("ADMIN_EMAILS") or "").split(",")
+                    if e.strip()}
+    return bool(admin_emails) and email.lower() in admin_emails
 
 # Global cache for the AI thesis output (per Yahoo symbol). Shared across
 # users — once one user has paid the LLM cost for a stock, subsequent
@@ -242,9 +257,12 @@ _SCREENER_TTL = 6 * 60 * 60  # 6 hours
 
 
 @fundamentals_api.route("/api/fundamentals/screener", methods=["GET"])
-@plans.requires_plan("elite")
 def fundamentals_screener():
     """Scan a curated NSE universe and return stocks scoring at/above ``min_score``.
+
+    Admin-only: this "Top Picks" screener produces a curated list of stocks
+    and is restricted to internal admin accounts (ADMIN_EMAILS) so it is not
+    surfaced to end users as a buy/sell recommendation service.
 
     Query params
     ------------
@@ -253,6 +271,9 @@ def fundamentals_screener():
     """
     if "email" not in session:
         return jsonify({"error": "Not authenticated"}), 401
+
+    if not _is_admin(session.get("email", "")):
+        return jsonify({"error": "Admin access required"}), 403
 
     try:
         min_score = max(0, min(100, int(request.args.get("min_score", 80))))
