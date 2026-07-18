@@ -354,6 +354,13 @@
 [data-theme="dark"] .oc-pre-outcome.miss{color:#fca5a5}
 [data-theme="dark"] .oc-pre-outcome.flat_ok{color:#93c5fd}
 [data-theme="dark"] .oc-pre-outcome.flat_miss{color:#f9a8d4}
+
+/* ── Scrollable OI-based Support & Resistance chart on small screens ── */
+.oc-sr-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+@media(max-width:640px){
+    .oc-sr-scroll .oc-sr-canvas-box{min-width:620px}
+    .oc-sr-scroll{scrollbar-width:thin}
+}
 </style>
 
 <div class="oc-page">
@@ -549,8 +556,10 @@
 
         <div class="oc-sr-panel" data-tab="oi">
             <h6><i class="fa-solid fa-arrows-up-to-line me-1"></i>OI-based Support &amp; Resistance</h6>
-            <div style="position:relative;height:260px;margin-bottom:14px">
-                <canvas id="ocSrChart"></canvas>
+            <div class="oc-sr-scroll">
+                <div class="oc-sr-canvas-box" style="position:relative;height:260px;margin-bottom:14px">
+                    <canvas id="ocSrChart"></canvas>
+                </div>
             </div>
             <div style="display:flex;gap:14px;font-size:.7rem;color:var(--text-muted);margin-bottom:10px;flex-wrap:wrap">
                 <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Call OI → Resistance</span>
