@@ -218,7 +218,7 @@
             </div>
             {% endif %}
             <a href="{{ url_for('portfolioMaker') }}" class="btn btn-sm btn-primary topbar-cta">
-                <i class="fa-solid fa-plus me-1"></i> Add Stock
+                <i class="fa-solid fa-plus"></i><span class="topbar-cta-text"> Add Stock</span>
             </a>
             <div class="topbar-user dropdown">
                 <button class="topbar-user-btn" data-bs-toggle="dropdown" aria-expanded="false">
@@ -739,8 +739,19 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   .tool-table tbody tr.tv-active{background:rgba(29,78,216,.07)}
   /* Lock background scroll while modal is open */
   body.tv-open{overflow:hidden}
+  /* Mobile: keep the modal header on one line and never push Close off-screen */
+  @media (max-width: 560px){
+    #tvDrawer .tv-head{padding:8px 10px;gap:6px}
+    #tvDrawer .tv-head h3{font-size:.82rem;gap:5px;min-width:0;flex:1 1 auto;overflow:hidden}
+    #tvDrawer .tv-head h3 #tvTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #tvDrawer .tv-actions{gap:5px;flex:0 0 auto}
+    #tvDrawer .tv-actions a,#tvDrawer .tv-actions button{padding:6px 8px;font-size:.72rem}
+    /* TradingView link → icon only to save room; Close stays labelled */
+    #tvOpen span,#tvOpen{font-size:0}
+    #tvOpen i{font-size:.8rem}
+    #tvTfBtn #tvTfLabel{font-size:.72rem}
+  }
 </style>
-
 <div id="tvBackdrop" aria-hidden="true"></div>
 <aside id="tvDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Stock chart">
   <div class="tv-head">
