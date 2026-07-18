@@ -204,15 +204,19 @@ def _piotroski(payload: dict) -> Optional[int]:
 
 
 def _verdict(composite: int) -> str:
+    # NOTE: We deliberately use market-sentiment language (bullish / bearish)
+    # rather than actionable calls (buy / sell). This is an educational
+    # fundamentals score, not investment advice or a SEBI-regulated
+    # buy/sell recommendation.
     if composite >= 80:
-        return "Strong Buy"
+        return "Strongly Bullish"
     if composite >= 65:
-        return "Buy"
+        return "Bullish"
     if composite >= 45:
-        return "Hold"
+        return "Neutral"
     if composite >= 30:
-        return "Avoid"
-    return "Sell"
+        return "Cautious"
+    return "Bearish"
 
 
 def _red_flags(payload: dict) -> list:
