@@ -84,7 +84,6 @@ PLANS = {
         "missing": [
             "Options analytics (Elite)",
             "Volume alerts (Elite)",
-            "Fundamentals Top Picks (Elite)",
             "Advanced metrics: Sharpe, beta, drawdown (Elite)",
             "Unlimited AI tokens (Elite)",
         ],
@@ -108,7 +107,6 @@ PLANS = {
             "Everything in Pro, plus:",
             "Options analytics (NIFTY option chain + OI)",
             "Volume alerts (volume shockers in real time)",
-            "Fundamentals — Top Picks (curated buy ideas)",
             "AI Assistant — unlimited tokens (fair-use)",
             "Advanced metrics — Sharpe, beta, drawdown & more",
         ],
