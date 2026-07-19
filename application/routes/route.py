@@ -6,7 +6,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import (render_template, request, redirect, session, url_for,
-                   jsonify, flash)
+                   jsonify, flash, Response)
 from werkzeug.security import generate_password_hash, check_password_hash
 from azure.core.exceptions import ResourceNotFoundError
 from azure.data.tables import UpdateMode
@@ -186,6 +186,56 @@ def index():
 def favicon():
     # Browsers auto-request /favicon.ico; serve the brand logo from /static.
     return redirect(url_for("static", filename="logo.png"))
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    # Allow crawling of public pages; block private/app + API areas.
+    base = request.url_root.rstrip("/")
+    lines = [
+        "User-agent: *",
+        "Allow: /$",
+        "Allow: /login",
+        "Allow: /signup",
+        "Allow: /terms",
+        "Disallow: /home",
+        "Disallow: /profile",
+        "Disallow: /api/",
+        "Disallow: /admin",
+        "Disallow: /logout",
+        "Disallow: /verify-email",
+        "Disallow: /reset-password",
+        "Disallow: /forgot-password",
+        f"Sitemap: {base}/sitemap.xml",
+        "",
+    ]
+    return Response("\n".join(lines), mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    # Only public, crawlable pages belong here.
+    base = request.url_root.rstrip("/")
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    pages = [
+        ("/", "1.0", "daily"),
+        ("/login", "0.6", "monthly"),
+        ("/signup", "0.8", "monthly"),
+        ("/terms", "0.3", "yearly"),
+    ]
+    urls = "".join(
+        f"<url><loc>{base}{path}</loc>"
+        f"<lastmod>{today}</lastmod>"
+        f"<changefreq>{freq}</changefreq>"
+        f"<priority>{prio}</priority></url>"
+        for path, prio, freq in pages
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{urls}</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
 
 
 @app.route("/login", methods=["GET", "POST"])
