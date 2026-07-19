@@ -8,6 +8,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Finance Candle — AI-powered portfolio &amp; trading platform for India</title>
     <meta name="description" content="Live multi-broker portfolio sync, options analytics, AI insights, RAG-powered filing search and pro-grade risk metrics — built for the Indian retail trader." />
+    <meta name="keywords" content="portfolio tracker India, options analytics, AI stock analysis, Indian stock market, NSE, BSE, F&O analytics, mutual fund tracker, trading platform India, options chain, OI buildup" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Finance Candle" />
+    <link rel="canonical" href="{{ request.url_root }}" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Finance Candle" />
+    <meta property="og:title" content="Finance Candle — AI-powered portfolio &amp; trading platform for India" />
+    <meta property="og:description" content="Live multi-broker portfolio sync, options analytics, AI insights, RAG-powered filing search and pro-grade risk metrics — built for the Indian retail trader." />
+    <meta property="og:url" content="{{ request.url_root }}" />
+    <meta property="og:image" content="{{ request.url_root }}static/logo.png" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Finance Candle — AI-powered trading platform for India" />
+    <meta name="twitter:description" content="Live portfolio sync, options analytics and AI insights for Indian retail traders." />
+    <meta name="twitter:image" content="{{ request.url_root }}static/logo.png" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Finance Candle",
+      "url": "{{ request.url_root }}",
+      "description": "AI-powered portfolio and trading platform for Indian retail traders — live multi-broker sync, options analytics, AI insights and RAG-powered filing search.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    }
+    </script>
+
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
