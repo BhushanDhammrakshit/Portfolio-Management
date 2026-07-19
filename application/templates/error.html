@@ -1,4 +1,5 @@
 {% extends "guest_layout.html" %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 {% block content %}
 <div class="auth-card text-center">
     <div class="error-code">{{ code or 404 }}</div>
