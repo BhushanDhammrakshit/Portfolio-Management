@@ -6,6 +6,10 @@
     <meta name="theme-color" content="#1e293b" />
     <title>{% if title %}{{ title }} · Finance Candle{% else %}Finance Candle{% endif %}</title>
 
+    <meta name="description" content="{% block meta_description %}Finance Candle — AI-powered portfolio and trading analytics for the Indian markets: multi-broker sync, options analytics, fundamentals and AI insights.{% endblock %}" />
+    <meta name="robots" content="{% block meta_robots %}noindex, nofollow{% endblock %}" />
+    <link rel="canonical" href="{{ request.base_url }}" />
+
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}" />
 
