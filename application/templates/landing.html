@@ -43,6 +43,80 @@
     }
     </script>
 
+    <!-- FAQ structured data for Google rich snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is my broker data safe on Finance Candle?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. We use read-only scopes on Fyers and Dhan — we can fetch your holdings and quotes, but cannot place, modify, or cancel orders. Tokens are encrypted at rest and you can revoke access from your broker dashboard at any time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the best portfolio tracker app in India?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Finance Candle is built specifically for Indian retail investors who trade on NSE. It offers live multi-broker sync (Fyers & Dhan), AI-powered stock analysis, options analytics with OI buildup, and pro-grade risk metrics like Sharpe ratio, VaR, and maximum drawdown — all in one platform."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the NIFTY & BANKNIFTY option chain analytics work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Finance Candle fetches live option chain data for NIFTY and BANKNIFTY, then computes OI buildup (long build-up, short build-up, long unwinding, short covering), put-call ratio (PCR), max-pain strike, and Greeks (delta, gamma, theta, vega) for every strike. It also generates a gap-up/gap-down forecast with a published track record."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does AI stock analysis work on Finance Candle?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The AI assistant is grounded in your actual holdings, live market quotes, recent NSE corporate filings, and news sentiment. It uses RAG (Retrieval-Augmented Generation) to cite real filings. You can bulk-analyse your entire portfolio in one click and get ranked rebalance suggestions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What intraday and swing trading tools are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Intraday tools include ORB scanner, RVOL heatmap, pre-market gappers, pivot-point levels, and momentum burst alerts. Swing tools include 52-week high breakout scanner, relative strength vs NIFTY, chart-pattern detection, sector leaders ranking, and a 10-15% swing opportunity screener."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Finance Candle free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — the Basic plan is free forever. It lets you track up to 15 holdings, connect one broker, use the sector heatmap, mutual fund tracker, and get 3 AI stock analyses per month. Paid plans start at ₹399/month. Every new account gets a 7-day Elite trial with all features unlocked."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What portfolio risk metrics does Finance Candle calculate?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Finance Candle computes Sharpe ratio, Sortino ratio, Value at Risk (VaR) at 95% and 99% confidence, maximum drawdown, portfolio beta vs NIFTY 50, sector concentration risk, and correlation analysis between holdings — all on your actual portfolio, updated daily."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Finance Candle different from Sensibull, StockEdge, or Zerodha Kite?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Finance Candle combines portfolio tracking, options analytics, fundamental screeners, intraday/swing scanners, and an AI research assistant in a single workspace — tools that otherwise require 3-4 separate subscriptions. It works across multiple brokers and adds AI-powered insights grounded in real NSE filings."
+          }
+        }
+      ]
+    }
+    </script>
+
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo.png') }}" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -1018,6 +1092,88 @@
                 <div class="pp-faq-a">
                     Today we're focused on NSE cash + F&amp;O and AMFI mutual funds — the universe most Indian retail
                     investors actually use. BSE, MCX commodities, and US equities are on the 2026 roadmap.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">What is the best portfolio tracker app in India?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Finance Candle is built specifically for Indian retail investors who trade on NSE.
+                    Unlike generic trackers, it offers live multi-broker sync (Fyers &amp; Dhan), AI-powered stock analysis,
+                    options analytics with OI buildup, and pro-grade risk metrics like Sharpe ratio, VaR, and maximum drawdown —
+                    all in one platform. You can start free and upgrade only when you need advanced tools.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">How does the NIFTY &amp; BANKNIFTY option chain analytics work?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Finance Candle fetches live option chain data for NIFTY and BANKNIFTY, then computes OI buildup
+                    (long build-up, short build-up, long unwinding, short covering), put-call ratio (PCR), max-pain strike,
+                    and Greeks (delta, gamma, theta, vega) for every strike. The platform also generates a gap-up / gap-down
+                    forecast for the next trading day, complete with a published track record of past predictions vs actual outcomes.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">How does AI stock analysis work on Finance Candle?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    The AI assistant is grounded in your actual holdings, live market quotes, recent NSE corporate filings,
+                    and news sentiment. Ask it anything — "Should I add more Infosys?", "Is my portfolio too IT-heavy?",
+                    or "Summarise the latest annual report for HDFC Bank." It uses RAG (Retrieval-Augmented Generation)
+                    to cite real filings instead of hallucinating. You can also bulk-analyse your entire portfolio in one click
+                    and get a ranked list of rebalance suggestions.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">What intraday and swing trading tools are available?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    <strong>Intraday tools:</strong> Opening Range Breakout (ORB) scanner, Relative Volume (RVOL) heatmap,
+                    pre-market gappers, pivot-point levels, and momentum burst alerts.<br/>
+                    <strong>Swing tools:</strong> 52-week high breakout scanner, relative strength vs NIFTY, chart-pattern
+                    detection (cup &amp; handle, ascending triangle, etc.), sector leaders ranking, and a 10–15% swing
+                    opportunity screener. All scanners run on live NSE data and refresh automatically.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">How do I track my mutual funds on Finance Candle?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Add your mutual fund holdings manually or let the AI pull them from your broker. Finance Candle then
+                    shows stock-level overlap between your MFs, compares expense ratios, tracks NAV performance vs benchmark,
+                    and lets you simulate SIPs for financial goals. The AI advisor flags underperforming funds and suggests
+                    better-rated alternatives from the AMFI database of 5,000+ schemes.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">What portfolio risk metrics does Finance Candle calculate?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Finance Candle computes institutional-grade risk metrics on your <em>actual</em> portfolio — not a demo.
+                    This includes Sharpe ratio, Sortino ratio, Value at Risk (VaR) at 95% and 99% confidence,
+                    maximum drawdown, portfolio beta vs NIFTY 50, sector concentration risk, and correlation analysis
+                    between your holdings. These update daily as prices move.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">Is Finance Candle free to use?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Yes — the Basic plan is free forever. It lets you track up to 15 holdings, connect one broker,
+                    use the sector heatmap, mutual fund tracker, and get 3 AI stock analyses per month.
+                    For active traders who need intraday scanners, swing tools, options analytics, and unlimited AI,
+                    paid plans start at ₹399/month. Every new account gets a 7-day Elite trial with all features unlocked.
+                </div>
+            </div>
+            <div class="pp-faq-item">
+                <div class="pp-faq-q">How is Finance Candle different from Sensibull, StockEdge, or Zerodha Kite?
+                    <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="pp-faq-a">
+                    Finance Candle combines portfolio tracking, options analytics, fundamental screeners, intraday/swing scanners,
+                    and an AI research assistant in a single workspace — tools that otherwise require 3–4 separate subscriptions.
+                    Unlike broker terminals, it works across multiple brokers (Fyers + Dhan + manual CSV) and adds AI-powered
+                    insights grounded in real NSE filings. Think of it as your personal Bloomberg terminal, built for Indian retail.
                 </div>
             </div>
         </div>
