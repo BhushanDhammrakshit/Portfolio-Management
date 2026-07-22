@@ -587,16 +587,17 @@ a.plan-badge-pro:hover {
     color: #422006;
 }
 .plan-badge-elite {
-    background: linear-gradient(135deg, #7c3aed, #6366f1, #8b5cf6, #a78bfa);
+    background: linear-gradient(135deg, #14141f, #2a2a40, #3a3358, #1a1725);
     background-size: 200% 200%;
     animation: elite-gradient 4s ease infinite, elite-pulse 2s ease-in-out infinite;
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(124, 58, 237, .5), 0 0 20px rgba(99, 102, 241, .25);
-    border: 1px solid rgba(167, 139, 250, .5);
+    color: #ffd75e;
+    text-shadow: 0 0 8px rgba(255, 200, 60, .55);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .5), 0 0 20px rgba(255, 200, 60, .45);
+    border: 1px solid rgba(255, 200, 60, .7);
 }
 a.plan-badge-elite:hover {
-    box-shadow: 0 4px 20px rgba(124, 58, 237, .65), 0 0 30px rgba(99, 102, 241, .4);
-    color: #fff;
+    box-shadow: 0 4px 22px rgba(0, 0, 0, .6), 0 0 34px rgba(255, 200, 60, .65);
+    color: #ffe27a;
 }
 @keyframes elite-gradient {
     0% { background-position: 0% 50%; }
@@ -604,8 +605,8 @@ a.plan-badge-elite:hover {
     100% { background-position: 0% 50%; }
 }
 @keyframes elite-pulse {
-    0%, 100% { box-shadow: 0 2px 10px rgba(124, 58, 237, .5), 0 0 20px rgba(99, 102, 241, .25); }
-    50% { box-shadow: 0 2px 14px rgba(124, 58, 237, .7), 0 0 28px rgba(99, 102, 241, .4); }
+    0%, 100% { box-shadow: 0 2px 10px rgba(0, 0, 0, .5), 0 0 20px rgba(255, 200, 60, .45); }
+    50% { box-shadow: 0 2px 14px rgba(0, 0, 0, .6), 0 0 30px rgba(255, 200, 60, .7); }
 }
 .plan-badge-icon { font-size: 0.7rem; }
 
