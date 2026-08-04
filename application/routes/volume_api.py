@@ -9,6 +9,7 @@ from flask import Blueprint, render_template, jsonify, session, redirect, url_fo
 
 from application.services import market_data
 from application.services import cache as shared_cache
+from application.services import snapshot_store
 from application.services.plans import requires_plan
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -384,7 +385,20 @@ def volume_scan():
         return jsonify({"error": "auth"}), 401
     from flask import request
     force = request.args.get("force") == "1"
-    return jsonify(_load(force=force))
+    snapshot_only = request.args.get("snapshot") == "1"
+
+    if snapshot_only and not force:
+        data = snapshot_store.serve_snapshot("live:volume_scan")
+        if data is None:
+            return jsonify({"snapshot_missing": True})
+        return jsonify(data)
+
+    payload = _load(force=force)
+    try:
+        snapshot_store.put("live:volume_scan", payload)
+    except Exception:
+        pass
+    return jsonify(payload)
 
 
 @volume_api.route("/volume")
