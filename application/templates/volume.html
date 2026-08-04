@@ -351,19 +351,34 @@ document.addEventListener('visibilitychange', () => {
 // cached scan, render it immediately and refresh silently in the
 // background so switching to this tab doesn't blank the screen with a
 // loading spinner. The timestamp line shows how stale the data is.
-(function init() {
+(async function init() {
     let entry = null;
     try { entry = ppCache.getEntry('volume:map'); } catch (e) {}
-    const hasCache = entry && entry.v && typeof entry.v === 'object' && Object.keys(entry.v).length > 0;
+    let hasCache = entry && entry.v && typeof entry.v === 'object' && Object.keys(entry.v).length > 0;
+
+    // Fallback: try Azure snapshot if browser cache is empty
+    if (!hasCache) {
+        try {
+            const r = await fetch('/api/volume/scan?snapshot=1');
+            const data = await r.json().catch(() => ({}));
+            if (data && data.stocks && data.stocks.length) {
+                const ts = Date.now();
+                (data.stocks || []).forEach(s => { s._updated = ts; _volMap[s.symbol] = s; });
+                try { ppCache.set('volume:map', _volMap); } catch (e) {}
+                hasCache = true;
+            }
+        } catch (e) { /* ignore */ }
+    }
+
     if (hasCache) {
-        Object.assign(_volMap, entry.v);
+        if (entry && entry.v) Object.assign(_volMap, entry.v);
         renderAll();
         document.getElementById('scanLoading').hidden = true;
         document.getElementById('scanContent').hidden = false;
         document.getElementById('emptyState').hidden = true;
-        const when = new Date(entry.t).toLocaleTimeString('en-IN');
+        const when = new Date((entry && entry.t) || Date.now()).toLocaleTimeString('en-IN');
         document.getElementById('scanTime').textContent =
-            'Cached · last refresh ' + when + ' (' + ppCache.ago(Date.now() - entry.t) + ') — refreshing…';
+            'Cached · last refresh ' + when + ' (' + ppCache.ago(Date.now() - ((entry && entry.t) || Date.now())) + ') — refreshing…';
         const startLive = () => {
             if (document.getElementById('liveToggle').checked) {
                 setLiveDot(isMarketOpen());
