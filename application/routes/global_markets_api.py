@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from application.services import cache as shared_cache
+from application.services import snapshot_store
 from application.services.providers import yfinance_provider as yfp
 
 global_markets_api = Blueprint("global_markets_api", __name__)
@@ -302,4 +303,17 @@ def global_markets_data():
     if "email" not in session:
         return jsonify({"error": "auth"}), 401
     force = request.args.get("refresh") == "1"
-    return jsonify(_load(force=force))
+    snapshot_only = request.args.get("snapshot") == "1"
+
+    if snapshot_only and not force:
+        data = snapshot_store.serve_snapshot("live:global_markets")
+        if data is None:
+            return jsonify({"snapshot_missing": True})
+        return jsonify(data)
+
+    payload = _load(force=force)
+    try:
+        snapshot_store.put("live:global_markets", payload)
+    except Exception:
+        pass
+    return jsonify(payload)
