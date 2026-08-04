@@ -120,15 +120,20 @@ def get_advanced_analytics():
     if not stocks:
         return jsonify({"error": "no_stocks", "message": "Add stocks to see analytics."})
 
-    # Per-user cache. The key embeds a signature of the holdings so any
-    # portfolio edit (add / update / delete) produces a fresh key
-    # automatically, while a short TTL bounds how stale the market-derived
-    # metrics can get. Repeated dashboard opens within the window are served
-    # straight from Redis instead of re-downloading 400 days of history.
     from flask import request as _req
     from application.services import cache as shared_cache
+    from application.services import snapshot_store
 
     _force = _req.args.get("refresh") == "1"
+    _snapshot_only = _req.args.get("snapshot") == "1"
+    _snap_key = f"user:analytics:{session['user_id']}"
+
+    if _snapshot_only and not _force:
+        data = snapshot_store.serve_snapshot(_snap_key)
+        if data is None:
+            return jsonify({"snapshot_missing": True})
+        return jsonify(data)
+
     _sig = _holdings_signature(stocks)
     _cache_key = f"analytics:{session['user_id']}:{_sig}"
     if not _force:
@@ -439,6 +444,10 @@ def get_advanced_analytics():
     )
     try:
         shared_cache.jset(_cache_key, result, ttl=_ANALYTICS_TTL)
+    except Exception:
+        pass
+    try:
+        snapshot_store.put(_snap_key, result)
     except Exception:
         pass
     return jsonify(result)
