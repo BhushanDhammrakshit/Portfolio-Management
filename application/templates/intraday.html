@@ -303,7 +303,8 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
 // shows the previous results instantly instead of an empty state. The
 // timestamp line tells users how stale the data is; "Scan again" runs
 // a fresh scan on demand.
-(function restoreCached() {
+(async function restoreCached() {
+    let hasCached = false;
     try {
         // Prefer the new per-mode key, but fall back to the legacy single key.
         const entry = ppCache.getEntry('intraday:scan:intraday') || ppCache.getEntry('intraday:scan');
@@ -316,8 +317,26 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
             if (content) content.hidden = false;
             const btn = document.getElementById('scanBtn');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
+            hasCached = true;
         }
     } catch (e) { /* ignore */ }
+
+    // Try Azure snapshot, then silent live revalidate
+    if (!hasCached) {
+        try {
+            const r = await fetch('/api/intraday/scan?snapshot=1');
+            const data = await r.json().catch(() => ({}));
+            if (data && data.stocks && data.stocks.length) {
+                _scanData = data.stocks;
+                try { ppCache.set('intraday:scan:intraday', data); } catch (e) {}
+                renderResults(data);
+                document.getElementById('emptyState').hidden = true;
+                document.getElementById('scanContent').hidden = false;
+                document.getElementById('scanBtn').innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
+                hasCached = true;
+            }
+        } catch (e) { /* ignore */ }
+    }
 })();
 
 async function runScan() {
