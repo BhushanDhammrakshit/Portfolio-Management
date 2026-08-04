@@ -272,6 +272,11 @@ def logIn():
                 session["persona"] = (user.get("Persona") or "") or None
                 session["terms_accepted"] = bool(user.get("TermsAccepted"))
                 session["just_logged_in"] = True
+                try:
+                    user["LastLoginOn"] = datetime.utcnow().isoformat()
+                    user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
+                except Exception as e:
+                    print(f"[login] could not record LastLoginOn: {e}")
                 return redirect(url_for("home"))
             return render_template("login.html",
                                    error="Invalid email or password.")
