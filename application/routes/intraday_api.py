@@ -8,6 +8,7 @@ from flask import Blueprint, jsonify, request, session, render_template, redirec
 
 from application.services import cache as shared_cache, market_data
 from application.services import swing_scanner
+from application.services import snapshot_store
 from application.services.plans import requires_plan
 
 intraday_api = Blueprint("intraday_api", __name__)
@@ -273,6 +274,13 @@ def scan_stocks():
 
     force = (request.args.get("refresh") == "1") or \
             ((request.get_json(silent=True) or {}).get("refresh") is True)
+    snapshot_only = request.args.get("snapshot") == "1"
+
+    if snapshot_only and not force:
+        data = snapshot_store.serve_snapshot("live:intraday_scan")
+        if data is None:
+            return jsonify({"snapshot_missing": True})
+        return jsonify(data)
 
     if not force:
         cached = shared_cache.jget(_SCAN_CACHE_KEY)
@@ -298,6 +306,10 @@ def scan_stocks():
     }
     try:
         shared_cache.jset(_SCAN_CACHE_KEY, payload, ttl=_SCAN_CACHE_TTL)
+    except Exception:
+        pass
+    try:
+        snapshot_store.put("live:intraday_scan", payload)
     except Exception:
         pass
     return jsonify(payload)
