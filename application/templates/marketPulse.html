@@ -143,29 +143,48 @@ function setBusy(busy) {
     if (busy) document.getElementById('mpError').hidden = true;
 }
 
-async function loadMarketPulse(refresh) {
-    setBusy(document.getElementById('mpContent').hidden);
+async function loadMarketPulse(refresh, options) {
+    options = options || {};
+    const silent = !!options.silent;
+    const suppressErrors = !!options.suppressErrors;
+    const snapshotOnly = !!options.snapshotOnly;
+    const content = document.getElementById('mpContent');
+    setBusy(content.hidden && !silent);
     const btn = document.getElementById('mpRefresh');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    const manageButton = refresh || (!silent && !snapshotOnly);
+    if (manageButton) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    }
     try {
-        const url = '/api/market-pulse' + (refresh ? '?refresh=1' : '');
+        const params = new URLSearchParams();
+        if (refresh) params.set('refresh', '1');
+        if (snapshotOnly) params.set('snapshot', '1');
+        const query = params.toString();
+        const url = '/api/market-pulse' + (query ? '?' + query : '');
         const r = await fetch(url);
         const data = await r.json().catch(() => ({}));
         if (data && data.error) throw new Error(data.error + (data.detail ? ' — ' + data.detail : ''));
         if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (data && data.snapshot_missing) return false;
+        try { ppCache.set('marketpulse:data', data); } catch (e) {}
         renderBreadthMovers(data.market_breadth_movers || null);
         renderCorporateReference(data.corporate_reference || null);
         const ts = (data.market_breadth_movers || {}).timestamp
                 || (data.corporate_reference || {}).timestamp || '';
-        document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts) : '';
-        document.getElementById('mpContent').hidden = false;
+        document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts + (data.snapshot ? ' · cached' : '')) : '';
+        content.hidden = false;
         document.getElementById('mpLoading').hidden = true;
+        document.getElementById('mpError').hidden = true;
+        return true;
     } catch (e) {
-        const err = document.getElementById('mpError');
-        err.textContent = 'Failed to load market pulse: ' + (e.message || e);
-        err.hidden = false;
-        document.getElementById('mpLoading').hidden = true;
+        if (!suppressErrors && content.hidden) {
+            const err = document.getElementById('mpError');
+            err.textContent = 'Failed to load market pulse: ' + (e.message || e);
+            err.hidden = false;
+            document.getElementById('mpLoading').hidden = true;
+        }
+        return false;
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
@@ -263,9 +282,28 @@ function renderCorporateReference(corp) {
 }
 
 document.getElementById('mpRefresh').addEventListener('click', () => loadMarketPulse(true));
-loadMarketPulse(false);
-// Auto-refresh every 90s while the tab is visible.
-setInterval(() => { if (!document.hidden) loadMarketPulse(false); }, 90_000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMarketPulse(false); });
+
+// Stale-while-revalidate init sequence
+(async function initMarketPulse() {
+    let hasCached = false;
+    try {
+        const entry = ppCache.getEntry('marketpulse:data');
+        if (entry && entry.v && !entry.v.error) {
+            const d = entry.v;
+            renderBreadthMovers(d.market_breadth_movers || null);
+            renderCorporateReference(d.corporate_reference || null);
+            const ts = (d.market_breadth_movers || {}).timestamp || (d.corporate_reference || {}).timestamp || '';
+            document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts + ' · cached ' + ppCache.ago(Date.now() - entry.t)) : '';
+            document.getElementById('mpContent').hidden = false;
+            document.getElementById('mpLoading').hidden = true;
+            hasCached = true;
+        }
+    } catch (e) {}
+    const snapshotLoaded = await loadMarketPulse(false, { snapshotOnly: true, silent: hasCached, suppressErrors: true });
+    await loadMarketPulse(false, { silent: hasCached || snapshotLoaded, suppressErrors: hasCached || snapshotLoaded });
+})();
+
+setInterval(() => { if (!document.hidden) loadMarketPulse(false, {silent: true, suppressErrors: true}); }, 90_000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMarketPulse(false, {silent: true, suppressErrors: true}); });
 </script>
 {% endblock %}
