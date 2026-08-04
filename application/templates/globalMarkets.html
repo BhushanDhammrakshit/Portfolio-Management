@@ -355,30 +355,54 @@
     $("gmContent").hidden = false;
   }
 
-  async function load(force){
+  async function load(force, options){
+    options = options || {};
+    const silent = !!options.silent;
+    const suppressErrors = !!options.suppressErrors;
+    const snapshotOnly = !!options.snapshotOnly;
     try {
-      const url = `/api/global-markets${force ? "?refresh=1" : ""}`;
+      const params = new URLSearchParams();
+      if (force) params.set('refresh', '1');
+      if (snapshotOnly) params.set('snapshot', '1');
+      const query = params.toString();
+      const url = `/api/global-markets${query ? '?' + query : ''}`;
       const resp = await fetch(url, {credentials: "same-origin"});
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
+      if (data && data.snapshot_missing) return false;
+      try { ppCache.set('globalmarkets:data', data); } catch(e) {}
       render(data);
+      return true;
     } catch (e){
-      console.error("global-markets load failed", e);
-      $("gmLoading").innerHTML =
-        '<p style="color:var(--text-muted)">Couldn\u2019t load global markets right now. Please try again.</p>';
+      if (!suppressErrors && $("gmContent").hidden) {
+        console.error("global-markets load failed", e);
+        $("gmLoading").innerHTML =
+          '<p style="color:var(--text-muted)">Couldn\u2019t load global markets right now. Please try again.</p>';
+      }
+      return false;
     }
   }
 
   function startTimer(){
     stopTimer();
-    timer = setInterval(() => load(false), 60000);
+    timer = setInterval(() => load(false, {silent: true, suppressErrors: true}), 60000);
   }
   function stopTimer(){
     if (timer){ clearInterval(timer); timer = null; }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    load(false);
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Stale-while-revalidate init
+    let hasCached = false;
+    try {
+      const entry = ppCache.getEntry('globalmarkets:data');
+      if (entry && entry.v && entry.v.regions) {
+        render(entry.v);
+        hasCached = true;
+      }
+    } catch(e) {}
+    const snapshotLoaded = await load(false, { snapshotOnly: true, silent: hasCached, suppressErrors: true });
+    await load(false, { silent: hasCached || snapshotLoaded, suppressErrors: hasCached || snapshotLoaded });
     const lt = $("gmLiveToggle");
     if (lt){
       lt.addEventListener("change", (e) => e.target.checked ? startTimer() : stopTimer());
