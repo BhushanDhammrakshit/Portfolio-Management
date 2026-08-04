@@ -423,12 +423,10 @@ function initTooltips() {
     });
 }
 // Init tooltips for static elements (table headers)
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initTooltips();
-    // Auto-render last analytics payload (any age) so navigating back to
-    // this page doesn't force a re-fetch. The user can hit "Refresh
-    // analytics" whenever they want fresh numbers; the timestamp tells
-    // them how stale the current view is.
+    let hasCached = false;
+    // Restore from browser cache instantly
     try {
         const entry = ppCache.getEntry('adv:analytics');
         if (entry && entry.v && entry.v.error !== 'no_stocks') {
@@ -437,8 +435,26 @@ document.addEventListener('DOMContentLoaded', () => {
             setUpdatedLabel(entry.t);
             const btn = document.getElementById('loadAnalytics');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+            hasCached = true;
         }
     } catch (e) { /* ignore */ }
+
+    // Fallback: try Azure snapshot if browser cache is empty
+    if (!hasCached) {
+        try {
+            const r = await fetch('/api/advanced-analytics?snapshot=1');
+            const data = await r.json().catch(() => ({}));
+            if (data && !data.snapshot_missing && !data.error) {
+                try { ppCache.set('adv:analytics', data); } catch (e) {}
+                render(data);
+                document.getElementById('analyticsContent').hidden = false;
+                setUpdatedLabel(Date.now());
+                const btn = document.getElementById('loadAnalytics');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+                hasCached = true;
+            }
+        } catch (e) { /* ignore */ }
+    }
 });
 
 function setUpdatedLabel(ts) {
