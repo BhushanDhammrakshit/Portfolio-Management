@@ -285,6 +285,41 @@ def logIn():
     return render_template("login.html")
 
 
+def _notify_admin_new_user(email_service, name, email, phone, gender,
+                           location, ref_code):
+    """Fire-and-forget email to admin when a new user signs up."""
+    dash = "\u2014"
+    subject = f"[FinanceCandle] New signup {dash} {name}"
+    html = (
+        '<div style="font-family:sans-serif;max-width:600px">'
+        '<h3 style="margin:0 0 14px;color:#1e293b">'
+        '\U0001f389 New User Registered</h3>'
+        '<table style="border-collapse:collapse;font-size:14px;line-height:1.6">'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Name</td>'
+        f'<td>{name}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Email</td>'
+        f'<td>{email}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Phone</td>'
+        f'<td>{phone}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Gender</td>'
+        f'<td>{gender or dash}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Location</td>'
+        f'<td>{location or dash}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Referral</td>'
+        f'<td>{ref_code or "organic"}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Time (UTC)</td>'
+        f'<td>{datetime.utcnow().strftime("%Y-%m-%d %H:%M")}</td></tr>'
+        '</table></div>'
+    )
+    email_service.send_email(
+        to="financecandleservice@gmail.com",
+        subject=subject,
+        html=html,
+        text=(f"New signup: {name} <{email}> | Phone: {phone} | "
+              f"Location: {location or '-'} | Ref: {ref_code or 'organic'}"),
+    )
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if "email" in session:
@@ -348,6 +383,14 @@ def signup():
                         )
                 except Exception as e:
                     print(f"[referral] link failed: {e}")
+
+            # Notify admin of new signup
+            try:
+                from application.services import email_service
+                _notify_admin_new_user(email_service, name, email, phone,
+                                      gender, location, ref_code)
+            except Exception:
+                pass
 
             # Stash pending state and trigger OTP. Do NOT log the user in yet.
             session["pending_verify_email"] = email
