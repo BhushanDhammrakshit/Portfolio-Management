@@ -61,6 +61,7 @@ from application.routes.volume_api import volume_api
 from application.routes.broker_api import broker_api
 from application.routes.billing import billing_bp
 from application.routes.rag_admin import rag_admin_bp
+from application.routes.admin_api import admin_bp
 from application.routes.fundamentals_api import fundamentals_api
 from application.routes.option_chain_api import option_chain_api
 from application.routes.market_pulse_api import market_pulse_api
@@ -85,6 +86,7 @@ app.register_blueprint(volume_api)
 app.register_blueprint(broker_api)
 app.register_blueprint(billing_bp)
 app.register_blueprint(rag_admin_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(fundamentals_api)
 app.register_blueprint(option_chain_api)
 app.register_blueprint(market_pulse_api)
