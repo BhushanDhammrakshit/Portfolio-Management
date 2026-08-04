@@ -177,6 +177,12 @@
         <a href="#" class="nav-item" onclick="document.getElementById('fcFeedbackModal').hidden=false;return false">
             <i class="fa-solid fa-envelope"></i><span>Send Feedback</span>
         </a>
+        {% if is_admin %}
+        <button type="button" class="nav-group-label" data-group="admin"><span>Admin</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
+        <a href="{{ url_for('admin_portal.admin_page') }}" class="nav-item {% if title == 'Admin Portal' %}active{% endif %}">
+            <i class="fa-solid fa-shield-halved"></i><span>Admin Portal</span>
+        </a>
+        {% endif %}
         <a href="#" class="nav-item nav-item-logout" id="logoutLink">
             <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
         </a>
@@ -238,6 +244,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('billing.billing_page') }}"><i class="fa-solid fa-crown me-2"></i>Plans &amp; Billing{% if current_plan and current_plan.id != 'free' %} <span class="badge bg-success ms-1" style="font-size:.6rem;vertical-align:middle">{{ current_plan.name }}</span>{% endif %}</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fa-solid fa-gear me-2"></i>Settings</a></li>
                     {% if is_admin %}
+                    <li><a class="dropdown-item" href="{{ url_for('admin_portal.admin_page') }}"><i class="fa-solid fa-shield-halved me-2 text-primary"></i>Admin Portal</a></li>
                     <li><a class="dropdown-item" href="#" id="adminRefreshTokens"><i class="fa-solid fa-rotate me-2 text-warning"></i>Refresh Tokens</a></li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
