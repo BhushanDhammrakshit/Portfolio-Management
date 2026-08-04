@@ -829,13 +829,25 @@ function showStaleBanner(data) {
     reasonEl.style.display = reason ? '' : 'none';
 }
 
-async function load(refresh) {
-    setBusy(document.getElementById('ocContent').hidden);
+async function load(refresh, options) {
+    options = options || {};
+    const snapshotOnly = !!options.snapshotOnly;
+    const silent = !!options.silent;
+    const suppressErrors = !!options.suppressErrors;
+    const content = document.getElementById('ocContent');
+    setBusy(content.hidden && !silent);
     const btn = document.getElementById('ocRefresh');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    const manageButton = refresh || (!silent && !snapshotOnly);
+    if (manageButton) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
+    }
     try {
-        const url = '/api/option-chain/nifty' + (refresh ? '?refresh=1' : '');
+        const params = new URLSearchParams();
+        if (refresh) params.set('refresh', '1');
+        if (snapshotOnly) params.set('snapshot', '1');
+        const query = params.toString();
+        const url = '/api/option-chain/nifty' + (query ? '?' + query : '');
         const r = await fetch(url);
         const data = await r.json().catch(() => ({}));
         if (window.PlanGate && window.PlanGate.handle(r, data)) {
@@ -850,29 +862,40 @@ async function load(refresh) {
                  </a>`;
             err.hidden = false;
             document.getElementById('ocLoading').hidden = true;
-            return;
+            return false;
         }
+        if (data && data.snapshot_missing) return false;
         if (data && data.error) {
             throw new Error((data.error + (data.detail ? ' — ' + data.detail : '')));
         }
         if (!r.ok) throw new Error('HTTP ' + r.status);
+        try { ppCache.set('optionchain:nifty', data); } catch (e) {}
         render(data);
         showStaleBanner(data);
-        document.getElementById('ocContent').hidden = false;
+        document.getElementById('ocError').hidden = true;
+        content.hidden = false;
         document.getElementById('ocLoading').hidden = true;
+        return true;
     } catch (e) {
-        const err = document.getElementById('ocError');
-        err.textContent = 'Failed to load option chain: ' + (e.message || e);
-        err.hidden = false;
+        if (!suppressErrors && content.hidden) {
+            const err = document.getElementById('ocError');
+            err.textContent = 'Failed to load option chain: ' + (e.message || e);
+            err.hidden = false;
+        }
         document.getElementById('ocLoading').hidden = true;
+        return false;
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
+        if (manageButton) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
+        }
     }
 }
 
 function render(d) {
-    document.getElementById('ocAsOf').textContent = 'As of ' + (d.as_of || '');
+    const asOf = d.as_of || d.snapshot_as_of || '';
+    document.getElementById('ocAsOf').textContent =
+        'As of ' + asOf + (d.snapshot ? ' · cached snapshot' : '');
     document.getElementById('ocSpot').textContent = Number(d.spot || 0).toLocaleString('en-IN');
     document.getElementById('ocExpiry').textContent = 'Expiry ' + (d.expiry || '—');
 
@@ -1427,7 +1450,31 @@ document.querySelectorAll('.oc-tab-btn').forEach(btn => {
 const _ocInitialTab = (() => { try { return sessionStorage.getItem('ocActiveTab') || 'overview'; } catch (_) { return 'overview'; } })();
 setActiveTab(_ocInitialTab);
 
-load(false);
+// Paint a prior browser value immediately, then prefer the durable Azure
+// snapshot before revalidating against the live provider.
+(async function initOptionChain() {
+    let hasCached = false;
+    try {
+        const entry = ppCache.getEntry('optionchain:nifty');
+        if (entry && entry.v && !entry.v.error && !entry.v.snapshot_missing) {
+            render(entry.v);
+            showStaleBanner(entry.v);
+            document.getElementById('ocContent').hidden = false;
+            document.getElementById('ocLoading').hidden = true;
+            hasCached = true;
+        }
+    } catch (e) {}
+
+    const snapshotLoaded = await load(false, {
+        snapshotOnly: true,
+        silent: hasCached,
+        suppressErrors: true,
+    });
+    await load(false, {
+        silent: hasCached || snapshotLoaded,
+        suppressErrors: hasCached || snapshotLoaded,
+    });
+})();
 
 // ── New panels: VIX widget, S/R levels, large-orders tracker ────────────
 function renderVix(vix) {
@@ -1695,10 +1742,10 @@ function renderBlockDeals(blk) {
 // scheduler keeps the cache + intraday series fresh when no tab is open,
 // so the chart still has a full-day picture when the user returns.
 let _ocTimer = setInterval(() => {
-    if (!document.hidden) load(false);
+    if (!document.hidden) load(false, {silent: true, suppressErrors: true});
 }, 30_000);
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) load(false);
+    if (!document.hidden) load(false, {silent: true, suppressErrors: true});
 });
 
 // ── Pre-Open Market Analysis ─────────────────────────────────────
