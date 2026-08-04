@@ -205,6 +205,19 @@ def _tag(payload: Any, *, snapshot: bool, as_of: Optional[str], source: str) -> 
     return payload
 
 
+def serve_snapshot(key: str) -> Any:
+    """Return the latest stored snapshot without invoking a live builder."""
+    snap = get(key)
+    if snap is None:
+        return None
+    return _tag(
+        snap["payload"],
+        snapshot=True,
+        as_of=snap.get("as_of"),
+        source="stored",
+    )
+
+
 # ── Public orchestrator ─────────────────────────────────────────────────
 def serve_or_refresh(
     key: str,
