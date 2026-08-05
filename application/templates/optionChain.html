@@ -1362,18 +1362,33 @@ function renderSrChart(rows, spot, sr) {
 function renderOiChart(series) {
     const ctx = document.getElementById('ocOiChart');
     if (!ctx || !window.Chart) return;
-    const labels = series.map(p => p.t);
-    const ce = series.map(p => (p.ce_oi || 0) / 1e7);   // → Crore
-    const pe = series.map(p => (p.pe_oi || 0) / 1e7);
+
+    // Filter to market hours only (09:15–15:30 IST) and drop zero/null values
+    const filtered = series.filter(p => {
+        if (!p.t) return false;
+        const t = p.t.replace(':', '');
+        return t >= '0915' && t <= '1530';
+    });
+
+    const labels = filtered.map(p => p.t);
+    const ce = filtered.map(p => {
+        const v = p.ce_oi;
+        return (v && v > 0) ? v / 1e7 : null;
+    });
+    const pe = filtered.map(p => {
+        const v = p.pe_oi;
+        return (v && v > 0) ? v / 1e7 : null;
+    });
+
     const data = {
         labels,
         datasets: [
             { label: 'Call OI (Cr)', data: ce, borderColor: '#dc2626',
               backgroundColor: 'rgba(220,38,38,.08)', tension: .25,
-              pointRadius: 0, borderWidth: 2, fill: true },
+              pointRadius: 0, borderWidth: 2, fill: true, spanGaps: false },
             { label: 'Put OI (Cr)',  data: pe, borderColor: '#16a34a',
               backgroundColor: 'rgba(22,163,74,.08)', tension: .25,
-              pointRadius: 0, borderWidth: 2, fill: true },
+              pointRadius: 0, borderWidth: 2, fill: true, spanGaps: false },
         ],
     };
     const opts = {
@@ -1383,12 +1398,13 @@ function renderOiChart(series) {
             x: { ticks: { maxTicksLimit: 10, color: '#94a3b8', autoSkip: true },
                  grid: { display: false } },
             y: { ticks: { color: '#94a3b8', callback: v => v.toFixed(1) + ' Cr' },
-                 grid: { color: 'rgba(148,163,184,.15)' } },
+                 grid: { color: 'rgba(148,163,184,.15)' },
+                 beginAtZero: false },
         },
         plugins: {
             legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
             tooltip: { callbacks: {
-                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`
+                label: c => c.parsed.y != null ? `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr` : ''
             }},
         },
     };
