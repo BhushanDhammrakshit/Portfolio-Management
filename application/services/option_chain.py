@@ -311,21 +311,32 @@ def get_nifty_option_chain(force_refresh: bool = False) -> Dict[str, Any]:
         ce_oi_v = (payload.get("totals") or {}).get("ce_oi")
         pe_oi_v = (payload.get("totals") or {}).get("pe_oi")
         if ce_oi_v is not None and pe_oi_v is not None and 915 <= hour_min <= 1530:
-            point = {
-                "t": minute_bucket,
-                "ce_oi": ce_oi_v,
-                "pe_oi": pe_oi_v,
-                "pcr": payload.get("pcr"),
-                "spot": payload.get("spot"),
-            }
-            if series and series[-1].get("t") == minute_bucket:
-                series[-1] = point  # replace within same minute
-            else:
-                series.append(point)
-            if len(series) > _SERIES_MAX_POINTS:
-                series = series[-_SERIES_MAX_POINTS:]
-            shared_cache.jset(series_key, series, ttl=_SERIES_TTL)
-            _save_series_to_store(day_key, series)
+            # Reject glitched zero/near-zero reads and sudden >50% drops
+            if ce_oi_v > 0 and pe_oi_v > 0:
+                store = True
+                if series:
+                    last = series[-1]
+                    lc = last.get("ce_oi") or 0
+                    lp = last.get("pe_oi") or 0
+                    if lc > 0 and lp > 0:
+                        if ce_oi_v < lc * 0.5 or pe_oi_v < lp * 0.5:
+                            store = False
+                if store:
+                    point = {
+                        "t": minute_bucket,
+                        "ce_oi": ce_oi_v,
+                        "pe_oi": pe_oi_v,
+                        "pcr": payload.get("pcr"),
+                        "spot": payload.get("spot"),
+                    }
+                    if series and series[-1].get("t") == minute_bucket:
+                        series[-1] = point
+                    else:
+                        series.append(point)
+                    if len(series) > _SERIES_MAX_POINTS:
+                        series = series[-_SERIES_MAX_POINTS:]
+                    shared_cache.jset(series_key, series, ttl=_SERIES_TTL)
+                    _save_series_to_store(day_key, series)
         payload["series"] = series
     except Exception:
         payload["series"] = []
