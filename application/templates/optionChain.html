@@ -1363,8 +1363,7 @@ function renderOiChart(series) {
     const ctx = document.getElementById('ocOiChart');
     if (!ctx || !window.Chart) return;
 
-    // Keep only market-hours points that pass outlier detection.
-    // A point is an outlier if OI is zero or drops >50% from the last valid reading.
+    // Forward-fill: bad/missing points inherit the last known good value
     const clean = [];
     let lastCe = null, lastPe = null;
     for (const p of series) {
@@ -1372,11 +1371,15 @@ function renderOiChart(series) {
         const t = p.t.replace(':', '');
         if (t < '0915' || t > '1530') continue;
         const ce = p.ce_oi, pe = p.pe_oi;
-        if (!ce || ce <= 0 || !pe || pe <= 0) continue;
-        if (lastCe !== null && (ce < lastCe * 0.5 || pe < lastPe * 0.5)) continue;
-        clean.push(p);
-        lastCe = ce;
-        lastPe = pe;
+        const valid = ce > 0 && pe > 0 &&
+            (lastCe === null || (ce >= lastCe * 0.5 && pe >= lastPe * 0.5));
+        if (valid) {
+            lastCe = ce; lastPe = pe;
+            clean.push({ t: p.t, ce_oi: ce, pe_oi: pe });
+        } else if (lastCe !== null) {
+            // Forward-fill with last good reading
+            clean.push({ t: p.t, ce_oi: lastCe, pe_oi: lastPe });
+        }
     }
 
     const labels = clean.map(p => p.t);
