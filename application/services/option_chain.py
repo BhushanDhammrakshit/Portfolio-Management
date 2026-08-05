@@ -306,9 +306,11 @@ def get_nifty_option_chain(force_refresh: bool = False) -> Dict[str, Any]:
             if series:
                 shared_cache.jset(series_key, series, ttl=_SERIES_TTL)
         minute_bucket = now_ist.strftime("%H:%M")
+        # Only record during market hours (09:15–15:30 IST)
+        hour_min = now_ist.hour * 100 + now_ist.minute
         ce_oi_v = (payload.get("totals") or {}).get("ce_oi")
         pe_oi_v = (payload.get("totals") or {}).get("pe_oi")
-        if ce_oi_v is not None and pe_oi_v is not None:
+        if ce_oi_v is not None and pe_oi_v is not None and 915 <= hour_min <= 1530:
             point = {
                 "t": minute_bucket,
                 "ce_oi": ce_oi_v,
