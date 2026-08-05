@@ -1363,32 +1363,35 @@ function renderOiChart(series) {
     const ctx = document.getElementById('ocOiChart');
     if (!ctx || !window.Chart) return;
 
-    // Filter to market hours only (09:15–15:30 IST) and drop zero/null values
-    const filtered = series.filter(p => {
-        if (!p.t) return false;
+    // Keep only market-hours points that pass outlier detection.
+    // A point is an outlier if OI is zero or drops >50% from the last valid reading.
+    const clean = [];
+    let lastCe = null, lastPe = null;
+    for (const p of series) {
+        if (!p.t) continue;
         const t = p.t.replace(':', '');
-        return t >= '0915' && t <= '1530';
-    });
+        if (t < '0915' || t > '1530') continue;
+        const ce = p.ce_oi, pe = p.pe_oi;
+        if (!ce || ce <= 0 || !pe || pe <= 0) continue;
+        if (lastCe !== null && (ce < lastCe * 0.5 || pe < lastPe * 0.5)) continue;
+        clean.push(p);
+        lastCe = ce;
+        lastPe = pe;
+    }
 
-    const labels = filtered.map(p => p.t);
-    const ce = filtered.map(p => {
-        const v = p.ce_oi;
-        return (v && v > 0) ? v / 1e7 : null;
-    });
-    const pe = filtered.map(p => {
-        const v = p.pe_oi;
-        return (v && v > 0) ? v / 1e7 : null;
-    });
+    const labels = clean.map(p => p.t);
+    const ceData = clean.map(p => p.ce_oi / 1e7);
+    const peData = clean.map(p => p.pe_oi / 1e7);
 
     const data = {
         labels,
         datasets: [
-            { label: 'Call OI (Cr)', data: ce, borderColor: '#dc2626',
-              backgroundColor: 'rgba(220,38,38,.08)', tension: .25,
-              pointRadius: 0, borderWidth: 2, fill: true, spanGaps: false },
-            { label: 'Put OI (Cr)',  data: pe, borderColor: '#16a34a',
-              backgroundColor: 'rgba(22,163,74,.08)', tension: .25,
-              pointRadius: 0, borderWidth: 2, fill: true, spanGaps: false },
+            { label: 'Call OI (Cr)', data: ceData, borderColor: '#dc2626',
+              backgroundColor: 'rgba(220,38,38,.08)', tension: .3,
+              pointRadius: 0, borderWidth: 2, fill: true },
+            { label: 'Put OI (Cr)',  data: peData, borderColor: '#16a34a',
+              backgroundColor: 'rgba(22,163,74,.08)', tension: .3,
+              pointRadius: 0, borderWidth: 2, fill: true },
         ],
     };
     const opts = {
@@ -1404,7 +1407,7 @@ function renderOiChart(series) {
         plugins: {
             legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
             tooltip: { callbacks: {
-                label: c => c.parsed.y != null ? `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr` : ''
+                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`
             }},
         },
     };
