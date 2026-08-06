@@ -262,18 +262,18 @@ def _get_baseline(symbol):
 
 def _signal_for(ratio, change_pct):
     if ratio >= 3 and change_pct >= 1.5:
-        return "STRONG BUY", "Heavy buying volume with strong price gain"
+        return "STRONG BULLISH", "Heavy volume with strong price gain"
     if ratio >= 2 and change_pct >= 0.5:
-        return "BUY", "Above-average volume with positive price action"
+        return "BULLISH", "Above-average volume with positive price action"
     if ratio >= 3 and change_pct <= -1.5:
-        return "STRONG SELL", "Heavy selling volume with sharp price drop"
+        return "STRONG BEARISH", "Heavy volume with sharp price drop"
     if ratio >= 2 and change_pct <= -0.5:
-        return "SELL", "Above-average volume with negative price action"
+        return "BEARISH", "Above-average volume with negative price action"
     if ratio >= 1.5 and change_pct >= 0:
-        return "WATCH BUY", "Mild volume uptick with green close"
+        return "WATCH BULLISH", "Mild volume uptick with green close"
     if ratio >= 1.5 and change_pct < 0:
-        return "WATCH SELL", "Mild volume uptick with red close"
-    return "HOLD", "Volume below average — no conviction"
+        return "WATCH BEARISH", "Mild volume uptick with red close"
+    return "NEUTRAL", "Volume below average — no conviction"
 
 
 def _load(force=False):
