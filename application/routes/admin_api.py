@@ -245,3 +245,85 @@ def admin_stats():
         "active_7d": active_7d,
         "active_30d": active_30d,
     })
+
+
+# ── Trial reminder emails ───────────────────────────────────────────────
+
+@admin_bp.route("/api/admin/trial-reminders/run", methods=["POST"])
+@_require_admin
+def run_trial_reminders():
+    from application.services import trial_reminder
+    stats = trial_reminder.send_trial_ending_reminders()
+    return jsonify({"ok": True, "stats": stats})
+
+
+# ── Plan-expired notification emails ─────────────────────────────────────
+
+@admin_bp.route("/api/admin/plan-expiry/run", methods=["POST"])
+@_require_admin
+def run_plan_expiry():
+    from application.services import plan_expiry_notifier
+    stats = plan_expiry_notifier.send_plan_expired_emails()
+    return jsonify({"ok": True, "stats": stats})
+
+
+# ── Free-plan upgrade nudge emails ───────────────────────────────────────
+
+@admin_bp.route("/api/admin/free-plan-nudge/run", methods=["POST"])
+@_require_admin
+def run_free_plan_nudge():
+    from application.services import free_plan_nudge
+    stats = free_plan_nudge.send_free_plan_nudges()
+    return jsonify({"ok": True, "stats": stats})
+
+
+# ── Send expiry mail to selected users ───────────────────────────────────
+
+@admin_bp.route("/api/admin/send-expiry-mail", methods=["POST"])
+@_require_admin
+def send_expiry_mail_to_selected():
+    """Send the plan-expired persuasion email to a manually selected list of users."""
+    from application.services import email_service
+    from application.services.plan_expiry_notifier import _expired_html
+
+    data = request.get_json(silent=True) or {}
+    emails = data.get("emails") or []
+    if not emails or not isinstance(emails, list):
+        return jsonify({"error": "Provide a non-empty 'emails' array"}), 400
+
+    stats = {"sent": 0, "errors": 0, "skipped": 0, "details": []}
+
+    for target_email in emails:
+        target_email = (target_email or "").strip().lower()
+        if not target_email:
+            stats["skipped"] += 1
+            continue
+        try:
+            results = list(user_table_client.query_entities(
+                query_filter=f"PartitionKey eq 'user' and Email eq '{target_email}'"))
+            if not results:
+                stats["skipped"] += 1
+                stats["details"].append({"email": target_email, "status": "not found"})
+                continue
+            user = results[0]
+            name = user.get("UserName", "")
+            plan_id = (user.get("Plan") or "free").lower()
+            plan_name = plans.get_plan(plan_id).get("name", plan_id.title())
+            expires_on = user.get("PlanExpiresOn") or "N/A"
+
+            ok, info = email_service.send_email(
+                to=target_email,
+                subject="You were making smarter trades \u2014 don\u2019t stop now",
+                html=_expired_html(name, plan_name, expires_on),
+            )
+            if ok:
+                stats["sent"] += 1
+                stats["details"].append({"email": target_email, "status": "sent"})
+            else:
+                stats["errors"] += 1
+                stats["details"].append({"email": target_email, "status": f"failed: {info}"})
+        except Exception as e:
+            stats["errors"] += 1
+            stats["details"].append({"email": target_email, "status": str(e)})
+
+    return jsonify({"ok": True, "stats": stats})
