@@ -304,7 +304,7 @@
         ? (u.active_7d ? `<span style="color:#16a34a;font-weight:600">${fmtDate(u.last_login)}</span>` : fmtDate(u.last_login))
         : '<span style="color:var(--text-muted)">Never</span>';
       return `<tr data-uid="${u.id}">
-        <td><input type="checkbox" class="adm-user-check" data-email="${u.email}" /></td>
+        <td><input type="checkbox" class="adm-user-check" data-uid="${u.id}" /></td>
         <td><strong>${u.name || '\u2014'}</strong></td>
         <td>${u.email}</td>
         <td>${u.phone || '\u2014'}</td>
@@ -528,9 +528,9 @@
 
   document.getElementById('admSendExpiryMail').addEventListener('click', async function() {
     const checked = document.querySelectorAll('.adm-user-check:checked');
-    const emails = Array.from(checked).map(cb => cb.dataset.email).filter(Boolean);
-    if (!emails.length) return;
-    if (!confirm(`Send expiry/upgrade email to ${emails.length} user(s)?`)) return;
+    const userIds = Array.from(checked).map(cb => cb.dataset.uid).filter(Boolean);
+    if (!userIds.length) return;
+    if (!confirm(`Send expiry/upgrade email to ${userIds.length} user(s)?`)) return;
 
     this.disabled = true;
     this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
@@ -538,7 +538,7 @@
       const d = await fetchJson('/api/admin/send-expiry-mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails })
+        body: JSON.stringify({ user_ids: userIds })
       });
       const s = d.stats || {};
       alert(`Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}`);
