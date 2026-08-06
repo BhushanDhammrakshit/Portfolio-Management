@@ -115,6 +115,7 @@
       <button class="adm-filter" data-plan="unverified">Unverified</button>
       <button class="adm-filter" data-plan="active7">Active (7d)</button>
       <button class="adm-filter" data-plan="inactive">Inactive</button>
+      <button class="btn btn-sm btn-outline-primary" id="admSendExpiryMail" style="display:none"><i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)</button>
       <span class="adm-count" id="admUserCount"></span>
     </div>
     <div class="adm-table-wrap">
@@ -122,6 +123,7 @@
         <table class="adm-table" id="admUserTable">
           <thead>
             <tr>
+              <th><input type="checkbox" id="admSelectAll" title="Select all"></th>
               <th data-col="name">Name <i class="fa-solid fa-sort"></i></th>
               <th data-col="email">Email <i class="fa-solid fa-sort"></i></th>
               <th data-col="phone">Phone</th>
@@ -152,6 +154,16 @@
   let _sortCol = 'created', _sortAsc = false;
   let _planFilter = 'all', _searchTerm = '';
 
+  // Safe JSON fetch — returns parsed JSON or throws with a readable message.
+  async function fetchJson(url, opts) {
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      throw new Error(text.startsWith('{') ? JSON.parse(text).error || `HTTP ${r.status}` : `HTTP ${r.status}`);
+    }
+    return r.json();
+  }
+
   // Tabs
   document.getElementById('admTabs').addEventListener('click', e => {
     const btn = e.target.closest('.adm-tab');
@@ -175,16 +187,18 @@
 
   // Fetch
   async function loadAll() {
-    const [statsR, usersR] = await Promise.all([
-      fetch('/api/admin/stats').then(r => r.json()),
-      fetch('/api/admin/users').then(r => r.json()),
-    ]);
-    _stats = statsR;
-    _users = usersR.users || [];
-    renderKpis();
-    renderOverviewCards();
-    renderUsers();
-    renderSystem();
+    try {
+      const [statsR, usersR] = await Promise.all([
+        fetchJson('/api/admin/stats'),
+        fetchJson('/api/admin/users'),
+      ]);
+      _stats = statsR;
+      _users = usersR.users || [];
+      renderKpis();
+      renderOverviewCards();
+      renderUsers();
+      renderSystem();
+    } catch (e) { console.error('Admin load failed:', e); }
   }
 
   function renderKpis() {
@@ -290,6 +304,7 @@
         ? (u.active_7d ? `<span style="color:#16a34a;font-weight:600">${fmtDate(u.last_login)}</span>` : fmtDate(u.last_login))
         : '<span style="color:var(--text-muted)">Never</span>';
       return `<tr data-uid="${u.id}">
+        <td><input type="checkbox" class="adm-user-check" data-email="${u.email}" /></td>
         <td><strong>${u.name || '\u2014'}</strong></td>
         <td>${u.email}</td>
         <td>${u.phone || '\u2014'}</td>
@@ -331,27 +346,30 @@
   window.setPlan = async function(uid, plan) {
     document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
     const months = plan === 'free' ? 0 : 1;
-    const r = await fetch(`/api/admin/users/${uid}/plan`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, months: months || 1 })
-    });
-    const d = await r.json();
-    if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    try {
+      const d = await fetchJson(`/api/admin/users/${uid}/plan`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, months: months || 1 })
+      });
+      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    } catch (e) { alert('Failed: ' + e.message); }
   };
 
   window.verifyUser = async function(uid) {
     document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    const r = await fetch(`/api/admin/users/${uid}/verify-email`, { method: 'POST' });
-    const d = await r.json();
-    if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    try {
+      const d = await fetchJson(`/api/admin/users/${uid}/verify-email`, { method: 'POST' });
+      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    } catch (e) { alert('Failed: ' + e.message); }
   };
 
   window.deleteUser = async function(uid, email) {
     document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
     if (!confirm('Delete user ' + email + '? This cannot be undone.')) return;
-    const r = await fetch(`/api/admin/users/${uid}/delete`, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    try {
+      const d = await fetchJson(`/api/admin/users/${uid}/delete`, { method: 'DELETE' });
+      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
+    } catch (e) { alert('Failed: ' + e.message); }
   };
 
   // Sort
@@ -405,6 +423,24 @@
         <div class="hc-row"><span class="hc-label">Provider</span><span class="hc-val">Brevo</span></div>
         <div class="hc-row"><span class="hc-label">Daily Quota</span><span class="hc-val">300 / day (free)</span></div>
       </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-hourglass-half"></i>Trial Reminders</h4>
+        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Daily @ 9:00 IST</span></div>
+        <div class="hc-row"><span class="hc-label">Thresholds</span><span class="hc-val">3d, 1d left</span></div>
+        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="trialReminderRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-triangle-exclamation"></i>Plan Expiry Notices</h4>
+        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Daily @ 9:30 IST</span></div>
+        <div class="hc-row"><span class="hc-label">Trigger</span><span class="hc-val">Pro/Elite lapsed</span></div>
+        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="planExpiryRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-bullhorn"></i>Free Plan Nudges</h4>
+        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Weekly, Mon @ 10:00 IST</span></div>
+        <div class="hc-row"><span class="hc-label">Cooldown</span><span class="hc-val">14 days / user</span></div>
+        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="freeNudgeRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
+      </div>
     `;
 
     // Wire system buttons
@@ -412,15 +448,14 @@
     if (refBtn) refBtn.addEventListener('click', async () => {
       refBtn.disabled = true; refBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Refreshing…';
       try {
-        const r = await fetch('/api/admin/refresh-tokens', { method: 'POST' });
-        const d = await r.json();
+        const d = await fetchJson('/api/admin/refresh-tokens', { method: 'POST' });
         alert(d.fyers ? `Fyers: ${d.fyers.refreshed || 0}/${d.fyers.total || 0} refreshed` : JSON.stringify(d));
       } catch (e) { alert('Failed: ' + e.message); }
       refBtn.disabled = false; refBtn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
     });
 
     // RAG status
-    fetch('/admin/rag/status').then(r => r.json()).then(d => {
+    fetchJson('/admin/rag/status').then(d => {
       document.getElementById('ragStatus').textContent = 'Online';
       document.getElementById('ragDocs').textContent = (d.total_docs || 0) + ' docs';
     }).catch(() => {
@@ -431,13 +466,89 @@
     if (ragBtn) ragBtn.addEventListener('click', async () => {
       ragBtn.disabled = true; ragBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Running…';
       try {
-        const r = await fetch('/admin/rag/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-        const d = await r.json();
+        const d = await fetchJson('/admin/rag/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         alert('Ingest complete: ' + JSON.stringify(d.stats || d));
       } catch (e) { alert('Failed: ' + e.message); }
       ragBtn.disabled = false; ragBtn.innerHTML = '<i class="fa-solid fa-download me-1"></i>Ingest';
     });
+
+    const trialBtn = document.getElementById('trialReminderRun');
+    if (trialBtn) trialBtn.addEventListener('click', async () => {
+      trialBtn.disabled = true; trialBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
+      try {
+        const d = await fetchJson('/api/admin/trial-reminders/run', { method: 'POST' });
+        const s = d.stats || {};
+        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
+      } catch (e) { alert('Failed: ' + e.message); }
+      trialBtn.disabled = false; trialBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
+    });
+
+    const expiryBtn = document.getElementById('planExpiryRun');
+    if (expiryBtn) expiryBtn.addEventListener('click', async () => {
+      expiryBtn.disabled = true; expiryBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
+      try {
+        const d = await fetchJson('/api/admin/plan-expiry/run', { method: 'POST' });
+        const s = d.stats || {};
+        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
+      } catch (e) { alert('Failed: ' + e.message); }
+      expiryBtn.disabled = false; expiryBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
+    });
+
+    const nudgeBtn = document.getElementById('freeNudgeRun');
+    if (nudgeBtn) nudgeBtn.addEventListener('click', async () => {
+      nudgeBtn.disabled = true; nudgeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
+      try {
+        const d = await fetchJson('/api/admin/free-plan-nudge/run', { method: 'POST' });
+        const s = d.stats || {};
+        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
+      } catch (e) { alert('Failed: ' + e.message); }
+      nudgeBtn.disabled = false; nudgeBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
+    });
   }
+  // ── Select users & send expiry mail ─────────────────────────────────
+  function updateSelectedCount() {
+    const checked = document.querySelectorAll('.adm-user-check:checked');
+    const btn = document.getElementById('admSendExpiryMail');
+    const cnt = document.getElementById('admSelectedCount');
+    cnt.textContent = checked.length;
+    btn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+  }
+
+  document.getElementById('admUserTable').addEventListener('change', e => {
+    if (e.target.classList.contains('adm-user-check') || e.target.id === 'admSelectAll') {
+      updateSelectedCount();
+    }
+  });
+
+  document.getElementById('admSelectAll').addEventListener('change', function() {
+    const boxes = document.querySelectorAll('.adm-user-check');
+    boxes.forEach(cb => { cb.checked = this.checked; });
+    updateSelectedCount();
+  });
+
+  document.getElementById('admSendExpiryMail').addEventListener('click', async function() {
+    const checked = document.querySelectorAll('.adm-user-check:checked');
+    const emails = Array.from(checked).map(cb => cb.dataset.email).filter(Boolean);
+    if (!emails.length) return;
+    if (!confirm(`Send expiry/upgrade email to ${emails.length} user(s)?`)) return;
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
+    try {
+      const d = await fetchJson('/api/admin/send-expiry-mail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails })
+      });
+      const s = d.stats || {};
+      alert(`Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}`);
+    } catch (e) { alert('Failed: ' + e.message); }
+    this.disabled = false;
+    this.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)';
+    document.querySelectorAll('.adm-user-check:checked').forEach(cb => { cb.checked = false; });
+    document.getElementById('admSelectAll').checked = false;
+    updateSelectedCount();
+  });
 
   // Refresh button
   document.getElementById('admRefresh').addEventListener('click', loadAll);
