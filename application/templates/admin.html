@@ -541,7 +541,13 @@
         body: JSON.stringify({ user_ids: userIds })
       });
       const s = d.stats || {};
-      alert(`Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}`);
+      const failures = (s.details || [])
+        .filter(item => item.status && item.status !== 'sent')
+        .map(item => `${item.email || item.id}: ${item.status}`);
+      alert(
+        `Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}` +
+        (failures.length ? `\n\nDetails:\n${failures.join('\n')}` : '')
+      );
     } catch (e) { alert('Failed: ' + e.message); }
     this.disabled = false;
     this.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)';

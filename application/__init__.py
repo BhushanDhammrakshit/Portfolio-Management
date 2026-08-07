@@ -228,6 +228,41 @@ def _start_rag_scheduler():
 _start_rag_scheduler()
 
 
+# ── Daily plan-expiry email scheduler ──────────────────────────────────
+def _start_plan_expiry_scheduler():
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
+        return
+    try:
+        from application.config import (PLAN_EXPIRY_NOTIFIER_ENABLED,
+                                        PLAN_EXPIRY_NOTIFIER_HOUR_IST)
+        if not PLAN_EXPIRY_NOTIFIER_ENABLED:
+            return
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from application.services import cache as _cache
+        from application.services import plan_expiry_notifier
+
+        def _run_if_leader():
+            if _cache.try_become_leader(ttl=3600):
+                plan_expiry_notifier.send_plan_expired_emails()
+
+        sched = BackgroundScheduler(timezone="Asia/Kolkata", daemon=True)
+        sched.add_job(
+            _run_if_leader,
+            trigger=CronTrigger(hour=PLAN_EXPIRY_NOTIFIER_HOUR_IST, minute=0),
+            id="plan_expiry_notification",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        sched.start()
+        print(f"[plan-expiry] notifications scheduled @ {PLAN_EXPIRY_NOTIFIER_HOUR_IST:02d}:00 IST")
+    except Exception as e:
+        print(f"[plan-expiry] scheduler start failed: {e}")
+
+
+_start_plan_expiry_scheduler()
+
+
 # ── Background precompute (market + per-user payloads → Redis) ────────
 def _start_precompute_scheduler():
     if os.environ.get("WERKZEUG_RUN_MAIN") == "false":

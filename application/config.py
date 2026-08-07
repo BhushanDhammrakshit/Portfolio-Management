@@ -32,10 +32,13 @@ EMAIL_FROM = os.getenv("EMAIL_FROM", "")
 EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Finance Candle")
 EMAIL_REPLY_TO = os.getenv("EMAIL_REPLY_TO", "")
 APP_NAME = os.getenv("APP_NAME", "Finance Candle")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://financecandle.com").rstrip("/")
 EMAIL_VERIFICATION_TABLE = os.getenv("EMAIL_VERIFICATION_TABLE", "EmailVerifications")
 OTP_TTL_MINUTES = int(os.getenv("OTP_TTL_MINUTES", "10"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "5"))
 OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))
+PLAN_EXPIRY_NOTIFIER_ENABLED = (os.getenv("PLAN_EXPIRY_NOTIFIER_ENABLED", "1") == "1")
+PLAN_EXPIRY_NOTIFIER_HOUR_IST = int(os.getenv("PLAN_EXPIRY_NOTIFIER_HOUR_IST", "9"))
 
 # ── Market data provider ──────────────────────────────────────────────
 # Primary provider for prices / history / quotes.
