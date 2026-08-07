@@ -277,6 +277,113 @@ def run_free_plan_nudge():
     return jsonify({"ok": True, "stats": stats})
 
 
+# ── Email templates — list, preview, manual send ─────────────────────
+
+@admin_bp.route("/api/admin/email-templates")
+@_require_admin
+def list_email_templates():
+    from application.services.email_templates import TEMPLATES
+    return jsonify({"templates": list(TEMPLATES.values())})
+
+
+@admin_bp.route("/api/admin/email-templates/<key>/preview")
+@_require_admin
+def preview_email_template(key):
+    from application.services.email_templates import TEMPLATES, preview_html
+    if key not in TEMPLATES:
+        return jsonify({"error": "Unknown template"}), 404
+    html = preview_html(key)
+    if html is None:
+        return jsonify({"error": "Preview not available"}), 404
+    return jsonify({"key": key, "subject": TEMPLATES[key]["subject"], "html": html})
+
+
+@admin_bp.route("/api/admin/email-templates/<key>/send", methods=["POST"])
+@_require_admin
+def send_email_template(key):
+    """Send a specific email template to a manually selected list of users."""
+    from application.services import email_service
+    from application.services import email_templates as et
+
+    if key not in et.TEMPLATES:
+        return jsonify({"error": "Unknown template"}), 404
+
+    data = request.get_json(silent=True) or {}
+    user_ids = data.get("user_ids") or []
+    if not user_ids or not isinstance(user_ids, list):
+        return jsonify({"error": "Provide a non-empty 'user_ids' array"}), 400
+
+    tpl = et.TEMPLATES[key]
+    stats = {"sent": 0, "errors": 0, "skipped": 0, "details": []}
+
+    for uid in user_ids:
+        uid = (uid or "").strip()
+        if not uid:
+            stats["skipped"] += 1
+            continue
+        try:
+            results = list(user_table_client.query_entities(
+                query_filter=f"PartitionKey eq 'user' and RowKey eq '{uid}'"))
+            if not results:
+                stats["skipped"] += 1
+                stats["details"].append({"id": uid, "status": "not found"})
+                continue
+            user = results[0]
+            email = user.get("Email", "")
+            if not email:
+                stats["skipped"] += 1
+                stats["details"].append({"id": uid, "status": "no email"})
+                continue
+
+            name = user.get("UserName", "")
+            plan_id = (user.get("Plan") or "free").lower()
+            plan_name = plans.get_plan(plan_id).get("name", plan_id.title())
+            persona = user.get("Persona", "")
+
+            html = _render_template_for_user(key, name, plan_name, persona, user)
+            if not html:
+                stats["skipped"] += 1
+                stats["details"].append({"id": uid, "email": email, "status": "no renderer"})
+                continue
+
+            ok, info = email_service.send_email(
+                to=email, subject=tpl["subject"], html=html,
+            )
+            if ok:
+                stats["sent"] += 1
+                stats["details"].append({"id": uid, "email": email, "status": "sent"})
+            else:
+                stats["errors"] += 1
+                stats["details"].append({"id": uid, "email": email, "status": f"failed: {info}"})
+        except Exception as e:
+            stats["errors"] += 1
+            stats["details"].append({"id": uid, "status": str(e)})
+
+    return jsonify({"ok": True, "stats": stats})
+
+
+def _render_template_for_user(key: str, name: str, plan_name: str,
+                              persona: str, user: dict) -> str | None:
+    from application.services import email_templates as et
+    renderers = {
+        "welcome": lambda: et.welcome_html(name, persona),
+        "feature_discovery": lambda: et.feature_discovery_html(name, plan_name),
+        "winback": lambda: et.winback_html(name, plan_name),
+        "re_engagement": lambda: et.re_engagement_html(name),
+        "renewal_success": lambda: et.renewal_success_html(
+            name, plan_name, user.get("PlanExpiresOn", "")),
+        "weekly_swing": lambda: et.weekly_swing_html(name),
+        "weekly_intraday": lambda: et.weekly_intraday_html(name),
+        "weekly_investor": lambda: et.weekly_investor_html(name),
+        "usage_summary": lambda: et.usage_summary_html(name, plan_name),
+        "usage_limit_warning": lambda: et.usage_limit_warning_html(name, plan_name),
+        "broker_sync_failure": lambda: et.broker_sync_failure_html(name),
+        "referral_reward": lambda: et.referral_reward_html(name),
+    }
+    fn = renderers.get(key)
+    return fn() if fn else None
+
+
 # ── Send expiry mail to selected users ───────────────────────────────────
 
 @admin_bp.route("/api/admin/send-expiry-mail", methods=["POST"])
