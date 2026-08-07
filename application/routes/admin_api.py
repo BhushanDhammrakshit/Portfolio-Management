@@ -1,560 +1,334 @@
-{% extends "layout.html" %}
-{% block content %}
-<style>
-.adm{max-width:1400px;margin:0 auto}
-.adm-header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
-.adm-header h1{font-size:1.5rem;font-weight:800;margin:0;display:flex;align-items:center;gap:10px}
-.adm-header h1 i{color:#6366f1}
-.adm-header p{font-size:.85rem;color:var(--text-muted);margin:4px 0 0}
-.adm-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:5px;margin-bottom:18px;overflow-x:auto}
-.adm-tab{padding:9px 18px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
-.adm-tab:hover{background:var(--surface-2);color:var(--text)}
-.adm-tab.active{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.25)}
-.adm-panel{display:none}.adm-panel.active{display:block}
+"""Admin portal — users, subscriptions, usage, system health."""
+from __future__ import annotations
 
-/* KPI cards */
-.adm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
-.adm-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
-.adm-kpi .k-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted)}
-.adm-kpi .k-val{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
-.adm-kpi .k-sub{font-size:.72rem;color:var(--text-muted)}
+import os
+from datetime import date, datetime, timedelta
+from functools import wraps
 
-/* Table */
-.adm-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
-.adm-table-scroll{max-height:calc(100vh - 320px);overflow-y:auto}
-.adm-table{width:100%;border-collapse:collapse;font-size:.82rem}
-.adm-table th{position:sticky;top:0;background:var(--surface-2);padding:10px 12px;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);white-space:nowrap;text-align:left;cursor:pointer;user-select:none}
-.adm-table th:hover{color:var(--text)}
-.adm-table th i{font-size:.6rem;margin-left:3px;opacity:.4}
-.adm-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
-.adm-table tr:hover td{background:var(--surface-2)}
-.adm-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+from flask import (Blueprint, jsonify, render_template, request, session)
 
-/* Badges */
-.plan-pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
-.plan-free{background:rgba(100,116,139,.12);color:var(--text-muted)}
-.plan-pro{background:rgba(99,102,241,.12);color:#6366f1}
-.plan-elite{background:linear-gradient(135deg,#fde68a,#fbbf24);color:#78350f}
-.badge-yes{color:#16a34a}.badge-no{color:#dc2626}
-.trial-badge{font-size:.65rem;background:rgba(245,158,11,.12);color:#b45309;padding:1px 7px;border-radius:4px;font-weight:600}
+from application.services.azure_table import user_table_client
+from application.services import plans
 
-/* Toolbar */
-.adm-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.adm-search{flex:1;min-width:200px;max-width:400px;padding:8px 14px;border:1px solid var(--border);border-radius:10px;font-size:.88rem;background:var(--surface);color:var(--text)}
-.adm-search:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.adm-filter{padding:7px 14px;border:1px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:600;background:var(--surface);color:var(--text-muted);cursor:pointer}
-.adm-filter.active{background:#6366f1;color:#fff;border-color:#6366f1}
-.adm-count{font-size:.82rem;color:var(--text-muted);margin-left:auto}
+admin_bp = Blueprint("admin_portal", __name__)
 
-/* Actions dropdown */
-.adm-actions{position:relative;display:inline-block}
-.adm-act-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.72rem;cursor:pointer;color:var(--text-muted)}
-.adm-act-btn:hover{background:var(--surface-2);color:var(--text)}
-.adm-act-menu{display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:160px;z-index:50;padding:4px}
-.adm-act-menu.show{display:block}
-.adm-act-item{display:block;width:100%;padding:8px 12px;border:none;background:none;text-align:left;font-size:.82rem;cursor:pointer;border-radius:6px;color:var(--text)}
-.adm-act-item:hover{background:var(--surface-2)}
-.adm-act-item.danger{color:#dc2626}
-.adm-act-item.danger:hover{background:rgba(220,38,38,.08)}
-
-/* Spinner */
-.adm-loading{text-align:center;padding:60px 20px;color:var(--text-muted)}
-.adm-loading .app-spinner{margin-bottom:12px}
-.adm-empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
-.adm-empty i{font-size:2rem;margin-bottom:10px;opacity:.4;display:block}
-
-/* System health cards */
-.adm-health{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.adm-hcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
-.adm-hcard h4{margin:0 0 10px;font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
-.adm-hcard h4 i{color:#6366f1;font-size:.85rem}
-.adm-hcard .hc-row{display:flex;justify-content:space-between;font-size:.82rem;padding:4px 0;border-bottom:1px solid var(--border)}
-.adm-hcard .hc-row:last-child{border:none}
-.adm-hcard .hc-label{color:var(--text-muted);font-weight:600}
-.adm-hcard .hc-val{font-weight:700;font-variant-numeric:tabular-nums}
-
-/* Responsive */
-@media(max-width:768px){
-  .adm-kpis{grid-template-columns:repeat(2,1fr)}
-  .adm-table-scroll{max-height:60vh}
+_ADMIN_EMAILS = {
+    e.strip().lower()
+    for e in (os.getenv("ADMIN_EMAILS") or "").split(",")
+    if e.strip()
 }
-</style>
 
-<div class="adm">
-  <div class="adm-header">
-    <div>
-      <h1><i class="fa-solid fa-shield-halved"></i>Admin Portal</h1>
-      <p>Manage users, monitor subscriptions, and track system health.</p>
-    </div>
-    <button class="btn btn-primary btn-sm" id="admRefresh" title="Refresh all data">
-      <i class="fa-solid fa-arrows-rotate me-1"></i>Refresh
-    </button>
-  </div>
 
-  <div class="adm-tabs" id="admTabs">
-    <button class="adm-tab active" data-tab="overview"><i class="fa-solid fa-chart-pie"></i>Overview</button>
-    <button class="adm-tab" data-tab="users"><i class="fa-solid fa-users"></i>Users</button>
-    <button class="adm-tab" data-tab="system"><i class="fa-solid fa-server"></i>System</button>
-  </div>
+def _is_admin(email: str) -> bool:
+    if not email:
+        return False
+    if not _ADMIN_EMAILS:
+        return True
+    return email.lower() in _ADMIN_EMAILS
 
-  <!-- Overview -->
-  <div class="adm-panel active" id="panel-overview">
-    <div class="adm-kpis" id="admKpis"></div>
-    <div class="adm-health" id="admOverviewCards"></div>
-  </div>
 
-  <!-- Users -->
-  <div class="adm-panel" id="panel-users">
-    <div class="adm-toolbar">
-      <input class="adm-search" id="admUserSearch" placeholder="Search by name, email, or phone…" />
-      <button class="adm-filter active" data-plan="all">All</button>
-      <button class="adm-filter" data-plan="free">Free</button>
-      <button class="adm-filter" data-plan="pro">Pro</button>
-      <button class="adm-filter" data-plan="elite">Elite</button>
-      <button class="adm-filter" data-plan="trial">On Trial</button>
-      <button class="adm-filter" data-plan="unverified">Unverified</button>
-      <button class="adm-filter" data-plan="active7">Active (7d)</button>
-      <button class="adm-filter" data-plan="inactive">Inactive</button>
-      <button class="btn btn-sm btn-outline-primary" id="admSendExpiryMail" style="display:none"><i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)</button>
-      <span class="adm-count" id="admUserCount"></span>
-    </div>
-    <div class="adm-table-wrap">
-      <div class="adm-table-scroll">
-        <table class="adm-table" id="admUserTable">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="admSelectAll" title="Select all"></th>
-              <th data-col="name">Name <i class="fa-solid fa-sort"></i></th>
-              <th data-col="email">Email <i class="fa-solid fa-sort"></i></th>
-              <th data-col="phone">Phone</th>
-              <th data-col="plan">Plan <i class="fa-solid fa-sort"></i></th>
-              <th data-col="persona">Persona</th>
-              <th data-col="verified">Verified</th>
-              <th data-col="created">Joined <i class="fa-solid fa-sort"></i></th>
-              <th data-col="last_login">Last Login <i class="fa-solid fa-sort"></i></th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="admUserBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+def _require_admin(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if "email" not in session:
+            return jsonify({"error": "auth required"}), 401
+        if not _is_admin(session.get("email", "")):
+            return jsonify({"error": "admin required"}), 403
+        return fn(*args, **kwargs)
+    wrapper.__name__ = fn.__name__
+    return wrapper
 
-  <!-- System -->
-  <div class="adm-panel" id="panel-system">
-    <div class="adm-health" id="admSystemCards"></div>
-  </div>
-</div>
 
-<script>
-(function(){
-  let _users = [];
-  let _stats = {};
-  let _sortCol = 'created', _sortAsc = false;
-  let _planFilter = 'all', _searchTerm = '';
+def _days_since(iso_str: str):
+    """Days since an ISO timestamp, or None if unparseable/blank."""
+    if not iso_str:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        return (datetime.utcnow() - dt).days
+    except (TypeError, ValueError):
+        return None
 
-  // Safe JSON fetch — returns parsed JSON or throws with a readable message.
-  async function fetchJson(url, opts) {
-    const r = await fetch(url, opts);
-    if (!r.ok) {
-      const text = await r.text().catch(() => '');
-      throw new Error(text.startsWith('{') ? JSON.parse(text).error || `HTTP ${r.status}` : `HTTP ${r.status}`);
-    }
-    return r.json();
-  }
 
-  // Tabs
-  document.getElementById('admTabs').addEventListener('click', e => {
-    const btn = e.target.closest('.adm-tab');
-    if (!btn) return;
-    document.querySelectorAll('.adm-tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-  });
+# ── Page ────────────────────────────────────────────────────────────────
 
-  // Format helpers
-  const fmt = v => v == null ? '\u2014' : v;
-  const fmtDate = d => {
-    if (!d) return '\u2014';
-    try {
-      const dt = new Date(d.replace('Z', '+00:00'));
-      if (isNaN(dt)) return d.slice(0, 10);
-      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch { return d.slice(0, 10); }
-  };
+@admin_bp.route("/admin")
+@_require_admin
+def admin_page():
+    return render_template(
+        "admin.html",
+        name=session.get("name"), email=session.get("email"),
+        title="Admin Portal",
+    )
 
-  // Fetch
-  async function loadAll() {
-    try {
-      const [statsR, usersR] = await Promise.all([
-        fetchJson('/api/admin/stats'),
-        fetchJson('/api/admin/users'),
-      ]);
-      _stats = statsR;
-      _users = usersR.users || [];
-      renderKpis();
-      renderOverviewCards();
-      renderUsers();
-      renderSystem();
-    } catch (e) { console.error('Admin load failed:', e); }
-  }
 
-  function renderKpis() {
-    const s = _stats;
-    const kpis = [
-      { label: 'Total Users', val: s.total_users || 0, color: '#6366f1' },
-      { label: 'Verified', val: s.verified || 0, color: '#16a34a', sub: `${s.unverified || 0} unverified` },
-      { label: 'Free', val: (s.by_plan || {}).free || 0, color: '#64748b' },
-      { label: 'Pro', val: (s.by_plan || {}).pro || 0, color: '#6366f1' },
-      { label: 'Elite', val: (s.by_plan || {}).elite || 0, color: '#f59e0b' },
-      { label: 'On Trial', val: s.on_trial || 0, color: '#0ea5e9', sub: s.trial_expiring_soon ? `${s.trial_expiring_soon} expiring soon` : '' },
-      { label: 'Today\'s Signups', val: s.signups_today || 0, color: '#16a34a' },
-      { label: 'This Week', val: s.signups_this_week || 0, color: '#0ea5e9' },
-      { label: 'Active Today', val: s.active_today || 0, color: '#16a34a' },
-      { label: 'Active (7d)', val: s.active_7d || 0, color: '#6366f1', sub: `${s.active_30d || 0} in 30d` },
-    ];
-    document.getElementById('admKpis').innerHTML = kpis.map(k =>
-      `<div class="adm-kpi"><span class="k-label">${k.label}</span><span class="k-val" style="color:${k.color}">${k.val}</span>${k.sub ? `<span class="k-sub">${k.sub}</span>` : ''}</div>`
-    ).join('');
-  }
+# ── Users API ───────────────────────────────────────────────────────────
 
-  function renderOverviewCards() {
-    const s = _stats;
-    const total = s.total_users || 1;
-    const plans = s.by_plan || {};
-    const paidPct = ((((plans.pro || 0) + (plans.elite || 0)) / total) * 100).toFixed(1);
-    const verPct = (((s.verified || 0) / total) * 100).toFixed(1);
+@admin_bp.route("/api/admin/users")
+@_require_admin
+def list_users():
+    try:
+        users_raw = list(user_table_client.query_entities(
+            query_filter="PartitionKey eq 'user'"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    // Recent signups list (last 10)
-    const recent = _users.slice().sort((a, b) => (b.created || '').localeCompare(a.created || '')).slice(0, 10);
-    const recentHtml = recent.map(u =>
-      `<div class="hc-row"><span class="hc-label">${u.name || u.email}</span><span class="hc-val">${fmtDate(u.created)}</span></div>`
-    ).join('');
+    now = date.today()
+    users = []
+    for u in users_raw:
+        plan_id = (u.get("Plan") or "free").lower()
+        expires = u.get("PlanExpiresOn") or ""
+        active = False
+        if plan_id != "free" and expires:
+            try:
+                active = datetime.fromisoformat(expires).date() >= now
+            except (TypeError, ValueError):
+                pass
+        if plan_id != "free" and not active:
+            plan_id = "free"
 
-    document.getElementById('admOverviewCards').innerHTML = `
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-chart-bar"></i>Plan Distribution</h4>
-        <div class="hc-row"><span class="hc-label">Free</span><span class="hc-val">${plans.free || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Pro</span><span class="hc-val" style="color:#6366f1">${plans.pro || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Elite</span><span class="hc-val" style="color:#f59e0b">${plans.elite || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Paid %</span><span class="hc-val">${paidPct}%</span></div>
-        <div class="hc-row"><span class="hc-label">Verified %</span><span class="hc-val">${verPct}%</span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-clock-rotate-left"></i>Recent Signups</h4>
-        ${recentHtml || '<div style="color:var(--text-muted);font-size:.85rem">No signups yet</div>'}
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-flask-vial"></i>Trial Health</h4>
-        <div class="hc-row"><span class="hc-label">Active Trials</span><span class="hc-val" style="color:#0ea5e9">${s.on_trial || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Expiring in 2 days</span><span class="hc-val" style="color:#dc2626">${s.trial_expiring_soon || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Trial-used users</span><span class="hc-val">${_users.filter(u => u.trial_used).length}</span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-user-clock"></i>Engagement</h4>
-        <div class="hc-row"><span class="hc-label">Active Today</span><span class="hc-val" style="color:#16a34a">${s.active_today || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Active last 7 days</span><span class="hc-val" style="color:#6366f1">${s.active_7d || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Active last 30 days</span><span class="hc-val">${s.active_30d || 0}</span></div>
-        <div class="hc-row"><span class="hc-label">Never logged in</span><span class="hc-val">${_users.filter(u => !u.last_login).length}</span></div>
-      </div>
-    `;
-  }
+        last_login = u.get("LastLoginOn") or ""
+        days_since_login = _days_since(last_login)
 
-  // Users table
-  function renderUsers() {
-    let list = _users.slice();
+        users.append({
+            "id": u.get("RowKey", ""),
+            "name": u.get("UserName", ""),
+            "email": u.get("Email", ""),
+            "phone": u.get("ContactNo", ""),
+            "gender": u.get("Gender", ""),
+            "location": u.get("Location", ""),
+            "plan": plan_id,
+            "plan_expires": expires,
+            "email_verified": bool(u.get("EmailVerified")),
+            "terms_accepted": bool(u.get("TermsAccepted")),
+            "trial_used": bool(u.get("TrialUsed")),
+            "on_trial": plans.is_on_trial(u),
+            "trial_days": plans.trial_days_remaining(u),
+            "persona": u.get("Persona", ""),
+            "referral_code": u.get("ReferralCode", ""),
+            "created": u.get("TermsAcceptedOn") or u.get("Timestamp", ""),
+            "last_login": last_login,
+            "active_7d": days_since_login is not None and days_since_login <= 7,
+            "active_30d": days_since_login is not None and days_since_login <= 30,
+        })
+    return jsonify({"users": users})
 
-    // Filter
-    if (_planFilter === 'trial') list = list.filter(u => u.on_trial);
-    else if (_planFilter === 'unverified') list = list.filter(u => !u.email_verified);
-    else if (_planFilter === 'active7') list = list.filter(u => u.active_7d);
-    else if (_planFilter === 'inactive') list = list.filter(u => !u.active_30d);
-    else if (_planFilter !== 'all') list = list.filter(u => u.plan === _planFilter);
 
-    if (_searchTerm) {
-      const q = _searchTerm.toLowerCase();
-      list = list.filter(u =>
-        (u.name || '').toLowerCase().includes(q) ||
-        (u.email || '').toLowerCase().includes(q) ||
-        (u.phone || '').includes(q)
-      );
-    }
+@admin_bp.route("/api/admin/users/<user_id>/plan", methods=["POST"])
+@_require_admin
+def change_user_plan(user_id):
+    data = request.get_json(silent=True) or {}
+    new_plan = (data.get("plan") or "").lower()
+    months = int(data.get("months") or 1)
+    if new_plan not in plans.PLANS:
+        return jsonify({"error": "Invalid plan"}), 400
 
-    // Sort
-    list.sort((a, b) => {
-      let va = a[_sortCol] || '', vb = b[_sortCol] || '';
-      if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
-      if (va < vb) return _sortAsc ? -1 : 1;
-      if (va > vb) return _sortAsc ? 1 : -1;
-      return 0;
-    });
+    try:
+        results = list(user_table_client.query_entities(
+            query_filter=f"RowKey eq '{user_id}'"))
+        if not results:
+            return jsonify({"error": "User not found"}), 404
+        user = results[0]
+        plans.set_user_plan(user, new_plan, months)
+        return jsonify({"ok": True, "plan": new_plan})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    document.getElementById('admUserCount').textContent = list.length + ' of ' + _users.length + ' users';
 
-    const body = document.getElementById('admUserBody');
-    body.innerHTML = list.map(u => {
-      const planCls = 'plan-' + u.plan;
-      const trialTag = u.on_trial ? ` <span class="trial-badge">${u.trial_days}d trial</span>` : '';
-      const verIcon = u.email_verified
-        ? '<i class="fa-solid fa-circle-check badge-yes"></i>'
-        : '<i class="fa-solid fa-circle-xmark badge-no"></i>';
-      const lastLogin = u.last_login
-        ? (u.active_7d ? `<span style="color:#16a34a;font-weight:600">${fmtDate(u.last_login)}</span>` : fmtDate(u.last_login))
-        : '<span style="color:var(--text-muted)">Never</span>';
-      return `<tr data-uid="${u.id}">
-        <td><input type="checkbox" class="adm-user-check" data-uid="${u.id}" /></td>
-        <td><strong>${u.name || '\u2014'}</strong></td>
-        <td>${u.email}</td>
-        <td>${u.phone || '\u2014'}</td>
-        <td><span class="plan-pill ${planCls}">${u.plan}</span>${trialTag}</td>
-        <td>${u.persona || '\u2014'}</td>
-        <td>${verIcon}</td>
-        <td>${fmtDate(u.created)}</td>
-        <td>${lastLogin}</td>
-        <td>
-          <div class="adm-actions">
-            <button class="adm-act-btn" onclick="toggleMenu(this)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-            <div class="adm-act-menu">
-              <button class="adm-act-item" onclick="setPlan('${u.id}','free')"><i class="fa-solid fa-tag me-2"></i>Set Free</button>
-              <button class="adm-act-item" onclick="setPlan('${u.id}','pro')"><i class="fa-solid fa-bolt me-2"></i>Set Pro</button>
-              <button class="adm-act-item" onclick="setPlan('${u.id}','elite')"><i class="fa-solid fa-gem me-2"></i>Set Elite</button>
-              ${!u.email_verified ? `<button class="adm-act-item" onclick="verifyUser('${u.id}')"><i class="fa-solid fa-envelope-circle-check me-2"></i>Verify Email</button>` : ''}
-              <button class="adm-act-item danger" onclick="deleteUser('${u.id}','${(u.email || '').replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash me-2"></i>Delete</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
-  }
+@admin_bp.route("/api/admin/users/<user_id>/verify-email", methods=["POST"])
+@_require_admin
+def admin_verify_email(user_id):
+    from azure.data.tables import UpdateMode
+    try:
+        results = list(user_table_client.query_entities(
+            query_filter=f"RowKey eq '{user_id}'"))
+        if not results:
+            return jsonify({"error": "User not found"}), 404
+        user = results[0]
+        user["EmailVerified"] = True
+        user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-  // Menu toggle
-  window.toggleMenu = function(btn) {
-    const menu = btn.nextElementSibling;
-    const wasOpen = menu.classList.contains('show');
-    document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    if (!wasOpen) menu.classList.add('show');
-  };
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.adm-actions')) {
-      document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    }
-  });
 
-  // Actions
-  window.setPlan = async function(uid, plan) {
-    document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    const months = plan === 'free' ? 0 : 1;
-    try {
-      const d = await fetchJson(`/api/admin/users/${uid}/plan`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, months: months || 1 })
-      });
-      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
-    } catch (e) { alert('Failed: ' + e.message); }
-  };
+@admin_bp.route("/api/admin/users/<user_id>/delete", methods=["DELETE"])
+@_require_admin
+def admin_delete_user(user_id):
+    try:
+        results = list(user_table_client.query_entities(
+            query_filter=f"RowKey eq '{user_id}'"))
+        if not results:
+            return jsonify({"error": "User not found"}), 404
+        user = results[0]
+        user_table_client.delete_entity(
+            partition_key=user["PartitionKey"], row_key=user["RowKey"])
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-  window.verifyUser = async function(uid) {
-    document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    try {
-      const d = await fetchJson(`/api/admin/users/${uid}/verify-email`, { method: 'POST' });
-      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
-    } catch (e) { alert('Failed: ' + e.message); }
-  };
 
-  window.deleteUser = async function(uid, email) {
-    document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    if (!confirm('Delete user ' + email + '? This cannot be undone.')) return;
-    try {
-      const d = await fetchJson(`/api/admin/users/${uid}/delete`, { method: 'DELETE' });
-      if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
-    } catch (e) { alert('Failed: ' + e.message); }
-  };
+# ── Stats summary ───────────────────────────────────────────────────────
 
-  // Sort
-  document.getElementById('admUserTable').querySelector('thead').addEventListener('click', e => {
-    const th = e.target.closest('th[data-col]');
-    if (!th) return;
-    const col = th.dataset.col;
-    if (_sortCol === col) _sortAsc = !_sortAsc;
-    else { _sortCol = col; _sortAsc = col === 'name'; }
-    renderUsers();
-  });
+@admin_bp.route("/api/admin/stats")
+@_require_admin
+def admin_stats():
+    try:
+        users_raw = list(user_table_client.query_entities(
+            query_filter="PartitionKey eq 'user'"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-  // Search
-  document.getElementById('admUserSearch').addEventListener('input', e => {
-    _searchTerm = e.target.value;
-    renderUsers();
-  });
+    now = date.today()
+    total = len(users_raw)
+    verified = 0
+    by_plan = {"free": 0, "pro": 0, "elite": 0}
+    on_trial = 0
+    trial_expiring = 0
+    today_signups = 0
+    week_signups = 0
+    active_today = 0
+    active_7d = 0
+    active_30d = 0
 
-  // Plan filter buttons
-  document.querySelectorAll('.adm-filter[data-plan]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.adm-filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _planFilter = btn.dataset.plan;
-      renderUsers();
-    });
-  });
+    for u in users_raw:
+        if u.get("EmailVerified"):
+            verified += 1
 
-  // System panel
-  function renderSystem() {
-    const providerName = '{{ market_data_provider or "yfinance" }}';
-    document.getElementById('admSystemCards').innerHTML = `
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-signal"></i>Market Data</h4>
-        <div class="hc-row"><span class="hc-label">Active Provider</span><span class="hc-val">${providerName}</span></div>
-        <div class="hc-row"><span class="hc-label">Token Refresh</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="sysRefreshTokens"><i class="fa-solid fa-rotate me-1"></i>Refresh</button></span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-brain"></i>RAG Pipeline</h4>
-        <div class="hc-row"><span class="hc-label">Status</span><span class="hc-val" id="ragStatus">Checking…</span></div>
-        <div class="hc-row"><span class="hc-label">Documents</span><span class="hc-val" id="ragDocs">\u2014</span></div>
-        <div class="hc-row"><span class="hc-label">Actions</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="ragIngest"><i class="fa-solid fa-download me-1"></i>Ingest</button></span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-database"></i>Snapshot Store</h4>
-        <div class="hc-row"><span class="hc-label">Azure Table</span><span class="hc-val">TabSnapshots</span></div>
-        <div class="hc-row"><span class="hc-label">Redis Cache</span><span class="hc-val">Active</span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-envelope"></i>Email Service</h4>
-        <div class="hc-row"><span class="hc-label">Provider</span><span class="hc-val">Brevo</span></div>
-        <div class="hc-row"><span class="hc-label">Daily Quota</span><span class="hc-val">300 / day (free)</span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-hourglass-half"></i>Trial Reminders</h4>
-        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Daily @ 9:00 IST</span></div>
-        <div class="hc-row"><span class="hc-label">Thresholds</span><span class="hc-val">3d, 1d left</span></div>
-        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="trialReminderRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-triangle-exclamation"></i>Plan Expiry Notices</h4>
-        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Daily @ 9:30 IST</span></div>
-        <div class="hc-row"><span class="hc-label">Trigger</span><span class="hc-val">Pro/Elite lapsed</span></div>
-        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="planExpiryRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
-      </div>
-      <div class="adm-hcard">
-        <h4><i class="fa-solid fa-bullhorn"></i>Free Plan Nudges</h4>
-        <div class="hc-row"><span class="hc-label">Schedule</span><span class="hc-val">Weekly, Mon @ 10:00 IST</span></div>
-        <div class="hc-row"><span class="hc-label">Cooldown</span><span class="hc-val">14 days / user</span></div>
-        <div class="hc-row"><span class="hc-label">Run now</span><span class="hc-val"><button class="btn btn-sm btn-outline-primary" id="freeNudgeRun"><i class="fa-solid fa-paper-plane me-1"></i>Send Now</button></span></div>
-      </div>
-    `;
+        days_since_login = _days_since(u.get("LastLoginOn") or "")
+        if days_since_login is not None:
+            if days_since_login <= 0:
+                active_today += 1
+            if days_since_login <= 7:
+                active_7d += 1
+            if days_since_login <= 30:
+                active_30d += 1
 
-    // Wire system buttons
-    const refBtn = document.getElementById('sysRefreshTokens');
-    if (refBtn) refBtn.addEventListener('click', async () => {
-      refBtn.disabled = true; refBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Refreshing…';
-      try {
-        const d = await fetchJson('/api/admin/refresh-tokens', { method: 'POST' });
-        alert(d.fyers ? `Fyers: ${d.fyers.refreshed || 0}/${d.fyers.total || 0} refreshed` : JSON.stringify(d));
-      } catch (e) { alert('Failed: ' + e.message); }
-      refBtn.disabled = false; refBtn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
-    });
+        plan_id = (u.get("Plan") or "free").lower()
+        expires = u.get("PlanExpiresOn") or ""
+        active = False
+        if plan_id != "free" and expires:
+            try:
+                exp_date = datetime.fromisoformat(expires).date()
+                active = exp_date >= now
+                if active and plans.is_on_trial(u):
+                    on_trial += 1
+                    if (exp_date - now).days <= 2:
+                        trial_expiring += 1
+            except (TypeError, ValueError):
+                pass
+        if plan_id != "free" and not active:
+            plan_id = "free"
+        by_plan[plan_id] = by_plan.get(plan_id, 0) + 1
 
-    // RAG status
-    fetchJson('/admin/rag/status').then(d => {
-      document.getElementById('ragStatus').textContent = 'Online';
-      document.getElementById('ragDocs').textContent = (d.total_docs || 0) + ' docs';
-    }).catch(() => {
-      document.getElementById('ragStatus').innerHTML = '<span style="color:#dc2626">Offline</span>';
-    });
+        created = u.get("TermsAcceptedOn") or ""
+        if created:
+            try:
+                cd = datetime.fromisoformat(created.replace("Z", "+00:00")).date()
+                if cd == now:
+                    today_signups += 1
+                if (now - cd).days <= 7:
+                    week_signups += 1
+            except (TypeError, ValueError):
+                pass
 
-    const ragBtn = document.getElementById('ragIngest');
-    if (ragBtn) ragBtn.addEventListener('click', async () => {
-      ragBtn.disabled = true; ragBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Running…';
-      try {
-        const d = await fetchJson('/admin/rag/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-        alert('Ingest complete: ' + JSON.stringify(d.stats || d));
-      } catch (e) { alert('Failed: ' + e.message); }
-      ragBtn.disabled = false; ragBtn.innerHTML = '<i class="fa-solid fa-download me-1"></i>Ingest';
-    });
+    return jsonify({
+        "total_users": total,
+        "verified": verified,
+        "unverified": total - verified,
+        "by_plan": by_plan,
+        "on_trial": on_trial,
+        "trial_expiring_soon": trial_expiring,
+        "signups_today": today_signups,
+        "signups_this_week": week_signups,
+        "active_today": active_today,
+        "active_7d": active_7d,
+        "active_30d": active_30d,
+    })
 
-    const trialBtn = document.getElementById('trialReminderRun');
-    if (trialBtn) trialBtn.addEventListener('click', async () => {
-      trialBtn.disabled = true; trialBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
-      try {
-        const d = await fetchJson('/api/admin/trial-reminders/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
-      trialBtn.disabled = false; trialBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
-    });
 
-    const expiryBtn = document.getElementById('planExpiryRun');
-    if (expiryBtn) expiryBtn.addEventListener('click', async () => {
-      expiryBtn.disabled = true; expiryBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
-      try {
-        const d = await fetchJson('/api/admin/plan-expiry/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
-      expiryBtn.disabled = false; expiryBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
-    });
+# ── Trial reminder emails ───────────────────────────────────────────────
 
-    const nudgeBtn = document.getElementById('freeNudgeRun');
-    if (nudgeBtn) nudgeBtn.addEventListener('click', async () => {
-      nudgeBtn.disabled = true; nudgeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
-      try {
-        const d = await fetchJson('/api/admin/free-plan-nudge/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
-      nudgeBtn.disabled = false; nudgeBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
-    });
-  }
-  // ── Select users & send expiry mail ─────────────────────────────────
-  function updateSelectedCount() {
-    const checked = document.querySelectorAll('.adm-user-check:checked');
-    const btn = document.getElementById('admSendExpiryMail');
-    const cnt = document.getElementById('admSelectedCount');
-    cnt.textContent = checked.length;
-    btn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-  }
+@admin_bp.route("/api/admin/trial-reminders/run", methods=["POST"])
+@_require_admin
+def run_trial_reminders():
+    from application.services import trial_reminder
+    stats = trial_reminder.send_trial_ending_reminders()
+    return jsonify({"ok": True, "stats": stats})
 
-  document.getElementById('admUserTable').addEventListener('change', e => {
-    if (e.target.classList.contains('adm-user-check') || e.target.id === 'admSelectAll') {
-      updateSelectedCount();
-    }
-  });
 
-  document.getElementById('admSelectAll').addEventListener('change', function() {
-    const boxes = document.querySelectorAll('.adm-user-check');
-    boxes.forEach(cb => { cb.checked = this.checked; });
-    updateSelectedCount();
-  });
+# ── Plan-expired notification emails ─────────────────────────────────────
 
-  document.getElementById('admSendExpiryMail').addEventListener('click', async function() {
-    const checked = document.querySelectorAll('.adm-user-check:checked');
-    const userIds = Array.from(checked).map(cb => cb.dataset.uid).filter(Boolean);
-    if (!userIds.length) return;
-    if (!confirm(`Send expiry/upgrade email to ${userIds.length} user(s)?`)) return;
+@admin_bp.route("/api/admin/plan-expiry/run", methods=["POST"])
+@_require_admin
+def run_plan_expiry():
+    from application.services import plan_expiry_notifier
+    stats = plan_expiry_notifier.send_plan_expired_emails()
+    return jsonify({"ok": True, "stats": stats})
 
-    this.disabled = true;
-    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
-    try {
-      const d = await fetchJson('/api/admin/send-expiry-mail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_ids: userIds })
-      });
-      const s = d.stats || {};
-      alert(`Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}`);
-    } catch (e) { alert('Failed: ' + e.message); }
-    this.disabled = false;
-    this.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)';
-    document.querySelectorAll('.adm-user-check:checked').forEach(cb => { cb.checked = false; });
-    document.getElementById('admSelectAll').checked = false;
-    updateSelectedCount();
-  });
 
-  // Refresh button
-  document.getElementById('admRefresh').addEventListener('click', loadAll);
+# ── Free-plan upgrade nudge emails ───────────────────────────────────────
 
-  // Initial load
-  loadAll();
-})();
-</script>
-{% endblock %}
+@admin_bp.route("/api/admin/free-plan-nudge/run", methods=["POST"])
+@_require_admin
+def run_free_plan_nudge():
+    from application.services import free_plan_nudge
+    stats = free_plan_nudge.send_free_plan_nudges()
+    return jsonify({"ok": True, "stats": stats})
+
+
+# ── Send expiry mail to selected users ───────────────────────────────────
+
+@admin_bp.route("/api/admin/send-expiry-mail", methods=["POST"])
+@_require_admin
+def send_expiry_mail_to_selected():
+    """Send the plan-expired persuasion email to a manually selected list of users."""
+    from application.services import email_service
+    from application.services.plan_expiry_notifier import _expired_html
+
+    data = request.get_json(silent=True) or {}
+    user_ids = data.get("user_ids") or []
+    if not user_ids or not isinstance(user_ids, list):
+        return jsonify({"error": "Provide a non-empty 'user_ids' array"}), 400
+
+    stats = {"sent": 0, "errors": 0, "skipped": 0, "details": []}
+
+    for uid in user_ids:
+        uid = (uid or "").strip()
+        if not uid:
+            stats["skipped"] += 1
+            continue
+        try:
+            results = list(user_table_client.query_entities(
+                query_filter=f"PartitionKey eq 'user' and RowKey eq '{uid}'"))
+            if not results:
+                stats["skipped"] += 1
+                stats["details"].append({"id": uid, "status": "not found"})
+                continue
+            user = results[0]
+            email = user.get("Email", "")
+            if not email:
+                stats["skipped"] += 1
+                stats["details"].append({"id": uid, "status": "no email"})
+                continue
+            name = user.get("UserName", "")
+            plan_id = (user.get("Plan") or "free").lower()
+            plan_name = plans.get_plan(plan_id).get("name", plan_id.title())
+            expires_on = user.get("PlanExpiresOn") or "N/A"
+
+            ok, info = email_service.send_email(
+                to=email,
+                subject="You were making smarter trades \u2014 don\u2019t stop now",
+                html=_expired_html(name, plan_name, expires_on),
+            )
+            if ok:
+                stats["sent"] += 1
+                stats["details"].append({"id": uid, "email": email, "status": "sent"})
+            else:
+                stats["errors"] += 1
+                stats["details"].append({"id": uid, "email": email, "status": f"failed: {info}"})
+        except Exception as e:
+            stats["errors"] += 1
+            stats["details"].append({"id": uid, "status": str(e)})
+
+    return jsonify({"ok": True, "stats": stats})
