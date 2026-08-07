@@ -73,10 +73,41 @@
 .adm-hcard .hc-label{color:var(--text-muted);font-weight:600}
 .adm-hcard .hc-val{font-weight:700;font-variant-numeric:tabular-nums}
 
+/* Result modal */
+.adm-modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);align-items:center;justify-content:center}
+.adm-modal-overlay.show{display:flex}
+.adm-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:90%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;animation:admSlideIn .2s ease}
+@keyframes admSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.adm-modal-header{display:flex;align-items:center;gap:10px;padding:18px 22px;border-bottom:1px solid var(--border)}
+.adm-modal-header i{font-size:1.1rem}
+.adm-modal-header .modal-title{font-size:1rem;font-weight:700;flex:1}
+.adm-modal-close{background:none;border:none;font-size:1.1rem;color:var(--text-muted);cursor:pointer;padding:4px 8px;border-radius:6px}
+.adm-modal-close:hover{background:var(--surface-2);color:var(--text)}
+.adm-modal-body{padding:18px 22px;overflow-y:auto;flex:1}
+.adm-modal-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.adm-modal-kpi{text-align:center;padding:12px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2)}
+.adm-modal-kpi .mk-val{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;display:block}
+.adm-modal-kpi .mk-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted)}
+.adm-modal-details{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.adm-modal-details summary{padding:10px 14px;font-size:.82rem;font-weight:700;cursor:pointer;color:var(--text-muted);background:var(--surface-2)}
+.adm-modal-details summary:hover{color:var(--text)}
+.adm-modal-detail-list{max-height:200px;overflow-y:auto;padding:6px 14px}
+.adm-modal-detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.adm-modal-detail-row:last-child{border:none}
+.adm-modal-detail-row .dr-email{color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.adm-modal-detail-row .dr-status{font-weight:600;font-size:.72rem;padding:2px 8px;border-radius:6px}
+.dr-sent{background:rgba(22,163,74,.1);color:#16a34a}
+.dr-failed{background:rgba(220,38,38,.1);color:#dc2626}
+.dr-skipped{background:rgba(100,116,139,.1);color:var(--text-muted)}
+.adm-modal-footer{padding:14px 22px;border-top:1px solid var(--border);text-align:right}
+.adm-modal-footer .btn{padding:8px 20px;border-radius:8px;font-weight:600;font-size:.85rem}
+
 /* Responsive */
 @media(max-width:768px){
   .adm-kpis{grid-template-columns:repeat(2,1fr)}
   .adm-table-scroll{max-height:60vh}
+  .adm-modal{width:95%;max-width:none}
+  .adm-modal-kpis{grid-template-columns:repeat(3,1fr)}
 }
 </style>
 
@@ -144,6 +175,39 @@
   <!-- System -->
   <div class="adm-panel" id="panel-system">
     <div class="adm-health" id="admSystemCards"></div>
+  </div>
+</div>
+
+<!-- Results modal -->
+<div class="adm-modal-overlay" id="admResultModal">
+  <div class="adm-modal">
+    <div class="adm-modal-header">
+      <i class="fa-solid fa-paper-plane" style="color:#6366f1" id="admModalIcon"></i>
+      <span class="modal-title" id="admModalTitle">Email Results</span>
+      <button class="adm-modal-close" id="admModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="adm-modal-body" id="admModalBody"></div>
+    <div class="adm-modal-footer">
+      <button class="btn btn-primary btn-sm" id="admModalDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="adm-modal-overlay" id="admConfirmModal">
+  <div class="adm-modal" style="max-width:400px">
+    <div class="adm-modal-header">
+      <i class="fa-solid fa-circle-question" style="color:#6366f1" id="admConfirmIcon"></i>
+      <span class="modal-title" id="admConfirmTitle">Confirm</span>
+      <button class="adm-modal-close" id="admConfirmCloseX"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="adm-modal-body" style="text-align:center;padding:24px 22px">
+      <p style="font-size:.92rem;margin:0;color:var(--text)" id="admConfirmMsg"></p>
+    </div>
+    <div class="adm-modal-footer" style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-sm" id="admConfirmCancel" style="padding:8px 20px;border-radius:8px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text)">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="admConfirmOk" style="padding:8px 20px;border-radius:8px;font-weight:600">Confirm</button>
+    </div>
   </div>
 </div>
 
@@ -365,7 +429,8 @@
 
   window.deleteUser = async function(uid, email) {
     document.querySelectorAll('.adm-act-menu.show').forEach(m => m.classList.remove('show'));
-    if (!confirm('Delete user ' + email + '? This cannot be undone.')) return;
+    const ok = await showConfirmModal('Delete user ' + email + '? This cannot be undone.', {icon: 'fa-trash', title: 'Delete User', danger: true});
+    if (!ok) return;
     try {
       const d = await fetchJson(`/api/admin/users/${uid}/delete`, { method: 'DELETE' });
       if (d.ok) { loadAll(); } else { alert(d.error || 'Failed'); }
@@ -477,9 +542,8 @@
       trialBtn.disabled = true; trialBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
       try {
         const d = await fetchJson('/api/admin/trial-reminders/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
+        showResultModal('Trial Reminders', 'fa-hourglass-half', d.stats || {});
+      } catch (e) { showResultModal('Trial Reminders', 'fa-hourglass-half', null, e.message); }
       trialBtn.disabled = false; trialBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
     });
 
@@ -488,9 +552,8 @@
       expiryBtn.disabled = true; expiryBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
       try {
         const d = await fetchJson('/api/admin/plan-expiry/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
+        showResultModal('Plan Expiry Notices', 'fa-triangle-exclamation', d.stats || {});
+      } catch (e) { showResultModal('Plan Expiry Notices', 'fa-triangle-exclamation', null, e.message); }
       expiryBtn.disabled = false; expiryBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
     });
 
@@ -499,9 +562,8 @@
       nudgeBtn.disabled = true; nudgeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
       try {
         const d = await fetchJson('/api/admin/free-plan-nudge/run', { method: 'POST' });
-        const s = d.stats || {};
-        alert(`Checked ${s.checked || 0} users \u2014 sent ${s.sent || 0}, errors ${s.errors || 0}`);
-      } catch (e) { alert('Failed: ' + e.message); }
+        showResultModal('Free Plan Nudges', 'fa-bullhorn', d.stats || {});
+      } catch (e) { showResultModal('Free Plan Nudges', 'fa-bullhorn', null, e.message); }
       nudgeBtn.disabled = false; nudgeBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Now';
     });
   }
@@ -530,7 +592,8 @@
     const checked = document.querySelectorAll('.adm-user-check:checked');
     const userIds = Array.from(checked).map(cb => cb.dataset.uid).filter(Boolean);
     if (!userIds.length) return;
-    if (!confirm(`Send expiry/upgrade email to ${userIds.length} user(s)?`)) return;
+    const ok = await showConfirmModal(`Send expiry/upgrade email to ${userIds.length} user(s)?`, {icon: 'fa-paper-plane', title: 'Send Expiry Mail'});
+    if (!ok) return;
 
     this.disabled = true;
     this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Sending…';
@@ -540,20 +603,120 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_ids: userIds })
       });
-      const s = d.stats || {};
-      const failures = (s.details || [])
-        .filter(item => item.status && item.status !== 'sent')
-        .map(item => `${item.email || item.id}: ${item.status}`);
-      alert(
-        `Sent: ${s.sent || 0}, Errors: ${s.errors || 0}, Skipped: ${s.skipped || 0}` +
-        (failures.length ? `\n\nDetails:\n${failures.join('\n')}` : '')
-      );
-    } catch (e) { alert('Failed: ' + e.message); }
+      showResultModal('Send Expiry Mail', 'fa-paper-plane', d.stats || {});
+    } catch (e) { showResultModal('Send Expiry Mail', 'fa-paper-plane', null, e.message); }
     this.disabled = false;
     this.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Expiry Mail (<span id="admSelectedCount">0</span>)';
     document.querySelectorAll('.adm-user-check:checked').forEach(cb => { cb.checked = false; });
     document.getElementById('admSelectAll').checked = false;
     updateSelectedCount();
+  });
+
+  // ── Confirm modal helper ─────────────────────────────────────────────
+  function showConfirmModal(message, {icon = 'fa-circle-question', title = 'Confirm', danger = false} = {}) {
+    return new Promise(resolve => {
+      const overlay = document.getElementById('admConfirmModal');
+      document.getElementById('admConfirmTitle').textContent = title;
+      document.getElementById('admConfirmMsg').textContent = message;
+      const iconEl = document.getElementById('admConfirmIcon');
+      iconEl.className = 'fa-solid ' + icon;
+      iconEl.style.color = danger ? '#dc2626' : '#6366f1';
+      const okBtn = document.getElementById('admConfirmOk');
+      okBtn.textContent = danger ? 'Delete' : 'Confirm';
+      okBtn.style.background = danger ? '#dc2626' : '';
+      overlay.classList.add('show');
+
+      function cleanup(val) {
+        overlay.classList.remove('show');
+        okBtn.removeEventListener('click', onOk);
+        document.getElementById('admConfirmCancel').removeEventListener('click', onCancel);
+        document.getElementById('admConfirmCloseX').removeEventListener('click', onCancel);
+        resolve(val);
+      }
+      function onOk() { cleanup(true); }
+      function onCancel() { cleanup(false); }
+      okBtn.addEventListener('click', onOk);
+      document.getElementById('admConfirmCancel').addEventListener('click', onCancel);
+      document.getElementById('admConfirmCloseX').addEventListener('click', onCancel);
+    });
+  }
+
+  // ── Result modal helper ──────────────────────────────────────────────
+  function showResultModal(title, icon, stats, errorMsg) {
+    const overlay = document.getElementById('admResultModal');
+    const modalTitle = document.getElementById('admModalTitle');
+    const modalIcon = document.getElementById('admModalIcon');
+    const modalBody = document.getElementById('admModalBody');
+
+    modalTitle.textContent = title;
+    modalIcon.className = 'fa-solid ' + icon;
+    modalIcon.style.color = errorMsg ? '#dc2626' : '#6366f1';
+
+    if (errorMsg) {
+      modalBody.innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <i class="fa-solid fa-circle-xmark" style="font-size:2.5rem;color:#dc2626;margin-bottom:12px;display:block"></i>
+          <p style="font-size:.95rem;font-weight:600;color:#dc2626;margin:0 0 8px">Request Failed</p>
+          <p style="font-size:.82rem;color:var(--text-muted);margin:0">${errorMsg}</p>
+        </div>`;
+      overlay.classList.add('show');
+      return;
+    }
+
+    const s = stats || {};
+    const sent = s.sent || 0;
+    const errors = s.errors || 0;
+    const skipped = s.skipped || 0;
+    const checked = s.checked || (sent + errors + skipped);
+    const details = s.details || [];
+
+    // KPIs
+    let html = `<div class="adm-modal-kpis">
+      <div class="adm-modal-kpi"><span class="mk-val" style="color:#16a34a">${sent}</span><span class="mk-label">Sent</span></div>
+      <div class="adm-modal-kpi"><span class="mk-val" style="color:#dc2626">${errors}</span><span class="mk-label">Errors</span></div>
+      <div class="adm-modal-kpi"><span class="mk-val" style="color:#64748b">${skipped || checked}</span><span class="mk-label">${skipped ? 'Skipped' : 'Checked'}</span></div>
+    </div>`;
+
+    // Success banner or warning
+    if (errors === 0 && sent > 0) {
+      html += `<div style="background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+        <i class="fa-solid fa-circle-check" style="color:#16a34a;font-size:1.1rem"></i>
+        <span style="font-size:.85rem;font-weight:600;color:#16a34a">All emails delivered successfully</span>
+      </div>`;
+    } else if (errors > 0) {
+      html += `<div style="background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;font-size:1.1rem"></i>
+        <span style="font-size:.85rem;font-weight:600;color:#dc2626">${errors} email(s) failed to send</span>
+      </div>`;
+    }
+
+    // Per-user details
+    if (details.length > 0) {
+      const rows = details.map(d => {
+        let cls = 'dr-skipped', label = d.status || 'skipped';
+        if (d.status === 'sent') { cls = 'dr-sent'; label = 'Sent'; }
+        else if (d.status && d.status.startsWith('failed')) { cls = 'dr-failed'; label = d.status.replace('failed: ', ''); }
+        else if (d.status === 'not found' || d.status === 'no email') { cls = 'dr-skipped'; label = d.status; }
+        return `<div class="adm-modal-detail-row">
+          <span class="dr-email">${d.email || d.id || '—'}</span>
+          <span class="dr-status ${cls}">${label}</span>
+        </div>`;
+      }).join('');
+      html += `<details class="adm-modal-details" ${details.length <= 8 ? 'open' : ''}>
+        <summary>${details.length} recipient(s) — click to expand</summary>
+        <div class="adm-modal-detail-list">${rows}</div>
+      </details>`;
+    }
+
+    modalBody.innerHTML = html;
+    overlay.classList.add('show');
+  }
+
+  // Modal close
+  document.getElementById('admModalClose').addEventListener('click', () => document.getElementById('admResultModal').classList.remove('show'));
+  document.getElementById('admModalDone').addEventListener('click', () => document.getElementById('admResultModal').classList.remove('show'));
+  document.getElementById('admResultModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
   });
 
   // Refresh button
