@@ -1196,5 +1196,41 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   });
 })();
 </script>
+
+<script>
+(function(){
+  var FEATURE_MAP = {
+    '/intraday-tools':'intraday_tools', '/swing-tools':'swing_tools',
+    '/option-chain':'option_chain', '/investing-tools':'investing_tools',
+    '/mutual-funds':'mutual_funds', '/ai-tools':'ai_tools',
+    '/home':'dashboard', '/portfolioAnalysis':'portfolio_analysis',
+    '/algoHelper':'ai_assistant', '/advanced-dashboard':'advanced_metrics',
+    '/portfolioMaker':'portfolio_maker'
+  };
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var feature = FEATURE_MAP[path];
+  if (!feature) return;
+
+  var activeSeconds = 0, lastTick = Date.now();
+  var visible = document.visibilityState === 'visible';
+
+  function tick(){ if (visible) { var now = Date.now(); activeSeconds += (now - lastTick) / 1000; lastTick = now; } }
+  function flush(useBeacon){
+    tick();
+    var seconds = Math.round(activeSeconds);
+    if (seconds < 1) return;
+    activeSeconds = 0;
+    var payload = JSON.stringify({ event: 'time_spent', meta: { feature: feature, seconds: seconds } });
+    if (useBeacon && navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function(){});
+    }
+  }
+  document.addEventListener('visibilitychange', function(){ tick(); visible = document.visibilityState === 'visible'; lastTick = Date.now(); });
+  setInterval(function(){ flush(false); }, 30000);
+  window.addEventListener('pagehide', function(){ flush(true); });
+})();
+</script>
 </body>
 </html>

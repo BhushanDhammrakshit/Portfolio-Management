@@ -263,6 +263,8 @@ def activity_stats():
     for u in users_raw:
         users.append({
             "id": u.get("RowKey", ""),
+            "name": u.get("UserName", ""),
+            "email": u.get("Email", ""),
             "email_verified": bool(u.get("EmailVerified")),
         })
     try:
@@ -308,6 +310,34 @@ def resolve_user():
     if best:
         return jsonify(best)
     return jsonify({"user_id": None})
+
+@admin_bp.route("/api/admin/search-users")
+@_require_admin
+def search_users():
+    """Live-typeahead search — matches name, or email (including the part before @)."""
+    q = (request.args.get("q") or "").strip().lower()
+    if len(q) < 2:
+        return jsonify({"results": []})
+    try:
+        users_raw = list(user_table_client.query_entities(
+            query_filter="PartitionKey eq 'user'"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    results = []
+    for u in users_raw:
+        email = str(u.get("Email") or "")
+        name = str(u.get("UserName") or "")
+        if q in email.lower() or q in name.lower():
+            results.append({
+                "id": u.get("RowKey", ""),
+                "name": name,
+                "email": email,
+                "plan": (u.get("Plan") or "free").lower(),
+            })
+        if len(results) >= 8:
+            break
+    return jsonify({"results": results})
 
 
 # ── Trial reminder emails ───────────────────────────────────────────────

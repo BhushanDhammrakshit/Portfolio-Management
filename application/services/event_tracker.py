@@ -147,6 +147,60 @@ def get_user_events(user_id: str, limit: int = 50) -> list[dict]:
     except Exception as e:
         print(f"[event_tracker] get_user_events failed: {e}")
         return []
+def _parse_meta(raw: str) -> dict:
+    try:
+        return json.loads(raw or "{}")
+    except (TypeError, ValueError):
+        return {}
+
+
+def compute_time_by_feature(events: list[dict], users: Optional[list[dict]] = None) -> list[dict]:
+    """Per-feature: distinct users, total minutes, avg minutes/user, and a
+    per-user breakdown (name/email + minutes) so admins can see exactly
+    who is spending time on each tool."""
+    seconds_by_feature: dict[str, int] = {}
+    user_seconds: dict[str, dict[str, int]] = {}  # feature -> user_id -> seconds
+    for e in events:
+        if e["event"] != "time_spent":
+            continue
+        meta = _parse_meta(e.get("meta"))
+        feature = meta.get("feature") or "unknown"
+        try:
+            seconds = int(float(meta.get("seconds") or 0))
+        except (TypeError, ValueError):
+            continue
+        if seconds <= 0:
+            continue
+        uid = e["user_id"]
+        seconds_by_feature[feature] = seconds_by_feature.get(feature, 0) + seconds
+        by_user = user_seconds.setdefault(feature, {})
+        by_user[uid] = by_user.get(uid, 0) + seconds
+
+    user_lookup = {u.get("id"): u for u in (users or []) if u.get("id")}
+
+    out = []
+    for feature, total_secs in seconds_by_feature.items():
+        by_user = user_seconds.get(feature, {})
+        n_users = len(by_user)
+        ranked = sorted(by_user.items(), key=lambda kv: kv[1], reverse=True)
+        top_users = []
+        for uid, secs in ranked:
+            u = user_lookup.get(uid, {})
+            top_users.append({
+                "user_id": uid,
+                "name": u.get("name") or "",
+                "email": u.get("email") or "",
+                "minutes": round(secs / 60, 1),
+            })
+        out.append({
+            "feature": feature,
+            "users": n_users,
+            "total_minutes": round(total_secs / 60, 1),
+            "avg_minutes_per_user": round(total_secs / 60 / max(n_users, 1), 1),
+            "top_users": top_users,
+        })
+    out.sort(key=lambda x: x["total_minutes"], reverse=True)
+    return out
 
 
 def get_all_events_since(hours: int = 24, max_rows: int = 5000) -> list[dict]:
@@ -270,4 +324,5 @@ def compute_activity_stats(users: list[dict]) -> dict:
         "funnel": funnel,
         "top_events": [{"event": ev, "count": c} for ev, c in top_events],
         "total_events_30d": len(events_30d),
+        "time_by_feature": compute_time_by_feature(events_30d, users),
     }
