@@ -101,22 +101,19 @@ def submit_feedback():
     user_email = session.get("email", "unknown")
     subject = f"[FinanceCandle Feedback] {category} \u2014 from {user_name}"
 
-    html = (
-        '<div style="font-family:sans-serif;max-width:600px">'
-        '<h3 style="margin:0 0 12px">New Feedback</h3>'
-        '<table style="border-collapse:collapse;font-size:14px">'
-        f'<tr><td style="padding:4px 12px 4px 0;font-weight:700">From</td><td>{user_name} &lt;{user_email}&gt;</td></tr>'
-        f'<tr><td style="padding:4px 12px 4px 0;font-weight:700">Category</td><td>{category}</td></tr>'
-        '</table>'
-        f'<div style="margin:16px 0;padding:14px;background:#f3f4f6;border-radius:8px;white-space:pre-wrap;font-size:14px;line-height:1.6">{message}</div>'
-        '</div>'
-    )
+    import datetime as _dt
+    from application.services import email_templates
+
+    sent_at = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=5, minutes=30))) \
+        .strftime("%d %b %Y, %I:%M %p IST")
+    html = email_templates.admin_feedback_html(
+        user_name, user_email, category, message, sent_at)
 
     ok, info = email_service.send_email(
         to=_FEEDBACK_TO,
         subject=subject,
         html=html,
-        text=f"From: {user_name} <{user_email}>\nCategory: {category}\n\n{message}",
+        text=f"[{category}] Feedback from {user_name} <{user_email}> at {sent_at}\n\n{message}",
     )
     if ok:
         return jsonify({"ok": True, "message": "Feedback sent! Thank you."})

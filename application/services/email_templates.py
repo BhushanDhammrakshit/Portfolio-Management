@@ -119,6 +119,26 @@ TEMPLATES: dict[str, dict] = {
         "description": "Notification when a referred user signs up or converts to paid.",
         "target": "Users with active referrals",
     },
+    "admin_new_signup": {
+        "key": "admin_new_signup",
+        "name": "Admin: New Signup Alert",
+        "icon": "fa-user-plus",
+        "color": "#16a34a",
+        "subject": f"[FinanceCandle] New signup \u2014 {{name}}",
+        "description": "Internal notification sent to the admin inbox whenever a new user registers.",
+        "target": "Admin inbox (not sent to end users)",
+        "admin_only": True,
+    },
+    "admin_feedback": {
+        "key": "admin_feedback",
+        "name": "Admin: Feedback Received",
+        "icon": "fa-comment-dots",
+        "color": "#6366f1",
+        "subject": "[FinanceCandle Feedback] <category> \u2014 from <user>",
+        "description": "Internal notification sent to the admin inbox whenever a user submits feedback.",
+        "target": "Admin inbox (not sent to end users)",
+        "admin_only": True,
+    },
 }
 
 
@@ -555,6 +575,108 @@ def referral_reward_html(name: str, referred_name: str = "a friend",
     )
 
 
+# ── Admin-only notification templates (internal inbox, not end users) ───
+
+def admin_new_signup_html(name: str, email: str, phone: str = "", gender: str = "",
+                          location: str = "", ref_code: str = "",
+                          sent_at: str = "") -> str:
+    """Notify the admin inbox that a new user just registered."""
+    from html import escape as _esc
+
+    dash = "\u2014"
+    safe_name = _esc(name or "")
+    safe_email = _esc(email or "")
+    safe_phone = _esc(phone or "") or dash
+    safe_gender = _esc(gender or "") or dash
+    safe_location = _esc(location or "") or dash
+    safe_ref = _esc(ref_code or "organic")
+    first_name = safe_name.split()[0] if safe_name else "them"
+
+    return f"""\
+<!doctype html>
+<html><body style="margin:0;padding:0;background:#f6f9fc;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937">
+  <div style="max-width:560px;margin:0 auto;padding:24px">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);padding:22px 28px;color:#fff">
+        <div style="font-size:13px;opacity:.85;letter-spacing:.08em;text-transform:uppercase">New Signup</div>
+        <div style="font-size:22px;font-weight:800;margin-top:4px">{APP_NAME}</div>
+      </div>
+      <div style="padding:26px 28px">
+        <span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#16a34a1a;color:#16a34a;font-weight:700;font-size:12px">&#127881; New User Registered</span>
+        <table style="border-collapse:collapse;font-size:14px;margin:16px 0 4px;width:100%">
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Name</td><td>{safe_name}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Email</td><td>{safe_email}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Phone</td><td>{safe_phone}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Gender</td><td>{safe_gender}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Location</td><td>{safe_location}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Referral</td><td>{safe_ref}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Sent</td><td>{sent_at}</td></tr>
+        </table>
+        <div style="text-align:center;margin:22px 0 6px">
+          <a href="mailto:{safe_email}?subject=Welcome%20to%20{APP_NAME}"
+             style="display:inline-block;padding:10px 22px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px">
+            Say hi to {first_name}
+          </a>
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0 14px">
+        <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.55">
+          Automated notification from the {APP_NAME} signup flow.
+        </p>
+      </div>
+    </div>
+  </div>
+</body></html>"""
+
+
+def admin_feedback_html(name: str, email: str, category: str, message: str,
+                        sent_at: str = "") -> str:
+    """Notify the admin inbox that a user submitted feedback."""
+    from html import escape as _esc
+
+    cat_colors = {
+        "bug": "#dc2626", "feature": "#0ea5e9", "general": "#6366f1",
+        "praise": "#16a34a", "other": "#6b7280",
+    }
+    cat_color = cat_colors.get((category or "").lower(), "#6366f1")
+
+    safe_name = _esc(name or "")
+    safe_email = _esc(email or "")
+    safe_category = _esc(category or "general")
+    safe_message = _esc(message or "")
+    first_name = safe_name.split()[0] if safe_name and safe_name != "Unknown" else "user"
+
+    return f"""\
+<!doctype html>
+<html><body style="margin:0;padding:0;background:#f6f9fc;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937">
+  <div style="max-width:560px;margin:0 auto;padding:24px">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#1e40af 0%,#2563eb 100%);padding:22px 28px;color:#fff">
+        <div style="font-size:13px;opacity:.85;letter-spacing:.08em;text-transform:uppercase">New Feedback</div>
+        <div style="font-size:22px;font-weight:800;margin-top:4px">{APP_NAME}</div>
+      </div>
+      <div style="padding:26px 28px">
+        <span style="display:inline-block;padding:4px 12px;border-radius:999px;background:{cat_color}1a;color:{cat_color};font-weight:700;font-size:12px;text-transform:capitalize">{safe_category}</span>
+        <table style="border-collapse:collapse;font-size:14px;margin:16px 0 4px;width:100%">
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">From</td><td>{safe_name} &lt;{safe_email}&gt;</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:700;color:#6b7280;white-space:nowrap">Sent</td><td>{sent_at}</td></tr>
+        </table>
+        <div style="margin:18px 0;padding:16px 18px;background:#f3f4f6;border-left:4px solid {cat_color};border-radius:8px;white-space:pre-wrap;font-size:14px;line-height:1.6;color:#111827">{safe_message}</div>
+        <div style="text-align:center;margin:22px 0 6px">
+          <a href="mailto:{safe_email}?subject=Re:%20Your%20feedback%20on%20{APP_NAME}"
+             style="display:inline-block;padding:10px 22px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px">
+            Reply to {first_name}
+          </a>
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0 14px">
+        <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.55">
+          Automated notification from the {APP_NAME} feedback widget.
+        </p>
+      </div>
+    </div>
+  </div>
+</body></html>"""
+
+
 # ── Preview helper ──────────────────────────────────────────────────────
 
 def preview_html(template_key: str) -> str | None:
@@ -572,6 +694,13 @@ def preview_html(template_key: str) -> str | None:
         "usage_limit_warning": lambda: usage_limit_warning_html("Priya", "Pro", 82),
         "broker_sync_failure": lambda: broker_sync_failure_html("Arjun", "Fyers"),
         "referral_reward": lambda: referral_reward_html("Sneha", "Rahul Sharma", "7 days of Pro"),
+        "admin_new_signup": lambda: admin_new_signup_html(
+            "Raghavendra", "drraghavendrabhat80@gmail.com", "9844333775",
+            "Male", "Bangalore", "organic", "09 Aug 2026, 08:33 AM IST"),
+        "admin_feedback": lambda: admin_feedback_html(
+            "Priya Sharma", "priya@example.com", "feature",
+            "It would be great to get a dark mode option for the swing scanner page!",
+            "09 Aug 2026, 08:33 AM IST"),
     }
     fn = builders.get(template_key)
     return fn() if fn else None

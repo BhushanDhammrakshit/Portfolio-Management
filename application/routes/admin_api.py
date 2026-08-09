@@ -307,6 +307,8 @@ def send_email_template(key):
 
     if key not in et.TEMPLATES:
         return jsonify({"error": "Unknown template"}), 404
+    if et.TEMPLATES[key].get("admin_only"):
+        return jsonify({"error": "This is an internal admin notification and can't be sent to users."}), 400
 
     data = request.get_json(silent=True) or {}
     user_ids = data.get("user_ids") or []

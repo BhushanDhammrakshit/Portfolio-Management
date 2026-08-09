@@ -293,35 +293,23 @@ def logIn():
 def _notify_admin_new_user(email_service, name, email, phone, gender,
                            location, ref_code):
     """Fire-and-forget email to admin when a new user signs up."""
+    from datetime import timedelta, timezone
+    from application.services import email_templates
+
     dash = "\u2014"
     subject = f"[FinanceCandle] New signup {dash} {name}"
-    html = (
-        '<div style="font-family:sans-serif;max-width:600px">'
-        '<h3 style="margin:0 0 14px;color:#1e293b">'
-        '\U0001f389 New User Registered</h3>'
-        '<table style="border-collapse:collapse;font-size:14px;line-height:1.6">'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Name</td>'
-        f'<td>{name}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Email</td>'
-        f'<td>{email}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Phone</td>'
-        f'<td>{phone}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Gender</td>'
-        f'<td>{gender or dash}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Location</td>'
-        f'<td>{location or dash}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Referral</td>'
-        f'<td>{ref_code or "organic"}</td></tr>'
-        f'<tr><td style="padding:4px 14px 4px 0;font-weight:700">Time (UTC)</td>'
-        f'<td>{datetime.utcnow().strftime("%Y-%m-%d %H:%M")}</td></tr>'
-        '</table></div>'
-    )
+
+    ist = timezone(timedelta(hours=5, minutes=30))
+    sent_at = datetime.now(ist).strftime("%d %b %Y, %I:%M %p IST")
+    html = email_templates.admin_new_signup_html(
+        name, email, phone, gender, location, ref_code, sent_at)
+
     email_service.send_email(
         to="financecandleservice@gmail.com",
         subject=subject,
         html=html,
         text=(f"New signup: {name} <{email}> | Phone: {phone} | "
-              f"Location: {location or '-'} | Ref: {ref_code or 'organic'}"),
+              f"Location: {location or '-'} | Ref: {ref_code or 'organic'} | {sent_at}"),
     )
 
 
