@@ -165,6 +165,20 @@
 .act-suggest-email{font-size:.72rem;color:var(--text-muted)}
 .act-suggest-empty{padding:12px;text-align:center;font-size:.8rem;color:var(--text-muted)}
 
+/* Recent errors */
+.act-err-list{display:flex;flex-direction:column;max-height:360px;overflow-y:auto}
+.act-err-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.act-err-item:last-child{border:none}
+.act-err-time{flex:0 0 120px;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums}
+.act-err-body{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.act-err-badge{font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
+.act-err-badge.act-err-server{background:rgba(220,38,38,.15);color:#dc2626}
+.act-err-badge.act-err-client{background:rgba(245,158,11,.15);color:#f59e0b}
+.act-err-user{font-weight:600;color:var(--text);cursor:pointer}
+.act-err-user:hover{text-decoration:underline}
+.act-err-msg{color:var(--text)}
+.act-err-path{color:var(--text-muted);font-size:.72rem}
+
 /* Time-per-tool user breakdown */
 .tbf-row{cursor:pointer}
 .tbf-row:hover{background:var(--surface-2)}
@@ -1126,7 +1140,30 @@
           </tbody>
         </table>` : '<div style="font-size:.82rem;color:var(--text-muted)">No time data yet — accumulates as users browse tool pages.</div>'}
       </div>
+      <div class="adm-hcard" style="grid-column:1 / -1">
+        <h4><i class="fa-solid fa-triangle-exclamation"></i>Recent Errors (24h)</h4>
+        ${(d.recent_errors && d.recent_errors.length) ? `
+        <div class="act-err-list">
+          ${d.recent_errors.map(er => {
+            const t = er.time ? new Date(er.time).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+            const isServer = er.event === 'server_error';
+            return `<div class="act-err-item">
+              <div class="act-err-time">${t}</div>
+              <div class="act-err-body">
+                <span class="act-err-badge act-err-${isServer ? 'server' : 'client'}">${isServer ? 'Server' : 'Client'}${er.status ? ' · ' + er.status : ''}</span>
+                <span class="act-err-user" data-uid="${er.user_id}" data-label="${(er.user_label || '').replace(/"/g, '&quot;')}">${er.user_label}</span>
+                <span class="act-err-msg">${(er.message || 'Unknown error').toString().slice(0, 180)}</span>
+                ${er.path ? `<span class="act-err-path">${er.path}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div style="font-size:.82rem;color:var(--text-muted)">No errors in the last 24h 🎉</div>'}
+      </div>
     `;
+
+    document.querySelectorAll('.act-err-user').forEach(el => {
+      el.addEventListener('click', () => showUserTimeline(el.dataset.uid, el.dataset.label));
+    });
 
     // Time-per-tool: click a row to expand/collapse its per-user breakdown
     document.querySelectorAll('.tbf-row').forEach(row => {

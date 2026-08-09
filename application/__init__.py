@@ -128,6 +128,19 @@ def _not_found(_e):
 @app.errorhandler(500)
 def _server_error(_e):
     try:
+        from flask import request
+        uid = session.get("user_id")
+        if uid:
+            from application.services.event_tracker import track_event
+            track_event(uid, "server_error", {
+                "endpoint": request.path,
+                "method": request.method,
+                "message": str(_e)[:200],
+                "type": type(_e).__name__,
+            })
+    except Exception:
+        pass
+    try:
         return render_template("error.html", code=500,
                                message="Something went wrong. Please try again."), 500
     except Exception:
