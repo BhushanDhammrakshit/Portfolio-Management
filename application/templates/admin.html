@@ -154,6 +154,28 @@
 .act-tl-time{flex:0 0 130px;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums}
 .act-tl-event{font-weight:600}
 .act-tl-meta{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+
+/* User search suggestions */
+.act-suggest-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;z-index:60;display:none}
+.act-suggest-list.show{display:block}
+.act-suggest-item{display:flex;flex-direction:column;gap:1px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border)}
+.act-suggest-item:last-child{border:none}
+.act-suggest-item:hover{background:var(--surface-2)}
+.act-suggest-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.act-suggest-email{font-size:.72rem;color:var(--text-muted)}
+.act-suggest-empty{padding:12px;text-align:center;font-size:.8rem;color:var(--text-muted)}
+
+/* Time-per-tool user breakdown */
+.tbf-row{cursor:pointer}
+.tbf-row:hover{background:var(--surface-2)}
+.tbf-caret{font-size:.7rem;color:var(--text-muted);transition:transform .15s}
+.tbf-row.open .tbf-caret{transform:rotate(90deg)}
+.tbf-detail-row td{background:var(--surface-2);padding:10px 14px}
+.tbf-users{display:flex;flex-wrap:wrap;gap:8px}
+.tbf-user{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:.76rem}
+.tbf-user:hover{border-color:var(--primary,#6366f1)}
+.tbf-user-name{font-weight:600;color:var(--text)}
+.tbf-user-mins{color:var(--text-muted)}
 </style>
 
 <div class="adm">
@@ -212,7 +234,7 @@
               <th data-col="last_login">Last Login <i class="fa-solid fa-sort"></i></th>
               <th>Actions</th>
             </tr>
-          </thead> s telephoness keeps
+          </thead>
           <tbody id="admUserBody"></tbody>
         </table>
       </div>
@@ -1066,38 +1088,120 @@
       </div>
       <div class="adm-hcard">
         <h4><i class="fa-solid fa-user-clock"></i>User Timeline</h4>
-        <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 10px">Click a user in the Users tab, or search by name, email, or phone below.</p>
-        <div style="display:flex;gap:8px">
-          <input class="adm-search" id="actTimelineSearch" placeholder="Name, email, or phone…" style="flex:1;max-width:none" />
-          <button class="btn btn-primary btn-sm" id="actTimelineBtn" style="white-space:nowrap">View Timeline</button>
+        <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 10px">Type a name, or email (even just the part before @) — click a suggestion.</p>
+        <div style="position:relative">
+          <input type="search" class="adm-search" id="actTimelineSearch" name="actTimelineSearchQuery" placeholder="Name or email…" style="width:100%;max-width:none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="actTimelineSuggest" />
+          <div id="actTimelineSuggest" class="act-suggest-list"></div>
         </div>
+      </div>
+      <div class="adm-hcard" style="grid-column:1 / -1">
+        <h4><i class="fa-solid fa-clock"></i>Time Spent per Tool (30d)</h4>
+        ${(d.time_by_feature && d.time_by_feature.length) ? `
+        <table class="adm-table" style="margin-top:6px">
+          <thead><tr><th></th><th>Tool</th><th class="num">Users</th><th class="num">Total Time</th><th class="num">Avg / User</th></tr></thead>
+          <tbody>
+            ${d.time_by_feature.map((t, i) => {
+              const label = t.feature.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+              const fmtM = m => m >= 60 ? (m / 60).toFixed(1) + 'h' : m + 'm';
+              const rowId = `tbf-detail-${i}`;
+              const users = t.top_users || [];
+              const usersHtml = users.length ? users.map(u => {
+                const uLabel = (u.name || u.email || u.user_id || '').toString();
+                return `<div class="tbf-user" data-uid="${u.user_id}" data-label="${uLabel.replace(/"/g, '&quot;')}">
+                  <span class="tbf-user-name">${uLabel || u.user_id}</span>
+                  <span class="tbf-user-mins">${fmtM(u.minutes)}</span>
+                </div>`;
+              }).join('') : '<div class="act-suggest-empty">No per-user data</div>';
+              return `<tr class="tbf-row" data-target="${rowId}">
+                  <td><i class="fa-solid fa-chevron-right tbf-caret"></i></td>
+                  <td>${label}</td>
+                  <td class="num">${t.users}</td>
+                  <td class="num">${fmtM(t.total_minutes)}</td>
+                  <td class="num">${fmtM(t.avg_minutes_per_user)}</td>
+                </tr>
+                <tr class="tbf-detail-row" id="${rowId}" style="display:none">
+                  <td colspan="5"><div class="tbf-users">${usersHtml}</div></td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : '<div style="font-size:.82rem;color:var(--text-muted)">No time data yet — accumulates as users browse tool pages.</div>'}
       </div>
     `;
 
-    // Wire timeline search
-    const tlBtn = document.getElementById('actTimelineBtn');
+    // Time-per-tool: click a row to expand/collapse its per-user breakdown
+    document.querySelectorAll('.tbf-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const detail = document.getElementById(row.dataset.target);
+        if (!detail) return;
+        const opening = detail.style.display === 'none';
+        detail.style.display = opening ? '' : 'none';
+        row.classList.toggle('open', opening);
+      });
+    });
+    // Click a user chip inside the breakdown to jump to their timeline
+    document.querySelectorAll('.tbf-user').forEach(chip => {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        showUserTimeline(chip.dataset.uid, chip.dataset.label);
+      });
+    });
+
+    // Wire timeline search — live suggestions as you type
     const tlInput = document.getElementById('actTimelineSearch');
-    async function _doTimelineSearch() {
-      const q = (tlInput.value || '').trim().toLowerCase();
-      if (!q) return;
-      tlBtn.disabled = true;
-      tlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-      try {
-        // Always resolve against the live server-side user table — the
-        // local _users cache can be stale/incomplete, so email lookups
-        // must not depend on it matching first.
-        const d = await fetchJson(`/api/admin/resolve-user?q=${encodeURIComponent(q)}`);
-        if (d.user_id) { showUserTimeline(d.user_id, d.label || q); return; }
-        alert('No user found matching "' + q + '". Try a partial name, email, or phone.');
-      } catch (e) {
-        alert('Search failed: ' + e.message);
-      } finally {
-        tlBtn.disabled = false;
-        tlBtn.innerHTML = 'View Timeline';
+    const tlSuggest = document.getElementById('actTimelineSuggest');
+    let tlDebounce = null;
+
+    function renderSuggestions(results) {
+      if (!results.length) {
+        tlSuggest.innerHTML = '<div class="act-suggest-empty">No matching users</div>';
+        tlSuggest.classList.add('show');
+        tlInput.setAttribute('aria-expanded', 'true');
+        return;
       }
+      tlSuggest.innerHTML = results.map(u => `
+        <div class="act-suggest-item" data-uid="${u.id}" data-label="${(u.name || u.email).replace(/"/g, '&quot;')}">
+          <span class="act-suggest-name">${u.name || u.email}</span>
+          <span class="act-suggest-email">${u.email}${u.plan ? ` · <span class="plan-pill plan-${u.plan}" style="font-size:.6rem;padding:1px 6px">${u.plan}</span>` : ''}</span>
+        </div>
+      `).join('');
+      tlSuggest.classList.add('show');
+      tlInput.setAttribute('aria-expanded', 'true');
     }
-    tlBtn.addEventListener('click', _doTimelineSearch);
-    tlInput.addEventListener('keydown', e => { if (e.key === 'Enter') _doTimelineSearch(); });
+
+    function hideSuggestions() {
+      tlSuggest.classList.remove('show');
+      tlInput.setAttribute('aria-expanded', 'false');
+    }
+
+    tlInput.addEventListener('input', () => {
+      const q = tlInput.value.trim();
+      clearTimeout(tlDebounce);
+      if (q.length < 2) { hideSuggestions(); return; }
+      tlDebounce = setTimeout(async () => {
+        try {
+          const d = await fetchJson(`/api/admin/search-users?q=${encodeURIComponent(q)}`);
+          renderSuggestions(d.results || []);
+        } catch (e) { hideSuggestions(); }
+      }, 200);
+    });
+
+    // Use mousedown (fires before the input's blur) so a click on a
+    // suggestion always registers, even if the browser tries to steal
+    // focus with its own native suggestion popup first.
+    tlSuggest.addEventListener('mousedown', e => {
+      const item = e.target.closest('.act-suggest-item');
+      if (!item) return;
+      e.preventDefault();
+      hideSuggestions();
+      tlInput.value = item.dataset.label;
+      showUserTimeline(item.dataset.uid, item.dataset.label);
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#actTimelineSearch') && !e.target.closest('#actTimelineSuggest')) {
+        hideSuggestions();
+      }
+    });
   }
 
   window.showUserTimeline = async function showUserTimeline(userId, label) {
