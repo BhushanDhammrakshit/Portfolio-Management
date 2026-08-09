@@ -132,6 +132,28 @@
   .adm-modal{width:95%;max-width:none}
   .adm-modal-kpis{grid-template-columns:repeat(3,1fr)}
 }
+
+/* Feature adoption bars */
+.act-bar-wrap{display:flex;align-items:center;gap:10px;padding:5px 0}
+.act-bar-label{flex:0 0 120px;font-size:.78rem;font-weight:600;color:var(--text);text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.act-bar-track{flex:1;height:10px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.act-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:width .5s ease}
+.act-bar-val{flex:0 0 60px;font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;color:var(--text-muted)}
+
+/* Funnel steps */
+.act-funnel-step{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.act-funnel-step:last-child{border:none}
+.act-funnel-num{flex:0 0 50px;font-size:1.2rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.act-funnel-info{flex:1}
+.act-funnel-name{font-size:.82rem;font-weight:600}
+.act-funnel-pct{font-size:.68rem;color:var(--text-muted)}
+
+/* Timeline */
+.act-tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.act-tl-item:last-child{border:none}
+.act-tl-time{flex:0 0 130px;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums}
+.act-tl-event{font-weight:600}
+.act-tl-meta{font-size:.72rem;color:var(--text-muted);margin-top:2px}
 </style>
 
 <div class="adm">
@@ -149,6 +171,7 @@
     <button class="adm-tab active" data-tab="overview"><i class="fa-solid fa-chart-pie"></i>Overview</button>
     <button class="adm-tab" data-tab="users"><i class="fa-solid fa-users"></i>Users</button>
     <button class="adm-tab" data-tab="emails"><i class="fa-solid fa-envelopes-bulk"></i>Emails</button>
+    <button class="adm-tab" data-tab="activity"><i class="fa-solid fa-chart-line"></i>Activity</button>
     <button class="adm-tab" data-tab="system"><i class="fa-solid fa-server"></i>System</button>
   </div>
 
@@ -189,7 +212,7 @@
               <th data-col="last_login">Last Login <i class="fa-solid fa-sort"></i></th>
               <th>Actions</th>
             </tr>
-          </thead>
+          </thead> s telephoness keeps
           <tbody id="admUserBody"></tbody>
         </table>
       </div>
@@ -248,6 +271,27 @@
       <div class="adm-modal-footer" style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn btn-sm" id="admEmailSendCancel" style="padding:8px 20px;border-radius:8px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text)">Cancel</button>
         <button class="btn btn-primary btn-sm" id="admEmailSendConfirm" style="padding:8px 20px;border-radius:8px;font-weight:600" disabled>Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity -->
+  <div class="adm-panel" id="panel-activity">
+    <div class="adm-kpis" id="actKpis"></div>
+    <div class="adm-health" id="actCards"></div>
+  </div>
+
+  <!-- User timeline modal -->
+  <div class="adm-modal-overlay" id="actTimelineModal">
+    <div class="adm-modal" style="max-width:620px;max-height:85vh">
+      <div class="adm-modal-header">
+        <i class="fa-solid fa-clock-rotate-left" style="color:#6366f1"></i>
+        <span class="modal-title" id="actTimelineTitle">Activity Timeline</span>
+        <button class="adm-modal-close" id="actTimelineClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="adm-modal-body" id="actTimelineBody" style="overflow-y:auto;max-height:60vh"></div>
+      <div class="adm-modal-footer">
+        <button class="btn btn-primary btn-sm" id="actTimelineDone">Close</button>
       </div>
     </div>
   </div>
@@ -343,6 +387,7 @@
       renderUsers();
       renderSystem();
       loadEmailTemplates();
+      loadActivity();
     } catch (e) { console.error('Admin load failed:', e); }
   }
 
@@ -465,6 +510,7 @@
               <button class="adm-act-item" onclick="setPlan('${u.id}','free')"><i class="fa-solid fa-tag me-2"></i>Set Free</button>
               <button class="adm-act-item" onclick="setPlan('${u.id}','pro')"><i class="fa-solid fa-bolt me-2"></i>Set Pro</button>
               <button class="adm-act-item" onclick="setPlan('${u.id}','elite')"><i class="fa-solid fa-gem me-2"></i>Set Elite</button>
+              <button class="adm-act-item" onclick="showUserTimeline('${u.id}','${(u.name || u.email).replace(/'/g,"\\'")}')"><i class="fa-solid fa-clock-rotate-left me-2"></i>View Activity</button>
               ${!u.email_verified ? `<button class="adm-act-item" onclick="verifyUser('${u.id}')"><i class="fa-solid fa-envelope-circle-check me-2"></i>Verify Email</button>` : ''}
               <button class="adm-act-item danger" onclick="deleteUser('${u.id}','${(u.email || '').replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash me-2"></i>Delete</button>
             </div>
@@ -933,6 +979,169 @@
     this.disabled = false;
     this.textContent = 'Send';
   });
+
+  // ── Activity tab ──────────────────────────────────────────────────────
+  let _activityData = null;
+
+  async function loadActivity() {
+    try {
+      _activityData = await fetchJson('/api/admin/activity');
+      renderActivity();
+    } catch (e) {
+      console.error('Activity load failed:', e);
+      document.getElementById('actKpis').innerHTML = '<div class="adm-empty"><i class="fa-solid fa-triangle-exclamation"></i>Failed to load activity data</div>';
+    }
+  }
+
+  function renderActivity() {
+    const d = _activityData;
+    if (!d) return;
+
+    // KPI cards
+    const kpis = [
+      { label: 'DAU', val: d.dau || 0, color: '#16a34a' },
+      { label: 'WAU', val: d.wau || 0, color: '#6366f1' },
+      { label: 'MAU', val: d.mau || 0, color: '#0ea5e9' },
+      { label: 'Events (30d)', val: d.total_events_30d || 0, color: '#f59e0b' },
+    ];
+    document.getElementById('actKpis').innerHTML = kpis.map(k =>
+      `<div class="adm-kpi"><span class="k-label">${k.label}</span><span class="k-val" style="color:${k.color}">${k.val.toLocaleString()}</span></div>`
+    ).join('');
+
+    // Feature adoption bars
+    const adoption = d.feature_adoption || [];
+    const maxPct = Math.max(...adoption.map(a => a.pct), 1);
+    let adoptionHtml = '';
+    if (adoption.length) {
+      adoptionHtml = adoption.map(a => {
+        const width = Math.max(2, (a.pct / maxPct) * 100);
+        const label = a.feature.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+        return `<div class="act-bar-wrap">
+          <span class="act-bar-label" title="${label}">${label}</span>
+          <div class="act-bar-track"><div class="act-bar-fill" style="width:${width}%"></div></div>
+          <span class="act-bar-val">${a.users} (${a.pct}%)</span>
+        </div>`;
+      }).join('');
+    } else {
+      adoptionHtml = '<div style="font-size:.82rem;color:var(--text-muted);padding:12px 0">No feature events recorded yet</div>';
+    }
+
+    // Funnel
+    const funnel = d.funnel || [];
+    const colors = ['#6366f1', '#0ea5e9', '#16a34a', '#f59e0b', '#dc2626'];
+    let funnelHtml = '';
+    if (funnel.length) {
+      funnelHtml = funnel.map((s, i) =>
+        `<div class="act-funnel-step">
+          <span class="act-funnel-num" style="color:${colors[i] || '#6366f1'}">${s.count.toLocaleString()}</span>
+          <div class="act-funnel-info">
+            <div class="act-funnel-name">${s.step}</div>
+            <div class="act-funnel-pct">${s.pct}% of total</div>
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    // Top events
+    const topEv = d.top_events || [];
+    let eventsHtml = '';
+    if (topEv.length) {
+      eventsHtml = topEv.map(e =>
+        `<div class="hc-row"><span class="hc-label">${e.event}</span><span class="hc-val">${e.count.toLocaleString()}</span></div>`
+      ).join('');
+    }
+
+    document.getElementById('actCards').innerHTML = `
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-layer-group"></i>Feature Adoption (30d)</h4>
+        ${adoptionHtml}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-filter"></i>Activation Funnel</h4>
+        ${funnelHtml || '<div style="font-size:.82rem;color:var(--text-muted)">No data yet</div>'}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-fire"></i>Top Events (30d)</h4>
+        ${eventsHtml || '<div style="font-size:.82rem;color:var(--text-muted)">No events yet</div>'}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-user-clock"></i>User Timeline</h4>
+        <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 10px">Click a user in the Users tab, or search by name, email, or phone below.</p>
+        <div style="display:flex;gap:8px">
+          <input class="adm-search" id="actTimelineSearch" placeholder="Name, email, or phone…" style="flex:1;max-width:none" />
+          <button class="btn btn-primary btn-sm" id="actTimelineBtn" style="white-space:nowrap">View Timeline</button>
+        </div>
+      </div>
+    `;
+
+    // Wire timeline search
+    const tlBtn = document.getElementById('actTimelineBtn');
+    const tlInput = document.getElementById('actTimelineSearch');
+    async function _doTimelineSearch() {
+      const q = (tlInput.value || '').trim().toLowerCase();
+      if (!q) return;
+      tlBtn.disabled = true;
+      tlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        // Always resolve against the live server-side user table — the
+        // local _users cache can be stale/incomplete, so email lookups
+        // must not depend on it matching first.
+        const d = await fetchJson(`/api/admin/resolve-user?q=${encodeURIComponent(q)}`);
+        if (d.user_id) { showUserTimeline(d.user_id, d.label || q); return; }
+        alert('No user found matching "' + q + '". Try a partial name, email, or phone.');
+      } catch (e) {
+        alert('Search failed: ' + e.message);
+      } finally {
+        tlBtn.disabled = false;
+        tlBtn.innerHTML = 'View Timeline';
+      }
+    }
+    tlBtn.addEventListener('click', _doTimelineSearch);
+    tlInput.addEventListener('keydown', e => { if (e.key === 'Enter') _doTimelineSearch(); });
+  }
+
+  window.showUserTimeline = async function showUserTimeline(userId, label) {
+    const overlay = document.getElementById('actTimelineModal');
+    document.getElementById('actTimelineTitle').textContent = 'Timeline: ' + (label || userId);
+    document.getElementById('actTimelineBody').innerHTML = '<div class="adm-loading"><div class="app-spinner"></div>Loading events…</div>';
+    overlay.classList.add('show');
+    try {
+      const d = await fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/events?limit=100`);
+      const events = d.events || [];
+      if (!events.length) {
+        document.getElementById('actTimelineBody').innerHTML = '<div class="adm-empty"><i class="fa-solid fa-inbox"></i>No events recorded for this user</div>';
+        return;
+      }
+      document.getElementById('actTimelineBody').innerHTML = events.map(e => {
+        let meta = '';
+        try { const m = JSON.parse(e.meta || '{}'); meta = Object.entries(m).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' · '); } catch {}
+        return `<div class="act-tl-item">
+          <span class="act-tl-time">${fmtDateTime(e.time)}</span>
+          <div>
+            <div class="act-tl-event">${e.event}${e.plan ? ` <span class="plan-pill plan-${e.plan}" style="font-size:.6rem;padding:1px 6px">${e.plan}</span>` : ''}</div>
+            ${meta ? `<div class="act-tl-meta">${meta}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('actTimelineBody').innerHTML = `<div class="adm-empty"><i class="fa-solid fa-triangle-exclamation"></i>Failed: ${e.message}</div>`;
+    }
+  }
+
+  const fmtDateTime = d => {
+    if (!d) return '\u2014';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt)) return d.slice(0, 16);
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ', ' +
+             dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch { return d.slice(0, 16); }
+  };
+
+  // Timeline modal close
+  document.getElementById('actTimelineClose').addEventListener('click', () => document.getElementById('actTimelineModal').classList.remove('show'));
+  document.getElementById('actTimelineDone').addEventListener('click', () => document.getElementById('actTimelineModal').classList.remove('show'));
+  document.getElementById('actTimelineModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
 
   // Refresh button
   document.getElementById('admRefresh').addEventListener('click', loadAll);

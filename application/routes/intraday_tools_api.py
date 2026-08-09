@@ -11,6 +11,7 @@ from application.services import (
     sector_rrg as sector_rrg_svc,
 )
 from application.services.plans import requires_plan
+from application.services.event_tracker import track_feature
 
 intraday_tools_api = Blueprint("intraday_tools_api", __name__)
 
@@ -20,6 +21,7 @@ def _auth_ok():
 
 
 @intraday_tools_api.route("/intraday-tools")
+@track_feature("intraday_tools")
 def intraday_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))

@@ -51,6 +51,10 @@ def _track_active_user():
 # Register blueprints
 from application.routes.user_routes import user_blueprint
 from application.routes.tender_api import tender_api
+
+# Register client-side event tracking endpoint
+from application.services.event_tracker import register_client_track_route
+register_client_track_route(app)
 from application.routes.stock_analysis_api import stock_analysis_api
 from application.routes.heatmap import heatmap_bp
 from application.routes.ai_portfolio_api import ai_portfolio_api

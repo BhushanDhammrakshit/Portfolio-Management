@@ -4,6 +4,7 @@ from flask import (Blueprint, render_template, session, redirect, url_for,
 
 from application.services import plans
 from application.services import razorpay_gateway as rz
+from application.services.event_tracker import track_event
 
 billing_bp = Blueprint("billing", __name__)
 
@@ -90,6 +91,10 @@ def upgrade():
     if plan_id == "free":
         flash("You've been moved to the Free plan.", "info")
     else:
+        track_event(session["user_id"], "plan_upgraded", {
+            "from": (plans.get_user_plan(user) or {}).get("id", "free"),
+            "to": plan_id, "trigger": "legacy_form",
+        })
         flash(f"Welcome to {plans.PLANS[plan_id]['name']}! Your plan is active for "
               f"{months} month{'s' if months > 1 else ''}.", "success")
     return redirect(url_for("billing.billing_page"))
@@ -99,8 +104,10 @@ def upgrade():
 @_login_required
 def cancel():
     user = plans.current_user_entity()
+    old_plan = (plans.get_user_plan(user) or {}).get("id", "free") if user else "free"
     if user:
         plans.set_user_plan(user, "free")
+    track_event(session.get("user_id", ""), "plan_cancelled", {"from": old_plan})
     flash("Your subscription has been cancelled. You're now on the Free plan.", "info")
     return redirect(url_for("billing.billing_page"))
 
@@ -228,6 +235,10 @@ def _activate_paid_plan_from_meta(meta: dict) -> bool:
         return False
     months = 12 if cycle == "annual" else 1
     plans.set_user_plan(user, plan_id, months=months)
+
+    track_event(uid, "plan_upgraded", {
+        "to": plan_id, "cycle": cycle, "trigger": "razorpay",
+    })
 
     # Award referral credit to whoever referred this user.
     try:

@@ -2,7 +2,7 @@
 from azure.data.tables import TableServiceClient
 
 from application.config import (AZURE_TABLE_CONN_STR, USER_INFO_TABLE,
-                                USER_STOCKS_TABLE)
+                                USER_STOCKS_TABLE, USER_EVENTS_TABLE)
 
 
 class _MissingClient:
@@ -24,18 +24,24 @@ if AZURE_TABLE_CONN_STR and USER_INFO_TABLE and USER_STOCKS_TABLE:
         try:
             service.create_table_if_not_exists(table_name=USER_INFO_TABLE)
             service.create_table_if_not_exists(table_name=USER_STOCKS_TABLE)
+            if USER_EVENTS_TABLE:
+                service.create_table_if_not_exists(table_name=USER_EVENTS_TABLE)
         except Exception as e:
             print(f"[azure-tables] table create skipped: {e}")
         user_table_client = service.get_table_client(table_name=USER_INFO_TABLE)
         stocks_table_client = service.get_table_client(table_name=USER_STOCKS_TABLE)
+        events_table_client = (service.get_table_client(table_name=USER_EVENTS_TABLE)
+                               if USER_EVENTS_TABLE else _MissingClient())
     except Exception as e:
         print(f"[azure-tables] init failed: {e}")
         user_table_client = _MissingClient()
         stocks_table_client = _MissingClient()
+        events_table_client = _MissingClient()
 else:
     print("[azure-tables] not configured (missing env vars). Using stub clients.")
     user_table_client = _MissingClient()
     stocks_table_client = _MissingClient()
+    events_table_client = _MissingClient()
 
 
 def get_user_by_credentials(email: str, password: str):

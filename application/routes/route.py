@@ -16,6 +16,7 @@ from application.services.azure_table import (user_table_client,
                                               stocks_table_client)
 from application.services import verification
 from application.services import precompute
+from application.services.event_tracker import track_event
 from application.constants import PERSONAS, get_persona
 
 
@@ -277,6 +278,10 @@ def logIn():
                     user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
                 except Exception as e:
                     print(f"[login] could not record LastLoginOn: {e}")
+                track_event(session["user_id"], "login", {
+                    "ua": (request.headers.get("User-Agent") or "")[:200],
+                    "utm": request.args.get("utm_source", ""),
+                })
                 return redirect(url_for("home"))
             return render_template("login.html",
                                    error="Invalid email or password.")
@@ -360,6 +365,11 @@ def signup():
             from application.services.plans import start_trial
             start_trial(entity)
             user_table_client.create_entity(entity=entity)
+            track_event(entity["RowKey"], "signup", {
+                "ref": (request.form.get("ref") or request.args.get("ref") or "")[:40],
+                "ua": (request.headers.get("User-Agent") or "")[:200],
+                "utm": request.args.get("utm_source", ""),
+            })
 
             # Link referral if a code was provided.
             ref_code = (request.form.get("ref") or request.args.get("ref") or "").strip()
@@ -438,6 +448,7 @@ def verify_email():
             # New signups accept the Terms & Disclaimer during registration.
             session["terms_accepted"] = True
             session["just_logged_in"] = True
+            track_event(session.get("user_id", ""), "email_verified")
             flash("Email verified \u2014 welcome aboard!", "success")
             return redirect(url_for("home"))
         return render_template("verifyEmail.html",
@@ -831,6 +842,7 @@ def add_to_portfolio():
             "Symbol": symbol,
         }
         stocks_table_client.create_entity(entity=entity)
+        track_event(session["user_id"], "holding_added", {"symbol": symbol})
         precompute.invalidate_user(session["user_id"])
         flash("Stock added to your portfolio.", "success")
         return redirect(url_for("portfolioMaker"))

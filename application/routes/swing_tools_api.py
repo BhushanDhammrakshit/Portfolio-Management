@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, render_template, request, session, redirec
 
 from application.services import swing_tools
 from application.services.plans import requires_plan
+from application.services.event_tracker import track_feature
 
 swing_tools_api = Blueprint("swing_tools_api", __name__)
 
@@ -16,6 +17,7 @@ def _auth_ok():
 
 
 @swing_tools_api.route("/swing-tools")
+@track_feature("swing_tools")
 def swing_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))
