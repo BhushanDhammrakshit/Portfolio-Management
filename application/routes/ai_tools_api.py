@@ -10,6 +10,8 @@ from application.services.plans import requires_plan
 
 ai_tools_api = Blueprint("ai_tools_api", __name__)
 
+from application.services.event_tracker import track_feature
+
 
 def _auth_ok():
     return "email" in session
@@ -20,6 +22,7 @@ def _email():
 
 
 @ai_tools_api.route("/ai-tools")
+@track_feature("ai_tools")
 def ai_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))

@@ -11,6 +11,8 @@ from azure.core.exceptions import ResourceNotFoundError
 
 investing_tools_api = Blueprint("investing_tools_api", __name__)
 
+from application.services.event_tracker import track_feature
+
 
 def _auth_ok():
     return "email" in session
@@ -60,6 +62,7 @@ def _user_holdings():
 
 
 @investing_tools_api.route("/investing-tools")
+@track_feature("investing_tools")
 def investing_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))

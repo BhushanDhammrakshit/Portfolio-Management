@@ -247,6 +247,69 @@ def admin_stats():
     })
 
 
+# ── Activity / behaviour analytics ─────────────────────────────────────
+
+@admin_bp.route("/api/admin/activity")
+@_require_admin
+def activity_stats():
+    from application.services import event_tracker
+    try:
+        users_raw = list(user_table_client.query_entities(
+            query_filter="PartitionKey eq 'user'"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    users = []
+    for u in users_raw:
+        users.append({
+            "id": u.get("RowKey", ""),
+            "email_verified": bool(u.get("EmailVerified")),
+        })
+    try:
+        stats = event_tracker.compute_activity_stats(users)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify(stats)
+
+
+@admin_bp.route("/api/admin/users/<user_id>/events")
+@_require_admin
+def user_events(user_id):
+    from application.services import event_tracker
+    limit = min(int(request.args.get("limit", 50)), 200)
+    events = event_tracker.get_user_events(user_id, limit=limit)
+    return jsonify({"events": events})
+
+
+@admin_bp.route("/api/admin/resolve-user")
+@_require_admin
+def resolve_user():
+    """Look up a user by email/name/phone substring and return their ID."""
+    q = (request.args.get("q") or "").strip().lower()
+    if not q:
+        return jsonify({"error": "missing q"}), 400
+    try:
+        users_raw = list(user_table_client.query_entities(
+            query_filter="PartitionKey eq 'user'"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    best = None
+    for u in users_raw:
+        email = str(u.get("Email") or "").strip().lower()
+        name = str(u.get("UserName") or "").strip().lower()
+        phone = str(u.get("ContactNo") or "").strip().lower()
+        row_key = str(u.get("RowKey") or "")
+        if q == email or q == row_key:
+            # Exact match wins immediately.
+            return jsonify({"user_id": row_key, "label": u.get("UserName") or email})
+        if best is None and (q in email or q in name or q in phone):
+            best = {"user_id": row_key, "label": u.get("UserName") or email}
+    if best:
+        return jsonify(best)
+    return jsonify({"user_id": None})
+
+
 # ── Trial reminder emails ───────────────────────────────────────────────
 
 @admin_bp.route("/api/admin/trial-reminders/run", methods=["POST"])

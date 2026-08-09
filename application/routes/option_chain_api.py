@@ -5,11 +5,13 @@ from application.services import option_chain as oc_service
 from application.services import gap_history
 from application.services import preopen_pulse
 from application.services.plans import requires_plan
+from application.services.event_tracker import track_feature
 
 option_chain_api = Blueprint("option_chain_api", __name__)
 
 
 @option_chain_api.route("/option-chain")
+@track_feature("option_chain")
 def option_chain_page():
     if "email" not in session:
         return redirect(url_for("logIn"))
