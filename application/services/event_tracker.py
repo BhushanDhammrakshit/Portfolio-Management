@@ -203,6 +203,29 @@ def compute_time_by_feature(events: list[dict], users: Optional[list[dict]] = No
     return out
 
 
+def _build_recent_errors(events: list[dict], users: Optional[list[dict]] = None, max_rows: int = 100) -> list[dict]:
+    """Recent client/server error events, newest first, with user labels attached."""
+    user_lookup = {u.get("id"): u for u in (users or []) if u.get("id")}
+    out = []
+    for e in events:
+        if e["event"] not in ("client_error", "server_error"):
+            continue
+        meta = _parse_meta(e.get("meta"))
+        u = user_lookup.get(e["user_id"], {})
+        out.append({
+            "time": e["time"],
+            "event": e["event"],
+            "user_id": e["user_id"],
+            "user_label": u.get("name") or u.get("email") or e["user_id"],
+            "kind": meta.get("kind") or meta.get("type") or "",
+            "message": meta.get("message") or "",
+            "path": meta.get("path") or meta.get("endpoint") or meta.get("url") or "",
+            "status": meta.get("status") or "",
+        })
+    out.sort(key=lambda x: x["time"], reverse=True)
+    return out[:max_rows]
+
+
 def get_all_events_since(hours: int = 24, max_rows: int = 5000) -> list[dict]:
     """All events across all users within the last N hours.
 
@@ -325,4 +348,5 @@ def compute_activity_stats(users: list[dict]) -> dict:
         "top_events": [{"event": ev, "count": c} for ev, c in top_events],
         "total_events_30d": len(events_30d),
         "time_by_feature": compute_time_by_feature(events_30d, users),
+        "recent_errors": _build_recent_errors(events_24h, users),
     }

@@ -1232,5 +1232,54 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   window.addEventListener('pagehide', function(){ flush(true); });
 })();
 </script>
+
+<script>
+(function(){
+  function reportError(kind, detail){
+    try {
+      var payload = JSON.stringify({ event: 'client_error', meta: Object.assign({ kind: kind, path: location.pathname }, detail) });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+      } else {
+        fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function(){});
+      }
+    } catch (e) {}
+  }
+
+  window.addEventListener('error', function(e){
+    reportError('js_error', {
+      message: String(e.message || '').slice(0, 200),
+      source: String(e.filename || '').slice(0, 200),
+      line: e.lineno || 0
+    });
+  });
+
+  window.addEventListener('unhandledrejection', function(e){
+    var reason = e.reason;
+    var msg = (reason && (reason.message || (reason.toString && reason.toString()))) || 'unhandled rejection';
+    reportError('promise_rejection', { message: String(msg).slice(0, 200) });
+  });
+
+  // Wrap fetch to catch failed API calls that silently break the UI
+  // (e.g. "data has not loaded" on refresh) — only 5xx/network, not routine 4xx.
+  var _fetch = window.fetch;
+  if (_fetch) {
+    window.fetch = function(){
+      var args = arguments;
+      var url = String(args[0] && args[0].url ? args[0].url : args[0] || '');
+      if (url.indexOf('/api/track') !== -1) return _fetch.apply(this, args);
+      return _fetch.apply(this, args).then(function(res){
+        if (!res.ok && res.status >= 500) {
+          reportError('api_error', { url: url.slice(0, 200), status: res.status });
+        }
+        return res;
+      }).catch(function(err){
+        reportError('network_error', { url: url.slice(0, 200), message: String(err && err.message || err).slice(0, 200) });
+        throw err;
+      });
+    };
+  }
+})();
+</script>
 </body>
 </html>
