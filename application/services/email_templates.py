@@ -144,8 +144,12 @@ TEMPLATES: dict[str, dict] = {
 
 def _wrapper(gradient: str, tagline: str, headline: str, body_html: str,
              cta_text: str | None = None, cta_url: str | None = None,
-             footer_note: str = "") -> str:
-    """Shared email shell — keeps every template visually consistent."""
+             footer_note: str = "", unsubscribe_url: str = "") -> str:
+    """Shared email shell — keeps every template visually consistent.
+
+    ``unsubscribe_url``, when provided, marks this send as non-essential
+    (digest / re-engagement / summary) and adds an opt-out link to the footer.
+    """
     cta_block = ""
     if cta_text and cta_url:
         cta_block = f"""\
@@ -154,6 +158,8 @@ def _wrapper(gradient: str, tagline: str, headline: str, body_html: str,
         </div>"""
     footer = footer_note or f"You received this as a member of {APP_NAME}"
     billing_url = f"{APP_BASE_URL}/billing"
+    unsub_link = (f' &middot; <a href="{unsubscribe_url}" style="color:#9ca3af;text-decoration:underline">Unsubscribe</a>'
+                  if unsubscribe_url else "")
     return f"""\
 <!doctype html>
 <html><body style="margin:0;padding:0;background:#f6f9fc;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937">
@@ -170,7 +176,7 @@ def _wrapper(gradient: str, tagline: str, headline: str, body_html: str,
       <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 28px;text-align:center">
         <p style="margin:0;font-size:11px;color:#d1d5db;line-height:1.5">
           &copy; {APP_NAME} &middot; {footer} &middot;
-          <a href="{billing_url}" style="color:#6366f1;text-decoration:none">Manage subscription</a>
+          <a href="{billing_url}" style="color:#6366f1;text-decoration:none">Manage subscription</a>{unsub_link}
         </p>
       </div>
     </div>
@@ -269,7 +275,7 @@ def winback_html(name: str, plan_name: str = "Pro") -> str:
     )
 
 
-def re_engagement_html(name: str, days_inactive: int = 7) -> str:
+def re_engagement_html(name: str, days_inactive: int = 7, unsubscribe_url: str = "") -> str:
     safe_name = (name or "there").split("@")[0][:60]
     return _wrapper(
         gradient="#f59e0b 0%,#d97706 100%",
@@ -293,6 +299,7 @@ def re_engagement_html(name: str, days_inactive: int = 7) -> str:
         cta_text="Check My Portfolio",
         cta_url=f"{APP_BASE_URL}/home",
         footer_note=f"You received this because you haven't logged into {APP_NAME} recently",
+        unsubscribe_url=unsubscribe_url,
     )
 
 
@@ -446,7 +453,8 @@ def weekly_investor_html(name: str) -> str:
 
 def usage_summary_html(name: str, plan_name: str = "Pro",
                        ai_used: int = 0, ai_limit: int = 100,
-                       tokens_used: int = 0, tokens_limit: int = 100000) -> str:
+                       tokens_used: int = 0, tokens_limit: int = 100000,
+                       unsubscribe_url: str = "") -> str:
     safe_name = (name or "there").split("@")[0][:60]
     ai_pct = min(100, round(ai_used / max(ai_limit, 1) * 100))
     tok_pct = min(100, round(tokens_used / max(tokens_limit, 1) * 100))
@@ -488,27 +496,35 @@ def usage_summary_html(name: str, plan_name: str = "Pro",
         cta_text="View Dashboard",
         cta_url=f"{APP_BASE_URL}/home",
         footer_note=f"You received this as a {plan_name} member of {APP_NAME}",
+        unsubscribe_url=unsubscribe_url,
     )
 
 
 def usage_limit_warning_html(name: str, plan_name: str = "Pro",
                               usage_pct: int = 80) -> str:
     safe_name = (name or "there").split("@")[0][:60]
+    exhausted = usage_pct >= 100
+    headline = ("Your monthly AI quota is exhausted"
+                if exhausted else f"You've used {usage_pct}% of your monthly AI quota")
+    intro = (f"You've reached the monthly AI analysis limit on your <strong>{plan_name}</strong> plan. "
+             "AI-powered tools (analysis, chat, Idea of the Day) are paused until next month's reset."
+             if exhausted else
+             f"You're approaching the monthly AI analysis limit on your <strong>{plan_name}</strong> plan. "
+             "Once you hit the cap, AI-powered tools will be paused until next month.")
     return _wrapper(
         gradient="#dc2626 0%,#b91c1c 100%",
         tagline="Usage alert",
-        headline=f"You've used {usage_pct}% of your monthly AI quota",
+        headline=headline,
         body_html=f"""\
         <p style="font-size:15px;margin:0 0 16px">Hi <strong>{safe_name}</strong>,</p>
         <p style="font-size:14px;line-height:1.65;color:#374151;margin:0 0 16px">
-          You're approaching the monthly AI analysis limit on your <strong>{plan_name}</strong> plan.
-          Once you hit the cap, AI-powered tools will be paused until next month.
+          {intro}
         </p>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:18px;margin:0 0 20px;text-align:center">
           <div style="font-size:24px;font-weight:800;color:#dc2626;margin-bottom:4px">{usage_pct}%</div>
           <div style="font-size:13px;color:#991b1b">of your monthly AI quota used</div>
           <div style="background:#e5e7eb;border-radius:6px;height:8px;margin:12px 0 0;overflow:hidden">
-            <div style="background:linear-gradient(90deg,#f59e0b,#dc2626);height:100%;width:{usage_pct}%;border-radius:6px"></div>
+            <div style="background:linear-gradient(90deg,#f59e0b,#dc2626);height:100%;width:{min(usage_pct, 100)}%;border-radius:6px"></div>
           </div>
         </div>
         <p style="font-size:14px;line-height:1.65;color:#374151;margin:0 0 16px">

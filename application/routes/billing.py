@@ -240,6 +240,21 @@ def _activate_paid_plan_from_meta(meta: dict) -> bool:
         "to": plan_id, "cycle": cycle, "trigger": "razorpay",
     })
 
+    # Confirmation email — best-effort, never blocks plan activation.
+    try:
+        from application.services import email_service, email_templates
+        email = user.get("Email")
+        if email:
+            plan_name = plans.get_plan(plan_id).get("name", plan_id.title())
+            email_service.send_email(
+                to=email,
+                subject=email_templates.TEMPLATES["renewal_success"]["subject"],
+                html=email_templates.renewal_success_html(
+                    user.get("UserName", ""), plan_name, user.get("PlanExpiresOn", "")),
+            )
+    except Exception as e:
+        print(f"[billing] renewal confirmation email failed: {e}")
+
     # Award referral credit to whoever referred this user.
     try:
         from application.services import referral

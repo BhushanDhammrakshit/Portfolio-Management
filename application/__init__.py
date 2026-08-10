@@ -280,6 +280,74 @@ def _start_plan_expiry_scheduler():
 _start_plan_expiry_scheduler()
 
 
+# ── Daily re-engagement email scheduler (one-time per 30-day window) ──
+def _start_re_engagement_scheduler():
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
+        return
+    try:
+        from application.config import RE_ENGAGEMENT_ENABLED, RE_ENGAGEMENT_HOUR_IST
+        if not RE_ENGAGEMENT_ENABLED:
+            return
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from application.services import cache as _cache
+        from application.services import re_engagement
+
+        def _run_if_leader():
+            if _cache.try_become_leader(ttl=3600):
+                re_engagement.send_re_engagement_emails()
+
+        sched = BackgroundScheduler(timezone="Asia/Kolkata", daemon=True)
+        sched.add_job(
+            _run_if_leader,
+            trigger=CronTrigger(hour=RE_ENGAGEMENT_HOUR_IST, minute=0),
+            id="re_engagement_daily",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        sched.start()
+        print(f"[re-engagement] daily check scheduled @ {RE_ENGAGEMENT_HOUR_IST:02d}:00 IST")
+    except Exception as e:
+        print(f"[re-engagement] scheduler start failed: {e}")
+
+
+_start_re_engagement_scheduler()
+
+
+# ── Monthly AI-usage summary scheduler (1st of the month) ─────────────
+def _start_usage_summary_scheduler():
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
+        return
+    try:
+        from application.config import USAGE_SUMMARY_ENABLED, USAGE_SUMMARY_HOUR_IST
+        if not USAGE_SUMMARY_ENABLED:
+            return
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        from application.services import cache as _cache
+        from application.services import usage_summary_mailer
+
+        def _run_if_leader():
+            if _cache.try_become_leader(ttl=3600):
+                usage_summary_mailer.send_monthly_usage_summaries()
+
+        sched = BackgroundScheduler(timezone="Asia/Kolkata", daemon=True)
+        sched.add_job(
+            _run_if_leader,
+            trigger=CronTrigger(day=1, hour=USAGE_SUMMARY_HOUR_IST, minute=0),
+            id="usage_summary_monthly",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        sched.start()
+        print(f"[usage-summary] monthly recap scheduled @ day 1, {USAGE_SUMMARY_HOUR_IST:02d}:00 IST")
+    except Exception as e:
+        print(f"[usage-summary] scheduler start failed: {e}")
+
+
+_start_usage_summary_scheduler()
+
+
 # ── Background precompute (market + per-user payloads → Redis) ────────
 def _start_precompute_scheduler():
     if os.environ.get("WERKZEUG_RUN_MAIN") == "false":

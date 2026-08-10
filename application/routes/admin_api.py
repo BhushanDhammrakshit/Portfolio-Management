@@ -370,6 +370,26 @@ def run_free_plan_nudge():
     return jsonify({"ok": True, "stats": stats})
 
 
+# ── Re-engagement emails (one-time per 30-day window) ────────────────────
+
+@admin_bp.route("/api/admin/re-engagement/run", methods=["POST"])
+@_require_admin
+def run_re_engagement():
+    from application.services import re_engagement
+    stats = re_engagement.send_re_engagement_emails()
+    return jsonify({"ok": True, "stats": stats})
+
+
+# ── Monthly usage summary emails ─────────────────────────────────────────
+
+@admin_bp.route("/api/admin/usage-summary/run", methods=["POST"])
+@_require_admin
+def run_usage_summary():
+    from application.services import usage_summary_mailer
+    stats = usage_summary_mailer.send_monthly_usage_summaries()
+    return jsonify({"ok": True, "stats": stats})
+
+
 # ── Email templates — list, preview, manual send ─────────────────────
 
 @admin_bp.route("/api/admin/email-templates")

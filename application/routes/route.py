@@ -295,6 +295,29 @@ def logIn():
     return render_template("login.html")
 
 
+def _send_welcome_email(user_id: str, name: str, email: str) -> None:
+    """Fire-and-forget onboarding email, sent once the account is verified."""
+    if not email:
+        return
+    try:
+        from application.services import email_service, email_templates
+        persona = ""
+        try:
+            results = list(user_table_client.query_entities(
+                query_filter=f"PartitionKey eq 'user' and RowKey eq '{user_id}'"))
+            if results:
+                persona = results[0].get("Persona", "") or ""
+        except Exception:
+            pass
+        email_service.send_email(
+            to=email,
+            subject=email_templates.TEMPLATES["welcome"]["subject"],
+            html=email_templates.welcome_html(name, persona),
+        )
+    except Exception as e:
+        print(f"[welcome-email] send failed for {email}: {e}")
+
+
 def _notify_admin_new_user(email_service, name, email, phone, gender,
                            location, ref_code):
     """Fire-and-forget email to admin when a new user signs up."""
@@ -426,6 +449,33 @@ def logout():
     return redirect(url_for("logIn"))
 
 
+@app.route("/email/unsubscribe")
+def email_unsubscribe():
+    """Signed link from non-essential emails (digest/re-engagement/summary) — no login needed."""
+    from application.services import email_prefs
+    from application.config import APP_NAME
+
+    token = request.args.get("token", "")
+    user_id = email_prefs.user_id_from_token(token) if token else None
+    ok = bool(user_id) and email_prefs.set_opted_out(user_id)
+    message = (
+        "You've been unsubscribed from non-essential emails (digests, re-engagement, "
+        "usage summaries). You'll still receive account-critical emails such as "
+        "security alerts and billing confirmations."
+        if ok else
+        "This unsubscribe link is invalid or has expired."
+    )
+    return f"""\
+<!doctype html><html><body style="margin:0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+background:#f6f9fc;padding:48px 24px;text-align:center;color:#1f2937">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;
+  border-radius:14px;padding:32px">
+    <h2 style="margin:0 0 12px">{APP_NAME}</h2>
+    <p style="font-size:14px;line-height:1.6;color:#374151">{message}</p>
+  </div>
+</body></html>"""
+
+
 # ---------- Email verification ----------
 
 @app.route("/verify-email", methods=["GET", "POST"])
@@ -449,6 +499,7 @@ def verify_email():
             session["terms_accepted"] = True
             session["just_logged_in"] = True
             track_event(session.get("user_id", ""), "email_verified")
+            _send_welcome_email(session.get("user_id", ""), session.get("name", ""), pending_email)
             flash("Email verified \u2014 welcome aboard!", "success")
             return redirect(url_for("home"))
         return render_template("verifyEmail.html",

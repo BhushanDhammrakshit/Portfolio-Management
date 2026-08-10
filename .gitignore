@@ -37,3 +37,6 @@ build/
 fix_mojibake.py
 HM2.mq4
 Strategies.txt
+
+
+*.pyc

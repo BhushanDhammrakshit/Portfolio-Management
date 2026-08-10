@@ -40,6 +40,10 @@ OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "5"))
 OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))
 PLAN_EXPIRY_NOTIFIER_ENABLED = (os.getenv("PLAN_EXPIRY_NOTIFIER_ENABLED", "1") == "1")
 PLAN_EXPIRY_NOTIFIER_HOUR_IST = int(os.getenv("PLAN_EXPIRY_NOTIFIER_HOUR_IST", "9"))
+RE_ENGAGEMENT_ENABLED = (os.getenv("RE_ENGAGEMENT_ENABLED", "1") == "1")
+RE_ENGAGEMENT_HOUR_IST = int(os.getenv("RE_ENGAGEMENT_HOUR_IST", "10"))
+USAGE_SUMMARY_ENABLED = (os.getenv("USAGE_SUMMARY_ENABLED", "1") == "1")
+USAGE_SUMMARY_HOUR_IST = int(os.getenv("USAGE_SUMMARY_HOUR_IST", "9"))
 
 # ── Market data provider ──────────────────────────────────────────────
 # Primary provider for prices / history / quotes.

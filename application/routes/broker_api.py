@@ -67,6 +67,53 @@ def _delete_token(user_id: str, broker: str = "fyers"):
     _user_tokens.pop(f"{broker}:{user_id}", None)
 
 
+# ── Broker sync failure alert (event-driven, cooldown to avoid spam) ────
+_BROKER_ALERT_COOLDOWN_DAYS = 3
+
+
+def _notify_broker_sync_failure(user_id: str, broker_name: str) -> None:
+    """Send a token-expired alert, at most once every N days per broker."""
+    from datetime import date, datetime
+
+    from azure.data.tables import UpdateMode
+
+    from application.services import email_service, email_templates
+    from application.services.azure_table import user_table_client
+
+    field = f"BrokerSyncAlert{broker_name}On"
+    try:
+        results = list(user_table_client.query_entities(
+            query_filter=f"PartitionKey eq 'user' and RowKey eq '{user_id}'"))
+        if not results:
+            return
+        user = results[0]
+        last_sent = user.get(field) or ""
+        if last_sent:
+            try:
+                days_since = (date.today() - datetime.fromisoformat(last_sent).date()).days
+                if days_since < _BROKER_ALERT_COOLDOWN_DAYS:
+                    return
+            except (TypeError, ValueError):
+                pass
+
+        email = user.get("Email")
+        if not email:
+            return
+        name = user.get("UserName", "")
+        ok, info = email_service.send_email(
+            to=email,
+            subject=f"Action needed \u2014 your {broker_name} connection expired",
+            html=email_templates.broker_sync_failure_html(name, broker_name),
+        )
+        if ok:
+            user[field] = date.today().isoformat()
+            user_table_client.update_entity(entity=user, mode=UpdateMode.MERGE)
+        else:
+            log.warning("broker_sync_failure: send failed for %s: %s", email, info)
+    except Exception as e:
+        log.warning("broker_sync_failure: alert error for user %s: %s", user_id, e)
+
+
 # ── Routes ──────────────────────────────────────────────────────────────
 
 @broker_api.route("/broker/fyers/connect")
@@ -179,6 +226,7 @@ def fyers_sync():
         # If token expired, remove it.
         if r.status_code == 401 or "token" in msg.lower() or "expired" in msg.lower():
             _delete_token(session["user_id"])
+            _notify_broker_sync_failure(session["user_id"], "Fyers")
             return jsonify({"error": "Fyers token expired. Please re-connect."}), 401
         return jsonify({"error": f"Fyers error: {msg}"}), 400
 
@@ -334,6 +382,7 @@ def dhan_sync():
         r = requests.get(_DHAN_HOLDINGS_URL, headers=headers, timeout=15)
         if r.status_code == 401:
             _delete_token(session["user_id"], "dhan")
+            _notify_broker_sync_failure(session["user_id"], "Dhan")
             return jsonify({"error": "Dhan token expired. Please re-connect with a new token."}), 401
         holdings = r.json()
     except Exception as e:
@@ -343,6 +392,7 @@ def dhan_sync():
     if isinstance(holdings, dict) and holdings.get("errorCode"):
         msg = holdings.get("errorMessage") or str(holdings)
         _delete_token(session["user_id"], "dhan")
+        _notify_broker_sync_failure(session["user_id"], "Dhan")
         return jsonify({"error": f"Dhan error: {msg}"}), 400
 
     if not isinstance(holdings, list) or not holdings:
