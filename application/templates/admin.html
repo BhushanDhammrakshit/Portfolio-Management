@@ -132,6 +132,64 @@
   .adm-modal{width:95%;max-width:none}
   .adm-modal-kpis{grid-template-columns:repeat(3,1fr)}
 }
+
+/* Feature adoption bars */
+.act-bar-wrap{display:flex;align-items:center;gap:10px;padding:5px 0}
+.act-bar-label{flex:0 0 120px;font-size:.78rem;font-weight:600;color:var(--text);text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.act-bar-track{flex:1;height:10px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.act-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#6366f1,#818cf8);transition:width .5s ease}
+.act-bar-val{flex:0 0 60px;font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;color:var(--text-muted)}
+
+/* Funnel steps */
+.act-funnel-step{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.act-funnel-step:last-child{border:none}
+.act-funnel-num{flex:0 0 50px;font-size:1.2rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.act-funnel-info{flex:1}
+.act-funnel-name{font-size:.82rem;font-weight:600}
+.act-funnel-pct{font-size:.68rem;color:var(--text-muted)}
+
+/* Timeline */
+.act-tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.act-tl-item:last-child{border:none}
+.act-tl-time{flex:0 0 130px;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums}
+.act-tl-event{font-weight:600}
+.act-tl-meta{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+
+/* User search suggestions */
+.act-suggest-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;z-index:60;display:none}
+.act-suggest-list.show{display:block}
+.act-suggest-item{display:flex;flex-direction:column;gap:1px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border)}
+.act-suggest-item:last-child{border:none}
+.act-suggest-item:hover{background:var(--surface-2)}
+.act-suggest-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.act-suggest-email{font-size:.72rem;color:var(--text-muted)}
+.act-suggest-empty{padding:12px;text-align:center;font-size:.8rem;color:var(--text-muted)}
+
+/* Recent errors */
+.act-err-list{display:flex;flex-direction:column;max-height:360px;overflow-y:auto}
+.act-err-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.act-err-item:last-child{border:none}
+.act-err-time{flex:0 0 120px;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums}
+.act-err-body{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.act-err-badge{font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
+.act-err-badge.act-err-server{background:rgba(220,38,38,.15);color:#dc2626}
+.act-err-badge.act-err-client{background:rgba(245,158,11,.15);color:#f59e0b}
+.act-err-user{font-weight:600;color:var(--text);cursor:pointer}
+.act-err-user:hover{text-decoration:underline}
+.act-err-msg{color:var(--text)}
+.act-err-path{color:var(--text-muted);font-size:.72rem}
+
+/* Time-per-tool user breakdown */
+.tbf-row{cursor:pointer}
+.tbf-row:hover{background:var(--surface-2)}
+.tbf-caret{font-size:.7rem;color:var(--text-muted);transition:transform .15s}
+.tbf-row.open .tbf-caret{transform:rotate(90deg)}
+.tbf-detail-row td{background:var(--surface-2);padding:10px 14px}
+.tbf-users{display:flex;flex-wrap:wrap;gap:8px}
+.tbf-user{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:.76rem}
+.tbf-user:hover{border-color:var(--primary,#6366f1)}
+.tbf-user-name{font-weight:600;color:var(--text)}
+.tbf-user-mins{color:var(--text-muted)}
 </style>
 
 <div class="adm">
@@ -149,6 +207,7 @@
     <button class="adm-tab active" data-tab="overview"><i class="fa-solid fa-chart-pie"></i>Overview</button>
     <button class="adm-tab" data-tab="users"><i class="fa-solid fa-users"></i>Users</button>
     <button class="adm-tab" data-tab="emails"><i class="fa-solid fa-envelopes-bulk"></i>Emails</button>
+    <button class="adm-tab" data-tab="activity"><i class="fa-solid fa-chart-line"></i>Activity</button>
     <button class="adm-tab" data-tab="system"><i class="fa-solid fa-server"></i>System</button>
   </div>
 
@@ -252,6 +311,27 @@
     </div>
   </div>
 
+  <!-- Activity -->
+  <div class="adm-panel" id="panel-activity">
+    <div class="adm-kpis" id="actKpis"></div>
+    <div class="adm-health" id="actCards"></div>
+  </div>
+
+  <!-- User timeline modal -->
+  <div class="adm-modal-overlay" id="actTimelineModal">
+    <div class="adm-modal" style="max-width:620px;max-height:85vh">
+      <div class="adm-modal-header">
+        <i class="fa-solid fa-clock-rotate-left" style="color:#6366f1"></i>
+        <span class="modal-title" id="actTimelineTitle">Activity Timeline</span>
+        <button class="adm-modal-close" id="actTimelineClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="adm-modal-body" id="actTimelineBody" style="overflow-y:auto;max-height:60vh"></div>
+      <div class="adm-modal-footer">
+        <button class="btn btn-primary btn-sm" id="actTimelineDone">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- System -->
   <div class="adm-panel" id="panel-system">
     <div class="adm-health" id="admSystemCards"></div>
@@ -343,6 +423,7 @@
       renderUsers();
       renderSystem();
       loadEmailTemplates();
+      loadActivity();
     } catch (e) { console.error('Admin load failed:', e); }
   }
 
@@ -465,6 +546,7 @@
               <button class="adm-act-item" onclick="setPlan('${u.id}','free')"><i class="fa-solid fa-tag me-2"></i>Set Free</button>
               <button class="adm-act-item" onclick="setPlan('${u.id}','pro')"><i class="fa-solid fa-bolt me-2"></i>Set Pro</button>
               <button class="adm-act-item" onclick="setPlan('${u.id}','elite')"><i class="fa-solid fa-gem me-2"></i>Set Elite</button>
+              <button class="adm-act-item" onclick="showUserTimeline('${u.id}','${(u.name || u.email).replace(/'/g,"\\'")}')"><i class="fa-solid fa-clock-rotate-left me-2"></i>View Activity</button>
               ${!u.email_verified ? `<button class="adm-act-item" onclick="verifyUser('${u.id}')"><i class="fa-solid fa-envelope-circle-check me-2"></i>Verify Email</button>` : ''}
               <button class="adm-act-item danger" onclick="deleteUser('${u.id}','${(u.email || '').replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash me-2"></i>Delete</button>
             </div>
@@ -933,6 +1015,274 @@
     this.disabled = false;
     this.textContent = 'Send';
   });
+
+  // ── Activity tab ──────────────────────────────────────────────────────
+  let _activityData = null;
+
+  async function loadActivity() {
+    try {
+      _activityData = await fetchJson('/api/admin/activity');
+      renderActivity();
+    } catch (e) {
+      console.error('Activity load failed:', e);
+      document.getElementById('actKpis').innerHTML = '<div class="adm-empty"><i class="fa-solid fa-triangle-exclamation"></i>Failed to load activity data</div>';
+    }
+  }
+
+  function renderActivity() {
+    const d = _activityData;
+    if (!d) return;
+
+    // KPI cards
+    const kpis = [
+      { label: 'DAU', val: d.dau || 0, color: '#16a34a' },
+      { label: 'WAU', val: d.wau || 0, color: '#6366f1' },
+      { label: 'MAU', val: d.mau || 0, color: '#0ea5e9' },
+      { label: 'Events (30d)', val: d.total_events_30d || 0, color: '#f59e0b' },
+    ];
+    document.getElementById('actKpis').innerHTML = kpis.map(k =>
+      `<div class="adm-kpi"><span class="k-label">${k.label}</span><span class="k-val" style="color:${k.color}">${k.val.toLocaleString()}</span></div>`
+    ).join('');
+
+    // Feature adoption bars
+    const adoption = d.feature_adoption || [];
+    const maxPct = Math.max(...adoption.map(a => a.pct), 1);
+    let adoptionHtml = '';
+    if (adoption.length) {
+      adoptionHtml = adoption.map(a => {
+        const width = Math.max(2, (a.pct / maxPct) * 100);
+        const label = a.feature.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+        return `<div class="act-bar-wrap">
+          <span class="act-bar-label" title="${label}">${label}</span>
+          <div class="act-bar-track"><div class="act-bar-fill" style="width:${width}%"></div></div>
+          <span class="act-bar-val">${a.users} (${a.pct}%)</span>
+        </div>`;
+      }).join('');
+    } else {
+      adoptionHtml = '<div style="font-size:.82rem;color:var(--text-muted);padding:12px 0">No feature events recorded yet</div>';
+    }
+
+    // Funnel
+    const funnel = d.funnel || [];
+    const colors = ['#6366f1', '#0ea5e9', '#16a34a', '#f59e0b', '#dc2626'];
+    let funnelHtml = '';
+    if (funnel.length) {
+      funnelHtml = funnel.map((s, i) =>
+        `<div class="act-funnel-step">
+          <span class="act-funnel-num" style="color:${colors[i] || '#6366f1'}">${s.count.toLocaleString()}</span>
+          <div class="act-funnel-info">
+            <div class="act-funnel-name">${s.step}</div>
+            <div class="act-funnel-pct">${s.pct}% of total</div>
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    // Top events
+    const topEv = d.top_events || [];
+    let eventsHtml = '';
+    if (topEv.length) {
+      eventsHtml = topEv.map(e =>
+        `<div class="hc-row"><span class="hc-label">${e.event}</span><span class="hc-val">${e.count.toLocaleString()}</span></div>`
+      ).join('');
+    }
+
+    document.getElementById('actCards').innerHTML = `
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-layer-group"></i>Feature Adoption (30d)</h4>
+        ${adoptionHtml}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-filter"></i>Activation Funnel</h4>
+        ${funnelHtml || '<div style="font-size:.82rem;color:var(--text-muted)">No data yet</div>'}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-fire"></i>Top Events (30d)</h4>
+        ${eventsHtml || '<div style="font-size:.82rem;color:var(--text-muted)">No events yet</div>'}
+      </div>
+      <div class="adm-hcard">
+        <h4><i class="fa-solid fa-user-clock"></i>User Timeline</h4>
+        <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 10px">Type a name, or email (even just the part before @) — click a suggestion.</p>
+        <div style="position:relative">
+          <input type="search" class="adm-search" id="actTimelineSearch" name="actTimelineSearchQuery" placeholder="Name or email…" style="width:100%;max-width:none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="actTimelineSuggest" />
+          <div id="actTimelineSuggest" class="act-suggest-list"></div>
+        </div>
+      </div>
+      <div class="adm-hcard" style="grid-column:1 / -1">
+        <h4><i class="fa-solid fa-clock"></i>Time Spent per Tool (30d)</h4>
+        ${(d.time_by_feature && d.time_by_feature.length) ? `
+        <table class="adm-table" style="margin-top:6px">
+          <thead><tr><th></th><th>Tool</th><th class="num">Users</th><th class="num">Total Time</th><th class="num">Avg / User</th></tr></thead>
+          <tbody>
+            ${d.time_by_feature.map((t, i) => {
+              const label = t.feature.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+              const fmtM = m => m >= 60 ? (m / 60).toFixed(1) + 'h' : m + 'm';
+              const rowId = `tbf-detail-${i}`;
+              const users = t.top_users || [];
+              const usersHtml = users.length ? users.map(u => {
+                const uLabel = (u.name || u.email || u.user_id || '').toString();
+                return `<div class="tbf-user" data-uid="${u.user_id}" data-label="${uLabel.replace(/"/g, '&quot;')}">
+                  <span class="tbf-user-name">${uLabel || u.user_id}</span>
+                  <span class="tbf-user-mins">${fmtM(u.minutes)}</span>
+                </div>`;
+              }).join('') : '<div class="act-suggest-empty">No per-user data</div>';
+              return `<tr class="tbf-row" data-target="${rowId}">
+                  <td><i class="fa-solid fa-chevron-right tbf-caret"></i></td>
+                  <td>${label}</td>
+                  <td class="num">${t.users}</td>
+                  <td class="num">${fmtM(t.total_minutes)}</td>
+                  <td class="num">${fmtM(t.avg_minutes_per_user)}</td>
+                </tr>
+                <tr class="tbf-detail-row" id="${rowId}" style="display:none">
+                  <td colspan="5"><div class="tbf-users">${usersHtml}</div></td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : '<div style="font-size:.82rem;color:var(--text-muted)">No time data yet — accumulates as users browse tool pages.</div>'}
+      </div>
+      <div class="adm-hcard" style="grid-column:1 / -1">
+        <h4><i class="fa-solid fa-triangle-exclamation"></i>Recent Errors (24h)</h4>
+        ${(d.recent_errors && d.recent_errors.length) ? `
+        <div class="act-err-list">
+          ${d.recent_errors.map(er => {
+            const t = er.time ? new Date(er.time).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+            const isServer = er.event === 'server_error';
+            return `<div class="act-err-item">
+              <div class="act-err-time">${t}</div>
+              <div class="act-err-body">
+                <span class="act-err-badge act-err-${isServer ? 'server' : 'client'}">${isServer ? 'Server' : 'Client'}${er.status ? ' · ' + er.status : ''}</span>
+                <span class="act-err-user" data-uid="${er.user_id}" data-label="${(er.user_label || '').replace(/"/g, '&quot;')}">${er.user_label}</span>
+                <span class="act-err-msg">${(er.message || 'Unknown error').toString().slice(0, 180)}</span>
+                ${er.path ? `<span class="act-err-path">${er.path}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div style="font-size:.82rem;color:var(--text-muted)">No errors in the last 24h 🎉</div>'}
+      </div>
+    `;
+
+    document.querySelectorAll('.act-err-user').forEach(el => {
+      el.addEventListener('click', () => showUserTimeline(el.dataset.uid, el.dataset.label));
+    });
+
+    // Time-per-tool: click a row to expand/collapse its per-user breakdown
+    document.querySelectorAll('.tbf-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const detail = document.getElementById(row.dataset.target);
+        if (!detail) return;
+        const opening = detail.style.display === 'none';
+        detail.style.display = opening ? '' : 'none';
+        row.classList.toggle('open', opening);
+      });
+    });
+    // Click a user chip inside the breakdown to jump to their timeline
+    document.querySelectorAll('.tbf-user').forEach(chip => {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        showUserTimeline(chip.dataset.uid, chip.dataset.label);
+      });
+    });
+
+    // Wire timeline search — live suggestions as you type
+    const tlInput = document.getElementById('actTimelineSearch');
+    const tlSuggest = document.getElementById('actTimelineSuggest');
+    let tlDebounce = null;
+
+    function renderSuggestions(results) {
+      if (!results.length) {
+        tlSuggest.innerHTML = '<div class="act-suggest-empty">No matching users</div>';
+        tlSuggest.classList.add('show');
+        tlInput.setAttribute('aria-expanded', 'true');
+        return;
+      }
+      tlSuggest.innerHTML = results.map(u => `
+        <div class="act-suggest-item" data-uid="${u.id}" data-label="${(u.name || u.email).replace(/"/g, '&quot;')}">
+          <span class="act-suggest-name">${u.name || u.email}</span>
+          <span class="act-suggest-email">${u.email}${u.plan ? ` · <span class="plan-pill plan-${u.plan}" style="font-size:.6rem;padding:1px 6px">${u.plan}</span>` : ''}</span>
+        </div>
+      `).join('');
+      tlSuggest.classList.add('show');
+      tlInput.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideSuggestions() {
+      tlSuggest.classList.remove('show');
+      tlInput.setAttribute('aria-expanded', 'false');
+    }
+
+    tlInput.addEventListener('input', () => {
+      const q = tlInput.value.trim();
+      clearTimeout(tlDebounce);
+      if (q.length < 2) { hideSuggestions(); return; }
+      tlDebounce = setTimeout(async () => {
+        try {
+          const d = await fetchJson(`/api/admin/search-users?q=${encodeURIComponent(q)}`);
+          renderSuggestions(d.results || []);
+        } catch (e) { hideSuggestions(); }
+      }, 200);
+    });
+
+    // Use mousedown (fires before the input's blur) so a click on a
+    // suggestion always registers, even if the browser tries to steal
+    // focus with its own native suggestion popup first.
+    tlSuggest.addEventListener('mousedown', e => {
+      const item = e.target.closest('.act-suggest-item');
+      if (!item) return;
+      e.preventDefault();
+      hideSuggestions();
+      tlInput.value = item.dataset.label;
+      showUserTimeline(item.dataset.uid, item.dataset.label);
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#actTimelineSearch') && !e.target.closest('#actTimelineSuggest')) {
+        hideSuggestions();
+      }
+    });
+  }
+
+  window.showUserTimeline = async function showUserTimeline(userId, label) {
+    const overlay = document.getElementById('actTimelineModal');
+    document.getElementById('actTimelineTitle').textContent = 'Timeline: ' + (label || userId);
+    document.getElementById('actTimelineBody').innerHTML = '<div class="adm-loading"><div class="app-spinner"></div>Loading events…</div>';
+    overlay.classList.add('show');
+    try {
+      const d = await fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/events?limit=100`);
+      const events = d.events || [];
+      if (!events.length) {
+        document.getElementById('actTimelineBody').innerHTML = '<div class="adm-empty"><i class="fa-solid fa-inbox"></i>No events recorded for this user</div>';
+        return;
+      }
+      document.getElementById('actTimelineBody').innerHTML = events.map(e => {
+        let meta = '';
+        try { const m = JSON.parse(e.meta || '{}'); meta = Object.entries(m).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' · '); } catch {}
+        return `<div class="act-tl-item">
+          <span class="act-tl-time">${fmtDateTime(e.time)}</span>
+          <div>
+            <div class="act-tl-event">${e.event}${e.plan ? ` <span class="plan-pill plan-${e.plan}" style="font-size:.6rem;padding:1px 6px">${e.plan}</span>` : ''}</div>
+            ${meta ? `<div class="act-tl-meta">${meta}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('actTimelineBody').innerHTML = `<div class="adm-empty"><i class="fa-solid fa-triangle-exclamation"></i>Failed: ${e.message}</div>`;
+    }
+  }
+
+  const fmtDateTime = d => {
+    if (!d) return '\u2014';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt)) return d.slice(0, 16);
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ', ' +
+             dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch { return d.slice(0, 16); }
+  };
+
+  // Timeline modal close
+  document.getElementById('actTimelineClose').addEventListener('click', () => document.getElementById('actTimelineModal').classList.remove('show'));
+  document.getElementById('actTimelineDone').addEventListener('click', () => document.getElementById('actTimelineModal').classList.remove('show'));
+  document.getElementById('actTimelineModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
 
   // Refresh button
   document.getElementById('admRefresh').addEventListener('click', loadAll);

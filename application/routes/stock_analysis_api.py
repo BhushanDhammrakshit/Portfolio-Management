@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, session
 
 from application.services.ai_client import chat as ai_chat, is_configured
 from application.services.rag import retriever as rag_retriever
+from application.services.event_tracker import track_event
 
 log = logging.getLogger(__name__)
 
@@ -309,6 +310,7 @@ def stock_analysis():
     plans.increment_usage(uid, "ai_single")
     out = _normalize(payload, stock)
     out["sources_used"] = rag_sources
+    track_event(uid, "ai_query_run", {"symbol": stock.get("Symbol", "")})
     return jsonify(out)
 
 

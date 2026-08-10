@@ -12,6 +12,8 @@ from application.services import ai_client
 
 mutual_funds_api = Blueprint("mutual_funds_api", __name__)
 
+from application.services.event_tracker import track_feature
+
 
 def _auth_ok() -> bool:
     return "email" in session and bool(session.get("user_id"))
@@ -24,6 +26,7 @@ def _err(msg: str, status: int = 400, **extra):
 
 # ── Page ────────────────────────────────────────────────────────────────
 @mutual_funds_api.route("/mutual-funds")
+@track_feature("mutual_funds")
 def mutual_funds_page():
     if "email" not in session:
         return redirect(url_for("logIn"))
