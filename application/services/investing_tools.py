@@ -433,9 +433,11 @@ def shareholding_pattern(symbol: str) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────
 
 def corporate_actions(symbols: List[str]) -> Dict[str, Any]:
-    """Pull dividends and splits for given symbols (last 2 years)."""
+    """Pull dividends and splits for given symbols (last 2 years + upcoming)."""
     out: List[Dict[str, Any]] = []
     cutoff = _now_ist().date() - _dt.timedelta(days=730)
+    today = _now_ist().date()
+    buy_window_start = today + _dt.timedelta(days=2)
 
     def _ca(symbol):
         try:
@@ -448,14 +450,35 @@ def corporate_actions(symbols: List[str]) -> Dict[str, Any]:
                 for ts, v in div.items():
                     d = ts.date() if hasattr(ts, "date") else None
                     if d and d >= cutoff:
+                        actionable = d >= buy_window_start
                         events.append({"date": d.isoformat(), "type": "Dividend",
-                                       "value": round(float(v), 2)})
+                                       "value": round(float(v), 2),
+                                       "actionable": actionable})
+            # Check upcoming ex-dividend from ticker info
+            try:
+                info = t.info or {}
+                ex_div_ts = info.get("exDividendDate")
+                div_rate = info.get("lastDividendValue") or info.get("dividendRate")
+                if ex_div_ts and div_rate:
+                    import datetime as _dtmod
+                    if isinstance(ex_div_ts, (int, float)):
+                        ex_date = _dtmod.date.fromtimestamp(ex_div_ts)
+                    else:
+                        ex_date = ex_div_ts
+                    if ex_date >= buy_window_start:
+                        already = any(e["date"] == ex_date.isoformat() and e["type"] == "Dividend" for e in events)
+                        if not already:
+                            events.append({"date": ex_date.isoformat(), "type": "Dividend",
+                                           "value": round(float(div_rate), 2),
+                                           "actionable": True, "upcoming": True})
+            except Exception:
+                pass
             if spl is not None and len(spl) > 0:
                 for ts, v in spl.items():
                     d = ts.date() if hasattr(ts, "date") else None
                     if d and d >= cutoff:
                         events.append({"date": d.isoformat(), "type": "Split",
-                                       "value": float(v)})
+                                       "value": float(v), "actionable": False})
             if not events:
                 return None
             events.sort(key=lambda e: e["date"], reverse=True)

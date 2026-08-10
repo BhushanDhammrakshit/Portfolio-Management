@@ -148,7 +148,7 @@
 
     <!-- Corporate Actions -->
     <section class="tool-panel" id="panel-corp">
-        <div class="tool-header"><div><h2>Corporate Actions Feed</h2><p>Dividends &amp; splits across your holdings (last 2 years).</p></div>
+        <div class="tool-header"><div><h2>Corporate Actions Feed</h2><p>Dividends &amp; splits across your holdings. <strong style="color:var(--green)">🟢 = Buy window open (ex-date 2+ days away)</strong></p></div>
             <div class="tool-controls"><button class="btn btn-success btn-sm" id="corpGo">Load my holdings</button></div>
         </div>
         <div id="corpContent"></div>
@@ -399,12 +399,19 @@
             const r=await fetch('/api/investing-tools/corporate-actions',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
             const d=await r.json();
             if(d.error){setError('corpContent',d.error);return;}
-            if(!d.stocks||!d.stocks.length){empty('corpContent','No corporate actions found in last 2 years for your holdings.');return;}
+            if(!d.stocks||!d.stocks.length){empty('corpContent','No corporate actions found for your holdings.');return;}
+            // Sort stocks: those with actionable events first
+            d.stocks.sort((a,b)=>{
+                const aAct=a.events.some(e=>e.actionable);
+                const bAct=b.events.some(e=>e.actionable);
+                return bAct-aAct;
+            });
             let html='';
             for(const s of d.stocks){
-                html+=`<div class="tool-card"><h4 style="margin:0 0 8px"><strong>${s.name}</strong> <small class="text-muted">${s.symbol}</small></h4><div class="table-scroll" style="max-height:200px"><table class="tool-table"><thead><tr><th>Date</th><th>Type</th><th class="num">Value</th></tr></thead><tbody>`;
+                html+=`<div class="tool-card"><h4 style="margin:0 0 8px"><strong>${s.name}</strong> <small class="text-muted">${s.symbol}</small></h4><div class="table-scroll" style="max-height:200px"><table class="tool-table"><thead><tr><th>Date</th><th>Type</th><th class="num">Value</th><th>Status</th></tr></thead><tbody>`;
                 s.events.forEach(e=>{
-                    html+=`<tr><td>${e.date}</td><td><span class="pill ${e.type==='Dividend'?'pill-up':'pill-info'}">${e.type}</span></td><td class="num">${fmt(e.value,2)}${e.type==='Dividend'?' ₹/sh':' ratio'}</td></tr>`;
+                    const badge=e.actionable?'<span class="pill pill-up">🟢 Buy Window</span>':e.upcoming?'<span class="pill pill-info">Upcoming</span>':'<span class="pill pill-neutral">Past</span>';
+                    html+=`<tr${e.actionable?' style="background:rgba(0,200,83,.07)"':''}><td>${e.date}</td><td><span class="pill ${e.type==='Dividend'?'pill-up':'pill-info'}">${e.type}</span></td><td class="num">${fmt(e.value,2)}${e.type==='Dividend'?' ₹/sh':' ratio'}</td><td>${badge}</td></tr>`;
                 });
                 html+='</tbody></table></div></div>';
             }

@@ -745,7 +745,7 @@ _NSE_SESSION_TTL = 15 * 60
 _NSE_BREADTH_CACHE_KEY = "optionchain:nse:breadth_movers:v1"
 _NSE_BREADTH_CACHE_TTL = 45
 
-_NSE_CORPREF_CACHE_KEY = "optionchain:nse:corp_ref:v1"
+_NSE_CORPREF_CACHE_KEY = "optionchain:nse:corp_ref:v2"
 _NSE_CORPREF_CACHE_TTL = 5 * 60
 
 
@@ -2184,9 +2184,13 @@ def _fetch_corporate_reference(top_n: int = 8) -> Optional[Dict[str, Any]]:
     if isinstance(cached, dict):
         return cached
 
+    # Fetch actions with ex-date 2-5 days from now so user can still buy
+    from_dt = (_dt.datetime.now(_IST) + _dt.timedelta(days=2)).strftime("%d-%m-%Y")
+    to_dt = (_dt.datetime.now(_IST) + _dt.timedelta(days=5)).strftime("%d-%m-%Y")
+
     try:
         anns = _nse_get_json("/api/corporate-announcements", params={"index": "equities"}, retries=1) or []
-        acts = _nse_get_json("/api/corporates-corporateActions", params={"index": "equities"}, retries=1) or []
+        acts = _nse_get_json("/api/corporates-corporateActions", params={"index": "equities", "from_date": from_dt, "to_date": to_dt}, retries=1) or []
         bms = _nse_get_json("/api/corporate-board-meetings", params={"index": "equities"}, retries=1) or []
     except Exception as e:  # noqa: BLE001
         log.debug("corp_ref.nse failed: %s", e)
@@ -2210,6 +2214,21 @@ def _fetch_corporate_reference(top_n: int = 8) -> Optional[Dict[str, Any]]:
             "record_date": it.get("recordDate") or "",
         }
 
+    # Filter: only keep actions with ex-date >= today+2 days
+    min_date = (_dt.datetime.now(_IST) + _dt.timedelta(days=2)).date()
+
+    def _is_future_action(it: Dict[str, Any]) -> bool:
+        raw = it.get("exDate") or it.get("faceValDate") or ""
+        if not raw:
+            return False
+        try:
+            d = _dt.datetime.strptime(raw.strip(), "%d-%b-%Y").date()
+            return d >= min_date
+        except Exception:
+            return True  # keep if unparseable
+
+    future_acts = [x for x in acts if isinstance(x, dict) and _is_future_action(x)]
+
     def _pack_bm(it: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "symbol": str(it.get("bm_symbol") or it.get("symbol") or "").upper(),
@@ -2220,7 +2239,7 @@ def _fetch_corporate_reference(top_n: int = 8) -> Optional[Dict[str, Any]]:
 
     out = {
         "announcements": [_pack_ann(x) for x in anns[:top_n] if isinstance(x, dict)],
-        "corporate_actions": [_pack_act(x) for x in acts[:top_n] if isinstance(x, dict)],
+        "corporate_actions": [_pack_act(x) for x in future_acts[:top_n]],
         "board_meetings": [_pack_bm(x) for x in bms[:top_n] if isinstance(x, dict)],
         "timestamp": _dt.datetime.now(_IST).strftime("%d %b %Y, %I:%M %p IST"),
     }
