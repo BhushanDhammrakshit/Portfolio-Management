@@ -181,6 +181,24 @@
   </div>
 </div>
 
+<!-- Mobile view advisory (shown once per login) -->
+<div class="modal fade" id="mobileViewWarningModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-desktop me-2 text-primary"></i>Better on a bigger screen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Finance Candle is built for deep portfolio analytics, charts, and tables. For the best experience, please use a laptop or a bigger screen.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const stocks = {{ stocks|tojson }};
@@ -553,6 +571,16 @@ document.getElementById('refreshPricesBtn').addEventListener('click', async (e) 
         if (r.ok) location.reload();
     } catch { }
 })();
+{% endif %}
+
+// Mobile-view advisory — just_logged_in is popped server-side, so this fires once per login
+{% if just_logged_in %}
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        const el = document.getElementById('mobileViewWarningModal');
+        if (el) new bootstrap.Modal(el).show();
+    }
+});
 {% endif %}
 </script>
 {% endblock %}
