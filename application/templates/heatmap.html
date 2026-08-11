@@ -2,7 +2,7 @@
 {% block content %}
 <div class="scope-wrapper">
   <header class="scope-header">
-    <h1 class="scope-title"><i class="fa-solid fa-table-cells-large me-2"></i>Sector Scope</h1>
+    <h1 class="scope-title"><i class="fa-solid fa-table-cells-large me-2"></i>Sector Heatmap</h1>
     <div class="scope-header-tools">
       <span id="scopeUpdated" class="scope-updated"></span>
       <label class="scope-live-toggle" title="Auto-refresh every 10s">
@@ -48,7 +48,7 @@
 /* Override app-content constraints so treemap fills the full page width */
 .app-content:has(.scope-wrapper) { max-width: 100%; padding: 0; margin: 0; }
 .scope-wrapper { border-radius: 0; border: none; height: auto; min-height: calc(100vh - var(--topbar-height) - 20px); box-shadow: none; margin-bottom: 20px }
-.scope-title{color:#0f172a;font-size:1.1rem;font-weight:800;margin:0}
+.scope-title{color:#0f172a;font-size:2.5rem;font-weight:800;margin:0}
 .scope-refresh-btn{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;width:34px;height:34px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
 .scope-refresh-btn:hover{background:#e2e8f0;color:#0f172a}
 .scope-header-tools{display:flex;align-items:center;gap:14px}
@@ -128,7 +128,7 @@
 /* ── Responsive: keep the header title readable on phones ──────── */
 @media (max-width: 560px){
   .scope-header{flex-wrap:wrap;gap:8px;padding:10px 12px}
-  .scope-title{white-space:nowrap;font-size:1rem;flex:1 1 100%}
+  .scope-title{white-space:nowrap;font-size:1.75rem;flex:1 1 100%}
   .scope-header-tools{gap:10px;flex-wrap:wrap;width:100%;justify-content:flex-start}
   .scope-updated{white-space:normal}
   .scope-bars-wrap{padding:14px 12px 18px}

@@ -195,7 +195,6 @@
         <button class="topbar-burger" id="mobileSidebarOpen" aria-label="Open menu">
             <i class="fa-solid fa-bars"></i>
         </button>
-        <div class="topbar-title">{{ title or 'Dashboard' }}</div>
         <div class="topbar-actions">
             {% if current_plan %}
             <a href="{{ url_for('billing.billing_page') }}" class="plan-badge plan-badge-{{ current_plan.id }}" title="Your current plan — manage in Billing">

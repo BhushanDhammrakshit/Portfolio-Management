@@ -19,12 +19,13 @@
 .candle-tooltip .ct-dn{color:#f87171;font-weight:700}
 .candle-tooltip .ct-head{font-weight:700;margin-bottom:4px;font-size:.74rem;border-bottom:1px solid #374151;padding-bottom:3px}
 [data-theme="dark"] .detail-chart-wrap{background:#0f172a}
+.scan-time-badge{font-size:.68rem;font-weight:600;color:var(--text-muted);opacity:.85;white-space:nowrap}
 </style>
 <div class="intraday-page">
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
         <div>
             <h1><i class="fa-solid fa-bolt me-2"></i>Intraday Signals</h1>
-            <p id="strategyTagline">RSI + MACD + EMA + VWAP strategy on top NIFTY 50 stocks. <span id="scanTime" class="text-muted"></span></p>
+            <p id="strategyTagline">RSI + MACD + EMA + VWAP strategy on top NIFTY 50 stocks. <span id="scanTime" class="scan-time-badge"></span></p>
         </div>
         <button id="scanBtn" class="btn btn-primary btn-sm">
             <i class="fa-solid fa-satellite-dish me-1"></i>Scan now
@@ -246,7 +247,7 @@ const EMPTY_TEXT = {
 };
 
 function applyModeUI() {
-    document.getElementById('strategyTagline').innerHTML = TAGLINES[_mode] + ' <span id="scanTime" class="text-muted"></span>';
+    document.getElementById('strategyTagline').innerHTML = TAGLINES[_mode] + ' <span id="scanTime" class="scan-time-badge"></span>';
     const empty = document.querySelector('#emptyState .empty-state p');
     if (empty) empty.innerHTML = EMPTY_TEXT[_mode];
     // Hide intraday-only filter bar in swing mode
@@ -372,10 +373,47 @@ async function runScan() {
     btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
 }
 
+// Swing mode overwrites #signalSummary with its own grade cards; restoring
+// this markup first keeps intraday's ids valid no matter which mode ran last.
+function resetIntradaySummaryCards() {
+    document.getElementById('signalSummary').innerHTML = `
+        <div class="dash-card" style="--card-accent:#16a34a">
+            <div class="dash-card-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fa-solid fa-arrow-up"></i></div>
+            <div class="dash-card-info">
+                <span class="dash-card-label">Buy signals</span>
+                <span class="dash-card-value" id="buyCount">0</span>
+            </div>
+        </div>
+        <div class="dash-card" style="--card-accent:#dc2626">
+            <div class="dash-card-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="dash-card-info">
+                <span class="dash-card-label">Sell signals</span>
+                <span class="dash-card-value" id="sellCount">0</span>
+            </div>
+        </div>
+        <div class="dash-card" style="--card-accent:#f59e0b">
+            <div class="dash-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-minus"></i></div>
+            <div class="dash-card-info">
+                <span class="dash-card-label">Hold</span>
+                <span class="dash-card-value" id="holdCount">0</span>
+            </div>
+        </div>
+        <div class="dash-card" style="--card-accent:#4f46e5">
+            <div class="dash-card-icon" style="background:linear-gradient(135deg,#4f46e5,#6366f1)"><i class="fa-solid fa-chart-bar"></i></div>
+            <div class="dash-card-info">
+                <span class="dash-card-label">Scanned</span>
+                <span class="dash-card-value" id="totalScanned">0</span>
+            </div>
+        </div>
+    `;
+}
+
 function renderResults(data, cachedAt) {
     if (_mode === 'swing') { renderSwingResults(data, cachedAt); return; }
+    resetIntradaySummaryCards();
     const suffix = cachedAt ? ' (' + ppCache.ago(Date.now() - cachedAt) + ')' : '';
-    document.getElementById('scanTime').textContent = 'Last scan: ' + data.scan_time + suffix;
+    const timeOnly = (data.scan_time.split(',')[1] || data.scan_time).trim();
+    document.getElementById('scanTime').textContent = 'Updated ' + timeOnly + suffix;
     document.getElementById('buyCount').textContent = data.buy_count;
     document.getElementById('sellCount').textContent = data.sell_count;
     document.getElementById('holdCount').textContent = data.hold_count;
@@ -415,7 +453,8 @@ function renderResults(data, cachedAt) {
 
 function renderSwingResults(data, cachedAt) {
     const suffix = cachedAt ? ' (' + ppCache.ago(Date.now() - cachedAt) + ')' : '';
-    document.getElementById('scanTime').textContent = 'Last scan: ' + data.scan_time + suffix;
+    const timeOnly = (data.scan_time.split(',')[1] || data.scan_time).trim();
+    document.getElementById('scanTime').textContent = 'Updated ' + timeOnly + suffix;
 
     const gc = data.grade_counts || {};
     const aPlus = gc['A+ SETUP'] || 0;
