@@ -93,12 +93,6 @@
         <div class="intraday-grid" id="signalGrid"></div>
     </div>
 
-    {% if market_data_provider and market_data_provider != 'yfinance' %}
-    <div class="data-source-badge text-end mt-2" style="font-size:.72rem;color:var(--text-muted);opacity:.7">
-        <i class="fa-solid fa-signal"></i> Market data provided by <strong>{{ market_data_provider | capitalize }}</strong>
-    </div>
-    {% endif %}
-
     <!-- Empty state -->
     <div id="emptyState" class="surface-card">
         <div class="empty-state">

@@ -304,13 +304,6 @@
         <span>&copy; {{ now_year if now_year else 2026 }} Finance Candle</span>
         <span class="text-muted">·</span>
         <span class="text-muted">Analytics &amp; education platform — not a SEBI-registered adviser/research analyst. Informational only, not investment advice.</span>
-        {% if market_data_provider and market_data_provider != 'yfinance' %}
-        <span class="text-muted">·</span>
-        <span class="text-muted" style="font-size:.75rem;">
-            <i class="fa-solid fa-signal"></i>
-            Market data by <strong>{{ market_data_provider | capitalize }}</strong>
-        </span>
-        {% endif %}
     </footer>
 </div>
 
