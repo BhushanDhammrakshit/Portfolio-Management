@@ -540,7 +540,7 @@ def send_expiry_mail_to_selected():
 
             ok, info = email_service.send_email(
                 to=email,
-                subject="You were making smarter trades \u2014 don\u2019t stop now",
+                subject=f"Your {plan_name} plan has expired",
                 html=_expired_html(name, plan_name, expires_on),
             )
             if ok:

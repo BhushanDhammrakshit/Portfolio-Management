@@ -129,9 +129,11 @@ def get_user_events(user_id: str, limit: int = 50) -> list[dict]:
     if not client or not user_id:
         return []
     try:
+        # Fetch extra rows since consecutive time_spent heartbeats get merged
+        # below into single sessions, or we'd under-fill the requested limit.
         rows = client.query_entities(
             query_filter=f"PartitionKey eq '{user_id}'",
-            results_per_page=limit,
+            results_per_page=limit * 3,
         )
         out = []
         for r in rows:
@@ -141,9 +143,9 @@ def get_user_events(user_id: str, limit: int = 50) -> list[dict]:
                 "plan": r.get("Plan", ""),
                 "meta": r.get("Meta", "{}"),
             })
-            if len(out) >= limit:
+            if len(out) >= limit * 3:
                 break
-        return out
+        return _merge_time_spent_sessions(out)[:limit]
     except Exception as e:
         print(f"[event_tracker] get_user_events failed: {e}")
         return []
@@ -152,6 +154,36 @@ def _parse_meta(raw: str) -> dict:
         return json.loads(raw or "{}")
     except (TypeError, ValueError):
         return {}
+
+
+def _merge_time_spent_sessions(events: list[dict]) -> list[dict]:
+    """Collapse consecutive `time_spent` heartbeat events for the same
+    feature into a single session row (e.g. 30s + 30s + 15s -> 75s), so the
+    timeline shows one entry from start to end per tool visit instead of one
+    per heartbeat — no matter how long the session ran. Expects events
+    sorted newest-first; only a different feature (or a non-time_spent
+    event) in between breaks a session into a new row."""
+    merged: list[dict] = []
+    for e in events:
+        if e.get("event") != "time_spent":
+            merged.append(e)
+            continue
+        meta = _parse_meta(e.get("meta"))
+        feature = meta.get("feature")
+        try:
+            secs = int(float(meta.get("seconds") or 0))
+        except (TypeError, ValueError):
+            secs = 0
+
+        if merged and merged[-1].get("event") == "time_spent":
+            prev_meta = _parse_meta(merged[-1].get("meta"))
+            if prev_meta.get("feature") == feature:
+                prev_meta["seconds"] = int(prev_meta.get("seconds") or 0) + secs
+                merged[-1] = {**merged[-1], "meta": json.dumps(prev_meta, default=str)}
+                continue
+
+        merged.append(dict(e))
+    return merged
 
 
 def compute_time_by_feature(events: list[dict], users: Optional[list[dict]] = None) -> list[dict]:
