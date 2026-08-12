@@ -261,7 +261,8 @@ def get_nifty_option_chain(force_refresh: bool = False) -> Dict[str, Any]:
     payload["strategy"] = _compute_strategy_verdict(payload)
 
     # Market Regime Meter — sideways vs volatile classification blended from
-    # VIX, ATM straddle, gamma pinning, OI wall range, and IV skew.
+    # VIX, ATM straddle, gamma pinning, OI wall range, IV skew and the day's
+    # realized spot move (reads payload["strategy"], set just above).
     try:
         from application.services import regime_meter
         payload["regime"] = regime_meter.compute_regime(payload)

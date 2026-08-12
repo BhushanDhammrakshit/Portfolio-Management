@@ -1,20 +1,40 @@
 """Market Regime Meter — classifies the option market as SIDEWAYS / NEUTRAL / VOLATILE.
 
-Composite score (0–100) blended from five option-derived signals:
+Composite score (0–100) blended from six signals:
 
-  1. India VIX level                      (weight 30%)
-  2. ATM straddle implied daily move %    (weight 25%)
-  3. Gamma pinning (peak gamma-OI strike) (weight 20%)
+  1. India VIX level                      (weight 25%)
+  2. ATM straddle implied daily move %    (weight 20%)
+  3. Gamma pinning (peak gamma-OI strike) (weight 15%)
   4. OI wall range (S/R cage width)       (weight 15%)
   5. IV skew (OTM-put IV vs ATM IV)       (weight 10%)
+  6. Day's realized spot move vs prev close (weight 15%)
+
+Signal 6 compares current LTP to the *previous day's close*, so it captures
+any large realized move — an overnight gap, a slow intraday grind, or both
+combined — not just gap-opens. Options-implied metrics (VIX, straddle,
+gamma pin, OI walls) can stay tight for a while even after such a move,
+since IV/OI take time to catch up. Without a realized-move input the meter
+could keep reading NEUTRAL through an already-large decline; this signal
+nudges the composite toward VOLATILE as soon as the move itself is large,
+independent of IV.
 
 Higher score → volatility-expansion / trending regime.
 Lower score  → range-bound / pinning regime.
 
-Bands:
-    0–35   → SIDEWAYS  (favour theta strategies)
-    35–65  → NEUTRAL   (defined-risk spreads)
-    65–100 → VOLATILE  (option-buying / debit spreads)
+Bands (loosened slightly vs. the original 35/65 split so the meter tips out
+of NEUTRAL a bit sooner on either side):
+    0–32   → SIDEWAYS  (favour theta strategies)
+    32–62  → NEUTRAL   (defined-risk spreads)
+    62–100 → VOLATILE  (option-buying / debit spreads)
+
+Note: the day's realized move only ever feeds in as signal 6 above (15%
+weight) — it never overrides the composite. A big realized move next to an
+otherwise-calm options tape (low VIX, cheap straddle, tight gamma pin) is a
+legitimate SIDEWAYS/NEUTRAL read: it can mean the move is being faded or
+that premium is still cheap to sell, and forcing the label to VOLATILE would
+contradict the very signals the verdict is built from. That mismatch is
+surfaced separately via ``move_notice`` instead (see ``compute_regime``),
+without touching the score/band/summary strategy call.
 
 Designed for NIFTY weekly chains. Falls back to neutral sub-scores when an
 input is missing so the meter degrades gracefully instead of raising.
@@ -272,14 +292,43 @@ def _component_skew(rows: List[Dict[str, Any]],
     }
 
 
+def _component_day_move(payload: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
+    """Score the day's realized spot move vs. previous close.
+
+    Reuses the intraday change already computed for the strategy verdict
+    (``payload['strategy']['spot']``), which is LTP vs. the *previous day's
+    close* — so any large realized move (gap-open or a slow intraday grind,
+    like a 200-point drift lower with no gap) shows up here even while
+    IV/gamma/OI walls haven't repriced yet.
+    """
+    spot_info = ((payload.get("strategy") or {}).get("spot")) or {}
+    chg_pct = spot_info.get("change_pct")
+    if chg_pct is None:
+        return 50.0, {"name": "Day's Move", "value": "—", "score": 50,
+                      "note": "Intraday change unavailable"}
+    move = abs(float(chg_pct))
+    score = _norm(move, [
+        (0.0, 5), (0.3, 20), (0.6, 40), (1.0, 65), (1.5, 85), (2.5, 98),
+    ])
+    pts = spot_info.get("change_pts")
+    pts_txt = f" ({pts:+.0f} pts)" if pts is not None else ""
+    return score, {
+        "name": "Day's Move",
+        "value": f"{chg_pct:+.2f}%{pts_txt}",
+        "score": round(score),
+        "note": "Large realized moves push toward VOLATILE even if IV hasn't caught up",
+    }
+
+
 # ── Public entry point ─────────────────────────────────────────────────
 
 _WEIGHTS = {
-    "vix": 0.30,
-    "straddle": 0.25,
-    "gamma": 0.20,
+    "vix": 0.25,
+    "straddle": 0.20,
+    "gamma": 0.15,
     "walls": 0.15,
     "skew": 0.10,
+    "day_move": 0.15,
 }
 
 
@@ -287,7 +336,7 @@ def compute_regime(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Compute the market regime meter from an option-chain payload.
 
     Inputs read off `payload`:
-        rows, spot, expiry, vix, sr_levels
+        rows, spot, expiry, vix, sr_levels, strategy.spot.change_pct
 
     Returns a dict with `score` (0–100), `label`, `band`, `summary`,
     `components` (list of sub-score dicts with name/value/score/weight/note)
@@ -305,6 +354,7 @@ def compute_regime(payload: Dict[str, Any]) -> Dict[str, Any]:
                                         vix_value=float(vix.get("value") or 0.0))
     wal_s, wal_c = _component_oi_walls(sr, spot)
     skw_s, skw_c = _component_skew(rows, spot)
+    day_s, day_c = _component_day_move(payload)
 
     composite = (
         vix_s * _WEIGHTS["vix"]
@@ -312,16 +362,17 @@ def compute_regime(payload: Dict[str, Any]) -> Dict[str, Any]:
         + gam_s * _WEIGHTS["gamma"]
         + wal_s * _WEIGHTS["walls"]
         + skw_s * _WEIGHTS["skew"]
+        + day_s * _WEIGHTS["day_move"]
     )
     score = round(composite, 1)
 
-    if score < 35:
+    if score < 32:
         band, label = "sideways", "SIDEWAYS"
         summary = (
             f"Range-bound regime ({score:.0f}/100). Premiums price a tight day — "
             "favour theta strategies (short straddle/strangle, iron condor)."
         )
-    elif score < 65:
+    elif score < 62:
         band, label = "neutral", "NEUTRAL"
         summary = (
             f"Mixed signals ({score:.0f}/100). Directional bias unclear — keep "
@@ -334,17 +385,30 @@ def compute_regime(payload: Dict[str, Any]) -> Dict[str, Any]:
             "favour option-buying / debit spreads, avoid naked short premium."
         )
 
+    # Informational only — flags a mismatch without touching score/band/summary.
+    move_notice = None
+    spot_info = ((payload.get("strategy") or {}).get("spot")) or {}
+    raw_move_pct = spot_info.get("change_pct")
+    if band != "volatile" and raw_move_pct is not None and abs(float(raw_move_pct)) >= 0.75:
+        move_notice = (
+            f"NIFTY has moved {raw_move_pct:+.2f}% today, but the options tape "
+            f"({label.lower()} verdict above) hasn't repriced for it yet — could "
+            "mean the move is being faded, or IV/premium may still catch up."
+        )
+
     return {
         "score": score,
         "label": label,
         "band": band,
         "summary": summary,
+        "move_notice": move_notice,
         "components": [
             {**vix_c, "weight": int(_WEIGHTS["vix"] * 100)},
             {**str_c, "weight": int(_WEIGHTS["straddle"] * 100)},
             {**gam_c, "weight": int(_WEIGHTS["gamma"] * 100)},
             {**wal_c, "weight": int(_WEIGHTS["walls"] * 100)},
             {**skw_c, "weight": int(_WEIGHTS["skew"] * 100)},
+            {**day_c, "weight": int(_WEIGHTS["day_move"] * 100)},
         ],
         "as_of": _dt.datetime.now(_IST).strftime("%I:%M %p IST"),
     }
