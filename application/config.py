@@ -248,6 +248,10 @@ USER_REFRESH_SECONDS = int(os.getenv("USER_REFRESH_SECONDS", "30"))
 # during market hours. Needed so OI deltas / gap-outlook keep accumulating
 # even when nobody has the options page open in a browser.
 OPTION_CHAIN_REFRESH_SECONDS = int(os.getenv("OPTION_CHAIN_REFRESH_SECONDS", "30"))
+# How often the background job rebuilds the pre-open market pulse during
+# the 08:45-09:35 IST window. Needed so the auction-window price series
+# and signals keep accumulating even when nobody has the page open.
+PREOPEN_REFRESH_SECONDS = int(os.getenv("PREOPEN_REFRESH_SECONDS", "20"))
 # A user is considered "active" (worth refreshing) if they hit any
 # authenticated endpoint within this many seconds.
 USER_ACTIVE_WINDOW_SECONDS = int(os.getenv("USER_ACTIVE_WINDOW_SECONDS", "300"))

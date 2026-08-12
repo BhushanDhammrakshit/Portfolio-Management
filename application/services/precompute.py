@@ -47,6 +47,21 @@ def _within_market_window() -> bool:
     mins = now.hour * 60 + now.minute
     return 9 * 60 <= mins <= 15 * 60 + 35
 
+
+def _within_preopen_window() -> bool:
+    """True during the pre-open pulse's active window (Mon-Fri 08:45-09:35 IST).
+
+    Matches ``preopen_pulse._phase()``'s warmup/preopen/frozen/live_session
+    boundaries so the background job stays warm exactly while the pulse's
+    own phase logic is still recomputing/locking the verdict and sampling
+    the price series.
+    """
+    now = _dt.datetime.now(_IST)
+    if now.weekday() >= 5:
+        return False
+    mins = now.hour * 60 + now.minute
+    return 8 * 60 + 45 <= mins <= 9 * 60 + 35
+
 # Redis key names (without the global CACHE_KEY_PREFIX, which jset adds).
 K_HEATMAP = "heatmap:nifty50"
 K_QUOTE = "quote:{symbol}"
@@ -238,6 +253,29 @@ def refresh_option_chain() -> None:
             oc_service.get_nifty_option_chain(force_refresh=True)
         except Exception as e:  # noqa: BLE001
             log.warning("precompute.refresh_option_chain failed: %s", e)
+
+
+def refresh_preopen_pulse() -> None:
+    """Rebuild the pre-open market pulse in the background.
+
+    Runs every ``PREOPEN_REFRESH_SECONDS`` but only during the 08:45-09:35
+    IST window, so the auction-window price series and signals keep
+    accumulating (and the verdict gets frozen at 09:08) even when nobody
+    has the Options Analytics page open. Requests then just read the warm
+    cache instead of triggering a live provider fetch themselves.
+    """
+    if not _within_preopen_window():
+        return
+    if not cache.try_become_leader(ttl=max(config.PREOPEN_REFRESH_SECONDS * 3, 60)):
+        return
+    with cache.lock("refresh:preopen_pulse", ttl=15) as got:
+        if not got:
+            return
+        try:
+            from application.services import preopen_pulse
+            preopen_pulse.get_preopen_pulse(force_refresh=True)
+        except Exception as e:  # noqa: BLE001
+            log.warning("precompute.refresh_preopen_pulse failed: %s", e)
 
 
 def refresh_active_users() -> None:
@@ -510,6 +548,15 @@ def start_scheduler() -> None:
             "interval",
             seconds=config.OPTION_CHAIN_REFRESH_SECONDS,
             id="precompute_option_chain",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        sched.add_job(
+            refresh_preopen_pulse,
+            "interval",
+            seconds=config.PREOPEN_REFRESH_SECONDS,
+            id="precompute_preopen_pulse",
             replace_existing=True,
             max_instances=1,
             coalesce=True,
