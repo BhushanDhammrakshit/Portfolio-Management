@@ -1409,6 +1409,8 @@ def _compute_gap_outlook(payload: Dict[str, Any],
         quality_flags.append("trend_unavailable")
     if not pcr_prev:
         quality_flags.append("pcr_baseline_unavailable")
+    if not fut_ok:
+        quality_flags.append("futures_unavailable")
 
     top_factors = sorted(
         contribs.items(), key=lambda kv: abs(kv[1]), reverse=True

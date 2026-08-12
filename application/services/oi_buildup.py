@@ -304,23 +304,169 @@ def _empty_buckets() -> Dict[str, List[Dict[str, Any]]]:
 _NIFTY_FUT_CACHE_KEY = "oi_buildup:nifty_futures:v1"
 _NIFTY_FUT_CACHE_TTL = 90  # seconds
 
+# Bias mapping shared by both the Dhan and NSE paths below.
+_FUT_BIAS = {
+    "long_buildup": 1.0,
+    "short_covering": 0.6,
+    "short_buildup": -1.0,
+    "long_unwinding": -0.6,
+}
 
-def nifty_futures_buildup(force: bool = False) -> Optional[Dict[str, Any]]:
-    """Return NIFTY futures OI buildup classification.
+# Resolving the near-month NIFTY future's Dhan security_id means scanning
+# the ~24MB scrip master, so cache the result — the contract only rolls
+# once a month.
+_NIFTY_FUT_SECID_CACHE_KEY = "oi_buildup:nifty_fut_secid:v1"
+_NIFTY_FUT_SECID_TTL = 12 * 3600
 
-    Extracts NIFTY from the same NSE OI-spurts feed that stocks use,
-    but without the index filter.  Returns::
+# A single Dhan quote only carries *current* OI, not the previous session's
+# closing OI (unlike NSE's snapshot, which ships ``prevOI`` directly). So we
+# lock the first successful read of each trading day as the baseline and
+# diff subsequent reads against it — equivalent to "vs previous close" as
+# long as the job starts near market open (little OI moves overnight).
+_NIFTY_FUT_BASELINE_KEY_FMT = "oi_buildup:nifty_fut_baseline:{date}"
+_NIFTY_FUT_BASELINE_TTL = 16 * 3600
 
-        {"symbol": "NIFTY", "price_chg_pct": ..., "oi_chg_pct": ...,
-         "bucket": "long_buildup"|..., "bias": float in [-1, +1]}
 
-    or ``None`` if data is unavailable.
+def _resolve_nifty_future_secid() -> Optional[str]:
+    """Find the nearest-expiry NIFTY index-future security_id from the
+    locally-cached Dhan scrip master (already downloaded for equity/index
+    symbol resolution — see :mod:`application.services.dhan_symbols`).
     """
-    if not force:
-        cached = shared_cache.jget(_NIFTY_FUT_CACHE_KEY)
-        if cached:
-            return cached
+    cached = shared_cache.jget(_NIFTY_FUT_SECID_CACHE_KEY)
+    if isinstance(cached, dict) and cached.get("security_id"):
+        return cached["security_id"]
+    try:
+        import csv as _csv
+        from application.services.dhan_symbols import _CACHE_FILE
 
+        today = _dt.datetime.now(_IST).date()
+        best_id: Optional[str] = None
+        best_expiry: Optional[_dt.date] = None
+        with open(_CACHE_FILE, "r", encoding="utf-8", errors="replace", newline="") as fh:
+            for row in _csv.DictReader(fh):
+                if (row.get("SEM_EXM_EXCH_ID") or "").strip().upper() != "NSE":
+                    continue
+                if (row.get("SEM_INSTRUMENT_NAME") or "").strip().upper() != "FUTIDX":
+                    continue
+                # "NIFTY-Aug2026-FUT" — the hyphen right after NIFTY excludes
+                # NIFTYIT/NIFTYNXT50/etc. index futures.
+                trading_sym = (row.get("SEM_TRADING_SYMBOL") or "").strip().upper()
+                if not trading_sym.startswith("NIFTY-"):
+                    continue
+                try:
+                    exp_dt = _dt.datetime.strptime(
+                        (row.get("SEM_EXPIRY_DATE") or "").strip(), "%Y-%m-%d %H:%M:%S",
+                    ).date()
+                except ValueError:
+                    continue
+                if exp_dt < today:
+                    continue
+                if best_expiry is None or exp_dt < best_expiry:
+                    best_expiry = exp_dt
+                    best_id = (row.get("SEM_SMST_SECURITY_ID") or "").strip()
+        if best_id:
+            shared_cache.jset(
+                _NIFTY_FUT_SECID_CACHE_KEY,
+                {"security_id": best_id, "expiry": str(best_expiry)},
+                ttl=_NIFTY_FUT_SECID_TTL,
+            )
+            return best_id
+    except Exception as e:
+        log.debug("oi_buildup: resolving NIFTY future security_id failed: %s", e)
+    return None
+
+
+def _fetch_nifty_future_quote_dhan(security_id: str) -> Optional[Dict[str, Any]]:
+    """Raw Dhan full-quote call for one NSE F&O instrument.
+
+    Returns the per-instrument dict from Dhan's ``/marketfeed/quote``
+    response (``last_price``, ``ohlc``, ``oi``, ...), or ``None`` on any
+    failure so the caller can fall back to the NSE feed.
+    """
+    try:
+        import requests
+        from application import config
+
+        if not (config.DHAN_CLIENT_ID and config.DHAN_ACCESS_TOKEN):
+            return None
+        headers = {
+            "access-token": config.DHAN_ACCESS_TOKEN,
+            "client-id": config.DHAN_CLIENT_ID,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        r = requests.post(
+            "https://api.dhan.co/v2/marketfeed/quote",
+            json={"NSE_FNO": [int(security_id)]},
+            headers=headers, timeout=12,
+        )
+        if r.status_code >= 400:
+            log.debug("oi_buildup: dhan futures quote HTTP %s: %s",
+                      r.status_code, r.text[:200])
+            return None
+        data = ((r.json() or {}).get("data") or {}).get("NSE_FNO") or {}
+        return data.get(str(security_id)) or data.get(security_id)
+    except Exception as e:
+        log.debug("oi_buildup: dhan futures quote failed: %s", e)
+        return None
+
+
+def _nifty_futures_via_dhan() -> Optional[Dict[str, Any]]:
+    """NIFTY futures OI buildup sourced from Dhan (broker API).
+
+    Preferred over the NSE feed below since it works from any hosting
+    region — NSE's public endpoint is commonly blocked from cloud /
+    non-IN datacentre IPs (see ``option_chain.py`` module docstring).
+    """
+    sec_id = _resolve_nifty_future_secid()
+    if not sec_id:
+        return None
+    raw = _fetch_nifty_future_quote_dhan(sec_id)
+    if not raw:
+        return None
+
+    ltp = _to_float(raw.get("last_price"))
+    oi = _to_int(raw.get("oi"))
+    prev_close = _to_float((raw.get("ohlc") or {}).get("close"))
+    if not ltp or not oi or oi <= 0:
+        return None
+
+    price_chg_pct = ((ltp - prev_close) / prev_close * 100.0) if prev_close else 0.0
+
+    today_key = _dt.datetime.now(_IST).strftime("%Y%m%d")
+    baseline_key = _NIFTY_FUT_BASELINE_KEY_FMT.format(date=today_key)
+    baseline = shared_cache.jget(baseline_key)
+    if not isinstance(baseline, dict) or not baseline.get("oi"):
+        # First successful read of the day — lock it as today's baseline.
+        try:
+            shared_cache.jset(baseline_key, {"oi": oi}, ttl=_NIFTY_FUT_BASELINE_TTL)
+        except Exception:
+            pass
+        return None  # no OI-change signal yet this session
+    base_oi = float(baseline.get("oi") or 0)
+    oi_chg_pct = ((oi - base_oi) / base_oi * 100.0) if base_oi else 0.0
+
+    bucket = _classify(price_chg_pct, oi_chg_pct)
+    oi_mag = min(abs(oi_chg_pct) / 15.0, 1.0)
+    bias = _FUT_BIAS.get(bucket, 0.0) * oi_mag
+
+    return {
+        "symbol": "NIFTY",
+        "price_chg_pct": round(price_chg_pct, 2),
+        "oi_chg_pct": round(oi_chg_pct, 2),
+        "bucket": bucket,
+        "bias": round(bias, 3),
+        "source": "dhan",
+    }
+
+
+def _nifty_futures_via_nse() -> Optional[Dict[str, Any]]:
+    """NIFTY futures OI buildup sourced from NSE's public OI-spurts feed.
+
+    Fallback path when Dhan credentials/data aren't available — kept as
+    originally implemented since NSE's snapshot conveniently ships
+    ``prevOI`` directly (no baseline-tracking needed).
+    """
     try:
         snapshot = _fetch_snapshot()
     except Exception as e:
@@ -337,42 +483,57 @@ def nifty_futures_buildup(force: bool = False) -> Optional[Dict[str, Any]]:
         oi = _to_int(c.get("openInterest") or c.get("latestOI"))
         prev_oi = _to_int(c.get("prevOI") or c.get("previousOI"))
 
-        # Derive price change %
         if ltp and prev_close and prev_close > 0:
             price_chg_pct = (ltp - prev_close) / prev_close * 100.0
         else:
             price_chg_pct = _to_float(c.get("pChange")) or 0.0
 
-        # Derive OI change %
         if oi and prev_oi and prev_oi > 0:
             oi_chg_pct = (oi - prev_oi) / prev_oi * 100.0
         else:
             oi_chg_pct = _to_float(c.get("oiChange") or c.get("pchangeinOpenInterest")) or 0.0
 
         bucket = _classify(price_chg_pct, oi_chg_pct)
-
-        # Bias: same mapping as fno_gap_forecast
-        _BIAS = {
-            "long_buildup": 1.0,
-            "short_covering": 0.6,
-            "short_buildup": -1.0,
-            "long_unwinding": -0.6,
-        }
-        # Scale by OI magnitude (bigger OI swing → stronger signal)
         oi_mag = min(abs(oi_chg_pct) / 15.0, 1.0)
-        bias = _BIAS.get(bucket, 0.0) * oi_mag
+        bias = _FUT_BIAS.get(bucket, 0.0) * oi_mag
 
-        result = {
+        return {
             "symbol": "NIFTY",
             "price_chg_pct": round(price_chg_pct, 2),
             "oi_chg_pct": round(oi_chg_pct, 2),
             "bucket": bucket,
             "bias": round(bias, 3),
+            "source": "nse",
         }
+    return None
+
+
+def nifty_futures_buildup(force: bool = False) -> Optional[Dict[str, Any]]:
+    """Return NIFTY futures OI buildup classification.
+
+    Tries Dhan (broker API) first, falling back to NSE's public feed.
+    Returns::
+
+        {"symbol": "NIFTY", "price_chg_pct": ..., "oi_chg_pct": ...,
+         "bucket": "long_buildup"|..., "bias": float in [-1, +1],
+         "source": "dhan"|"nse"}
+
+    or ``None`` if data is unavailable from either source.
+    """
+    if not force:
+        cached = shared_cache.jget(_NIFTY_FUT_CACHE_KEY)
+        if cached:
+            return cached
+
+    result = _nifty_futures_via_dhan()
+    if result is None:
+        result = _nifty_futures_via_nse()
+
+    if result:
         try:
             shared_cache.jset(_NIFTY_FUT_CACHE_KEY, result, ttl=_NIFTY_FUT_CACHE_TTL)
         except Exception:
             pass
-        return result
+    return result
 
     return None

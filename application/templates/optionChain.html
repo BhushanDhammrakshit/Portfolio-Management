@@ -102,6 +102,11 @@
 .oc-gap-confidence{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--text-muted);margin-left:8px}
 .oc-gap-stats{display:flex;gap:14px;font-size:.72rem;color:var(--text-muted);margin-top:6px;flex-wrap:wrap}
 .oc-gap-stats strong{color:var(--text);font-variant-numeric:tabular-nums}
+.oc-gap-data-warn{display:flex;align-items:center;gap:8px;font-size:.76rem;line-height:1.4;color:#92400e;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:7px 12px;margin-top:8px;cursor:pointer}
+.oc-gap-data-warn:hover{background:rgba(245,158,11,.16)}
+.oc-gap-data-warn i{color:#f59e0b}
+.oc-gap-data-warn .warn-cta{margin-left:auto;font-weight:700;text-decoration:underline;white-space:nowrap}
+[data-theme="dark"] .oc-gap-data-warn{color:#fcd34d;background:rgba(245,158,11,.12)}
 
 .oc-bchip{display:inline-block;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:2px;letter-spacing:.02em;white-space:nowrap}
 .oc-bchip.bull{background:rgba(22,163,74,.15);color:#15803d}
@@ -648,6 +653,11 @@
                         <span>← Gap Down</span><span>Flat</span><span>Gap Up →</span>
                     </div>
                     <div class="oc-gap-stats" id="ocGfStats"></div>
+                    <div id="ocGfDataWarn" class="oc-gap-data-warn" hidden>
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span id="ocGfDataWarnText"></span>
+                        <span class="warn-cta">Details</span>
+                    </div>
                 </div>
             </div>
 
@@ -1029,6 +1039,7 @@ function renderBuildup(buildup) {
 }
 
 function renderGapOutlook(g) {
+    window._ocLastGapOutlook = g;
     const labelMap = {
         'GAP UP':    { cls: 'up',        text: '↑ Gap Up' },
         'GAP DOWN':  { cls: 'down',      text: '↓ Gap Down' },
@@ -1079,6 +1090,38 @@ function renderGapOutlook(g) {
         <span>Expected gap <strong>${showPts ? `${fmt(expPts)} pts (${fmtPct(expPct)})` : '—'}</strong></span>
         <span>Expected range <strong>${showPts ? `${fmt(expLo)} to ${fmt(expHi)} pts` : '—'}</strong></span>
     `;
+    applyGapDataWarning((g.factors || {}).quality_flags, g.coverage);
+}
+
+// Human-readable explanations for `factors.quality_flags` codes — shown in
+// the standardized warning popup so users know *why* confidence is low.
+const GAP_FLAG_TEXT = {
+    no_recent_baseline: 'No recent OI snapshot yet — using the full day\u2019s OI change instead of the last few minutes.',
+    vix_unavailable: 'India VIX data is unavailable right now.',
+    trend_unavailable: 'Recent spot-price trend data is unavailable.',
+    pcr_baseline_unavailable: 'No prior PCR reading yet to compare against.',
+    futures_unavailable: 'NIFTY futures OI data is unavailable (broker and NSE both failed).',
+};
+
+/** Show/hide the "data incomplete" banner on the gap-forecast panel and
+ * wire it to a standardized popup listing exactly what's missing. */
+function applyGapDataWarning(qualityFlags, coverage) {
+    const el = document.getElementById('ocGfDataWarn');
+    if (!el) return;
+    const flags = (qualityFlags || []).filter(Boolean);
+    if (!flags.length) { el.hidden = true; el.onclick = null; return; }
+    const pct = (coverage != null) ? Math.round(coverage * 100) : null;
+    el.hidden = false;
+    document.getElementById('ocGfDataWarnText').textContent =
+        'Data incomplete' + (pct != null ? ' (' + pct + '% coverage)' : '') + ' — this lowers forecast confidence.';
+    el.onclick = () => {
+        const items = flags.map(f => '<li>' + escapeHtml(GAP_FLAG_TEXT[f] || f) + '</li>').join('');
+        window.appAlert(
+            '<p>The gap forecast is running with incomplete data right now:</p>'
+            + '<ul style="margin:0;padding-left:18px;text-align:left">' + items + '</ul>',
+            'warning'
+        );
+    };
 }
 
 function escapeHtml(s) {
@@ -1242,6 +1285,11 @@ function renderGapForecast(payload) {
         const score = Number(latest.predicted_score || 0);
         pinEl.style.left = Math.max(5, Math.min(95, 50 + score * 30)) + '%';
     }
+    // gap_history rows don't carry quality_flags; reuse the most recent
+    // live computation (same underlying signal) so the warning stays accurate.
+    const lastLive = window._ocLastGapOutlook;
+    applyGapDataWarning(lastLive ? (lastLive.factors || {}).quality_flags : null,
+                        lastLive ? lastLive.coverage : null);
 
     // History rows
     const tb = document.getElementById('ocGfBody');
