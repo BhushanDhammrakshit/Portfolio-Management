@@ -671,9 +671,16 @@ def set_persona():
     from the topbar. Honours an optional ``next`` redirect target.
     """
     persona_id = (request.form.get("persona") or "").strip().lower()
-    if not get_persona(persona_id):
+    persona = get_persona(persona_id)
+    if not persona:
         flash("Please choose a valid profile to continue.", "warning")
         return redirect(url_for("choose_persona"))
+    if persona.get("coming_soon"):
+        flash(f"{persona['label']} is still being built — coming soon!", "info")
+        nxt = request.form.get("next") or ""
+        if nxt.startswith("/") and not nxt.startswith("//"):
+            return redirect(nxt)
+        return redirect(url_for("home"))
 
     session["persona"] = persona_id
     _persist_user_persona(session["email"], persona_id)

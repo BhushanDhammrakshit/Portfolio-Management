@@ -212,6 +212,16 @@
                     <li class="persona-switch-head">Switch workspace</li>
                     {% for pid, p in all_personas.items() %}
                     <li>
+                        {% if p.coming_soon %}
+                        <button type="button" class="persona-switch-item persona-switch-item-soon"
+                                data-coming-soon-persona="{{ p.label }}">
+                            <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
+                            <span class="persona-switch-item-text">
+                                <span class="persona-switch-item-title">{{ p.label }}<span class="lock-badge"><i class="fa-solid fa-clock"></i>Soon</span></span>
+                                <span class="persona-switch-item-sub">{{ p.tagline }}</span>
+                            </span>
+                        </button>
+                        {% else %}
                         <form method="POST" action="{{ url_for('set_persona') }}" class="persona-switch-form">
                             <input type="hidden" name="persona" value="{{ pid }}">
                             <input type="hidden" name="next" value="/home">
@@ -224,6 +234,7 @@
                                 {% if user_persona.id == pid %}<i class="fa-solid fa-check persona-switch-item-check"></i>{% endif %}
                             </button>
                         </form>
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
@@ -458,6 +469,9 @@ button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;
 .persona-switch-item-title{font-size:.88rem;font-weight:700;line-height:1.2;color:#1e293b}
 .persona-switch-item-sub{font-size:.74rem;color:#64748b;line-height:1.2;margin-top:2px}
 .persona-switch-item-check{color:#6366f1;font-size:.8rem}
+.persona-switch-item-soon{opacity:.7;cursor:not-allowed}
+.persona-switch-item-soon:hover{background:transparent}
+.persona-switch-item-title .lock-badge{margin-left:8px;vertical-align:middle}
 .persona-switch-head{color:#64748b}
 [data-theme="dark"] .persona-switch-btn{background:#1e293b;border-color:rgba(255,255,255,.12);color:#e2e8f0}
 [data-theme="dark"] .persona-switch-menu{background:#1e293b}
@@ -656,6 +670,20 @@ button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;
   /** Show a confirm modal. Returns a Promise<boolean>. */
   window.appConfirm = function(msg, opts) { return show(msg, Object.assign({type: 'confirm', confirm: true}, opts || {})); };
 })();
+
+/* ===== Persona items still under construction ===== */
+document.querySelectorAll('[data-coming-soon-persona]').forEach(btn => {
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    const label = this.dataset.comingSoonPersona || 'This workspace';
+    window.appAlert(
+      `<strong>${label}</strong> is coming soon. We're still building out its ` +
+      `fundamentals, mutual funds and portfolio tools — you'll be able to switch ` +
+      `to it here once it's ready.`,
+      'info'
+    );
+  });
+});
 
 /* ===== Plan info exposed to JS ===== */
 window.appPlan = {{ (current_plan or {'id':'free','name':'Free','limits':{}})|tojson }};

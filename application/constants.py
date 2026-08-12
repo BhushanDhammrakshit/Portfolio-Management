@@ -62,6 +62,9 @@ PERSONAS = {
         "desc": "Fundamentals, mutual funds and portfolio analytics for "
                 "building wealth over the long run.",
         "groups": ["workspace", "investing", "markets", "ai", "account"],
+        # Not yet ready for users — UI shows a "coming soon" notice and the
+        # server refuses to persist this selection until it's unset.
+        "coming_soon": True,
     },
 }
 

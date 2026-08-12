@@ -57,12 +57,15 @@
         }
         .op-card button:hover{transform:translateY(-6px);border-color:var(--border-2);box-shadow:0 24px 50px rgba(0,0,0,.45)}
         .op-card.is-current button{border-color:rgba(109,108,247,.6);box-shadow:0 0 0 1px rgba(109,108,247,.4)}
+        .op-card.is-soon button{cursor:not-allowed;opacity:.82}
+        .op-card.is-soon button:hover{transform:none;box-shadow:none;border-color:var(--border)}
         .op-ico{width:54px;height:54px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;box-shadow:0 10px 24px rgba(0,0,0,.35)}
         .op-card.trader .op-ico{background:linear-gradient(135deg,#f59e0b,#ef4444)}
         .op-card.swing .op-ico{background:linear-gradient(135deg,#6D6CF7,#8B5CF6)}
         .op-card.investor .op-ico{background:linear-gradient(135deg,#10B981,#0ea5e9)}
-        .op-name{font-size:1.2rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
-        .op-badge{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:rgba(109,108,247,.18);color:#C7CAFF}
+        .op-name{font-size:1.2rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+        .op-badge{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:rgba(109,108,247,.18);color:#C7CAFF;white-space:nowrap;flex-shrink:0;line-height:1.4;margin-top:2px}
+        .op-badge.soon{background:rgba(245,158,11,.18);color:#FCD34D}
         .op-tag{font-size:.82rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
         .op-desc{font-size:.92rem;color:var(--muted);line-height:1.55;flex:1 1 auto}
         .op-cta{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem;color:#fff;margin-top:4px}
@@ -71,6 +74,22 @@
 
         .op-foot{margin-top:34px;color:var(--muted);font-size:.84rem}
         .op-foot i{color:var(--accent)}
+
+        /* ── "Coming soon" modal ─────────────────────────────────────── */
+        .op-modal-overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+            background:rgba(5,8,20,.65);backdrop-filter:blur(4px);padding:20px}
+        .op-modal-overlay.show{display:flex}
+        .op-modal-card{width:100%;max-width:420px;background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+            border:1px solid var(--border-2);border-radius:18px;padding:28px 26px;text-align:center;
+            box-shadow:0 24px 60px rgba(0,0,0,.5);animation:opModalIn .18s ease-out}
+        @keyframes opModalIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+        .op-modal-ico{width:56px;height:56px;border-radius:14px;margin:0 auto 14px;display:inline-flex;align-items:center;justify-content:center;
+            font-size:1.4rem;color:#78350f;background:linear-gradient(135deg,#fde68a,#f59e0b);box-shadow:0 6px 20px rgba(245,158,11,.35)}
+        .op-modal-title{font-size:1.1rem;font-weight:800;margin:0 0 8px;color:var(--ink)}
+        .op-modal-msg{font-size:.9rem;color:var(--muted);line-height:1.55;margin:0 0 20px}
+        .op-modal-ok{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:9px;border:0;
+            background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;font-weight:700;font-size:.88rem;cursor:pointer}
+        .op-modal-ok:hover{filter:brightness(1.08)}
     </style>
 </head>
 <body>
@@ -89,6 +108,17 @@
 
         <div class="op-grid">
             {% for pid, p in personas.items() %}
+            {% if p.coming_soon %}
+            <div class="op-card {{ pid }} is-soon">
+                <button type="button" data-coming-soon-persona="{{ p.label }}">
+                    <span class="op-ico"><i class="fa-solid {{ p.icon }}"></i></span>
+                    <span class="op-name"><span>{{ p.label }}</span><span class="op-badge soon">Coming soon</span></span>
+                    <span class="op-tag">{{ p.tagline }}</span>
+                    <span class="op-desc">{{ p.desc }}</span>
+                    <span class="op-cta"><i class="fa-solid fa-clock"></i> Still in the works</span>
+                </button>
+            </div>
+            {% else %}
             <form method="POST" action="{{ url_for('set_persona') }}" class="op-card {{ pid }}{% if current_persona == pid %} is-current{% endif %}">
                 <input type="hidden" name="persona" value="{{ pid }}">
                 <button type="submit">
@@ -99,10 +129,42 @@
                     <span class="op-cta">{% if current_persona == pid %}Keep this{% else %}Choose this{% endif %} <i class="fa-solid fa-arrow-right"></i></span>
                 </button>
             </form>
+            {% endif %}
             {% endfor %}
         </div>
 
         <p class="op-foot"><i class="fa-solid fa-shield-halved"></i> Your choice only changes what you see — every tool stays available whenever you switch.</p>
     </main>
+
+    <div class="op-modal-overlay" id="opComingSoonModal">
+        <div class="op-modal-card">
+            <div class="op-modal-ico"><i class="fa-solid fa-clock"></i></div>
+            <h5 class="op-modal-title" id="opComingSoonTitle">Coming soon</h5>
+            <p class="op-modal-msg">
+                We're still building out fundamentals, mutual funds and portfolio
+                tools for this profile. Pick Day Trader or Swing Trader for now —
+                you can switch the moment it's ready.
+            </p>
+            <button type="button" class="op-modal-ok" id="opComingSoonOk">Got it</button>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const overlay = document.getElementById('opComingSoonModal');
+        const titleEl = document.getElementById('opComingSoonTitle');
+        function open(label){
+            titleEl.textContent = (label || 'This profile') + ' is coming soon';
+            overlay.classList.add('show');
+        }
+        function close(){ overlay.classList.remove('show'); }
+        document.querySelectorAll('[data-coming-soon-persona]').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.preventDefault(); open(btn.dataset.comingSoonPersona); });
+        });
+        document.getElementById('opComingSoonOk').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    })();
+    </script>
 </body>
 </html>
