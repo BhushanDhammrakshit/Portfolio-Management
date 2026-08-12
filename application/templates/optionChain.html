@@ -1363,38 +1363,39 @@ function renderOiChart(series) {
     const ctx = document.getElementById('ocOiChart');
     if (!ctx || !window.Chart) return;
 
-    // Forward-fill: bad/missing points inherit the last known good value
-    const clean = [];
-    let lastCe = null, lastPe = null;
-    for (const p of series) {
-        if (!p.t) continue;
+    // Plot every fetched point as-is; only the market-hours window is filtered.
+    const clean = (series || []).filter(p => {
+        if (!p.t) return false;
         const t = p.t.replace(':', '');
-        if (t < '0915' || t > '1530') continue;
-        const ce = p.ce_oi, pe = p.pe_oi;
-        const valid = ce > 0 && pe > 0 &&
-            (lastCe === null || (ce >= lastCe * 0.5 && pe >= lastPe * 0.5));
-        if (valid) {
-            lastCe = ce; lastPe = pe;
-            clean.push({ t: p.t, ce_oi: ce, pe_oi: pe });
-        } else if (lastCe !== null) {
-            // Forward-fill with last good reading
-            clean.push({ t: p.t, ce_oi: lastCe, pe_oi: lastPe });
-        }
-    }
+        return t >= '0915' && t <= '1530';
+    });
 
     const labels = clean.map(p => p.t);
     const ceData = clean.map(p => p.ce_oi / 1e7);
     const peData = clean.map(p => p.pe_oi / 1e7);
+    // Backend flags a point when it looks like a sudden >50% OI drop vs. the
+    // prior reading — plotted (not hidden) but called out as a suspect read.
+    const glitchFlags = clean.map(p => !!p.glitch);
+    const glitchDash = ctx2 => (glitchFlags[ctx2.p0DataIndex] || glitchFlags[ctx2.p1DataIndex])
+        ? [5, 4] : undefined;
+    const glitchColor = base => ctx2 => (glitchFlags[ctx2.p0DataIndex] || glitchFlags[ctx2.p1DataIndex])
+        ? '#f59e0b' : base;
+    const pointRadius = glitchFlags.map(g => g ? 4 : 0);
+    const pointColor = '#f59e0b';
 
     const data = {
         labels,
         datasets: [
             { label: 'Call OI (Cr)', data: ceData, borderColor: '#dc2626',
               backgroundColor: 'rgba(220,38,38,.08)', tension: .3,
-              pointRadius: 0, borderWidth: 2, fill: true },
+              pointRadius, pointBackgroundColor: pointColor, pointBorderColor: pointColor,
+              borderWidth: 2, fill: true,
+              segment: { borderDash: glitchDash, borderColor: glitchColor('#dc2626') } },
             { label: 'Put OI (Cr)',  data: peData, borderColor: '#16a34a',
               backgroundColor: 'rgba(22,163,74,.08)', tension: .3,
-              pointRadius: 0, borderWidth: 2, fill: true },
+              pointRadius, pointBackgroundColor: pointColor, pointBorderColor: pointColor,
+              borderWidth: 2, fill: true,
+              segment: { borderDash: glitchDash, borderColor: glitchColor('#16a34a') } },
         ],
     };
     const opts = {
@@ -1410,7 +1411,8 @@ function renderOiChart(series) {
         plugins: {
             legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
             tooltip: { callbacks: {
-                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`
+                label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`,
+                afterLabel: c => glitchFlags[c.dataIndex] ? '⚠ unusual reading (sudden shift)' : '',
             }},
         },
     };
