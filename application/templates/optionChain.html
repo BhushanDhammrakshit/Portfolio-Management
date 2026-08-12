@@ -291,6 +291,7 @@
 .oc-gh-pill.pending{background:rgba(245,158,11,.18);color:#b45309;border-color:rgba(245,158,11,.35)}
 .oc-gh-pill.flat_ok{background:rgba(59,130,246,.18);color:#1d4ed8;border-color:rgba(59,130,246,.35)}
 .oc-gh-pill.flat_miss{background:rgba(244,114,182,.18);color:#be185d;border-color:rgba(244,114,182,.35)}
+.oc-gh-pill.near{background:rgba(100,116,139,.18);color:#475569;border-color:rgba(100,116,139,.35)}
 .oc-gh-num{font-variant-numeric:tabular-nums}
 [data-theme="dark"] .oc-gh-pill.up{color:#4ade80}
 [data-theme="dark"] .oc-gh-pill.down{color:#f87171}
@@ -299,6 +300,7 @@
 [data-theme="dark"] .oc-gh-pill.pending{color:#fcd34d}
 [data-theme="dark"] .oc-gh-pill.flat_ok{color:#93c5fd}
 [data-theme="dark"] .oc-gh-pill.flat_miss{color:#f9a8d4}
+[data-theme="dark"] .oc-gh-pill.near{color:#94a3b8}
 
 /* ── Pre-Open Market Analysis ────────────────────────────── */
 .oc-preopen{display:flex;flex-direction:column;gap:14px;margin-top:6px}
@@ -1191,6 +1193,7 @@ function renderGapHistory(payload) {
         if (u === 'MISS') return 'miss';
         if (u === 'FLAT_OK') return 'flat_ok';
         if (u === 'FLAT_MISS') return 'flat_miss';
+        if (u === 'NEAR') return 'near';
         return 'pending';
     };
     const outcomeText = (o) => {
@@ -1199,6 +1202,7 @@ function renderGapHistory(payload) {
         if (u === 'MISS') return '✗ Miss';
         if (u === 'FLAT_OK') return '✓ Flat';
         if (u === 'FLAT_MISS') return '~ Flat miss';
+        if (u === 'NEAR') return '~ Near miss';
         return '… Pending';
     };
     const num = (n, dp) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(dp == null ? 2 : dp);
@@ -1298,8 +1302,8 @@ function renderGapForecast(payload) {
         return;
     }
     const predClass = (p) => { const u = String(p||'').toUpperCase(); return u === 'GAP UP' ? 'up' : u === 'GAP DOWN' ? 'down' : 'flat'; };
-    const outcomeClass = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return 'hit'; if (u==='MISS') return 'miss'; if (u==='FLAT_OK') return 'flat_ok'; if (u==='FLAT_MISS') return 'flat_miss'; return 'pending'; };
-    const outcomeText = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return '✓ Hit'; if (u==='MISS') return '✗ Miss'; if (u==='FLAT_OK') return '✓ Flat'; if (u==='FLAT_MISS') return '~ Flat miss'; return '… Pending'; };
+    const outcomeClass = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return 'hit'; if (u==='MISS') return 'miss'; if (u==='FLAT_OK') return 'flat_ok'; if (u==='FLAT_MISS') return 'flat_miss'; if (u==='NEAR') return 'near'; return 'pending'; };
+    const outcomeText = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return '✓ Hit'; if (u==='MISS') return '✗ Miss'; if (u==='FLAT_OK') return '✓ Flat'; if (u==='FLAT_MISS') return '~ Flat miss'; if (u==='NEAR') return '~ Near miss'; return '… Pending'; };
     const num = (n, dp) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(dp == null ? 2 : dp);
     const pts = (n) => { if (n == null || isNaN(n)) return '—'; const v = Number(n); return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0); };
     const pct = (n) => { if (n == null || isNaN(n)) return '—'; const v = Number(n); return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + '%'; };
