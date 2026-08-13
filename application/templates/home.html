@@ -16,6 +16,17 @@
         </div>
     </header>
 
+    {% if has_demo_stocks %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2" role="alert">
+        <div><i class="fa-solid fa-circle-info me-1"></i>You're viewing <strong>sample holdings</strong> so you can see what the dashboard offers. Add your real stocks anytime.</div>
+        <form action="{{ url_for('remove_demo_portfolio') }}" method="post" class="m-0" onsubmit="return confirm('Remove all sample stocks from your portfolio?');">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-broom me-1"></i>Remove sample stocks
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
     <div class="dashboard-cards">
         <div class="dash-card dash-card-total">
             <div class="dash-card-icon"><i class="fa-solid fa-wallet"></i></div>
@@ -486,7 +497,7 @@ if (stocks.length > 0) {
         div.innerHTML = `
             <div class="holding-color" style="background:${colors[i % colors.length]}"></div>
             <div class="holding-info">
-                <span class="holding-name">${s.StockName}</span>
+                <span class="holding-name">${s.StockName}${s.IsDemo ? ' <span class="badge bg-secondary-subtle text-secondary" style="font-size:.65rem;font-weight:600;vertical-align:middle;">Sample</span>' : ''}</span>
                 <span class="holding-meta">${s.Quantity} shares · ${s.Sector || 'N/A'}</span>
             </div>
             <div class="holding-values">

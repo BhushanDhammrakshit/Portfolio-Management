@@ -16,6 +16,7 @@ from application.services.azure_table import (user_table_client,
                                               stocks_table_client)
 from application.services import verification
 from application.services import precompute
+from application.services import demo_portfolio
 from application.services.event_tracker import track_event
 from application.constants import PERSONAS, get_persona
 
@@ -643,10 +644,14 @@ def home():
     if not session.get("persona"):
         return redirect(url_for("choose_persona"))
     stocks = _fetch_user_stocks(session["user_id"])
+    if not stocks and demo_portfolio.seed_demo_stocks_if_needed(session["user_id"]):
+        stocks = _fetch_user_stocks(session["user_id"])
+    has_demo_stocks = any(s.get("IsDemo") for s in stocks)
     just_logged_in = session.pop("just_logged_in", False)
     return render_template("home.html",
                            name=session["name"], email=session["email"],
                            title="Dashboard", stocks=stocks,
+                           has_demo_stocks=has_demo_stocks,
                            just_logged_in=just_logged_in)
 
 
@@ -1084,6 +1089,18 @@ def delete_from_portfolio(row_key):
     except Exception as e:
         print(f"[portfolio.delete] error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/portfolio/remove-demo", methods=["POST"])
+@login_required
+def remove_demo_portfolio():
+    removed = demo_portfolio.remove_demo_stocks(session["user_id"])
+    if removed:
+        precompute.invalidate_user(session["user_id"])
+        flash(f"Removed {removed} sample stock{'s' if removed != 1 else ''} from your portfolio.", "success")
+    else:
+        flash("No sample stocks to remove.", "info")
+    return redirect(url_for("home"))
 
 
 @app.route("/portfolio/update/<row_key>", methods=["POST"])
