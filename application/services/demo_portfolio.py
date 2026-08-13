@@ -11,17 +11,42 @@ from application.services.azure_table import (stocks_table_client,
 from application.services.event_tracker import track_event
 
 # Shown to every new / empty-portfolio user as removable "sample" holdings.
+# PurchaseMultiplier is applied to the current price to derive the buy price
+# (e.g. 0.90 = bought 10% below today's price = profit; 1.15 = loss), so the
+# sample portfolio always shows a realistic mix of gains and losses instead
+# of drifting all-profit or all-loss as real market prices move over time.
+# Spans multiple sectors and both small/large gains and losses.
 DEFAULT_DEMO_STOCKS = [
     {"Symbol": "RELIANCE.NS", "StockName": "Reliance Industries",
-     "Sector": "Energy", "Quantity": 10, "PurchasePrice": 2450.0},
+     "Sector": "Energy", "Quantity": 10, "FallbackCurrentPrice": 2450.0,
+     "PurchaseMultiplier": 0.90},   # moderate profit
     {"Symbol": "TCS.NS", "StockName": "Tata Consultancy Services",
-     "Sector": "IT", "Quantity": 5, "PurchasePrice": 3550.0},
+     "Sector": "IT", "Quantity": 5, "FallbackCurrentPrice": 3550.0,
+     "PurchaseMultiplier": 1.18},   # moderate loss
     {"Symbol": "HDFCBANK.NS", "StockName": "HDFC Bank",
-     "Sector": "Financial Services", "Quantity": 15, "PurchasePrice": 1520.0},
+     "Sector": "Financial Services", "Quantity": 15, "FallbackCurrentPrice": 1520.0,
+     "PurchaseMultiplier": 0.93},   # small profit
     {"Symbol": "INFY.NS", "StockName": "Infosys",
-     "Sector": "IT", "Quantity": 10, "PurchasePrice": 1480.0},
+     "Sector": "IT", "Quantity": 10, "FallbackCurrentPrice": 1480.0,
+     "PurchaseMultiplier": 1.12},   # moderate loss
     {"Symbol": "ITC.NS", "StockName": "ITC Limited",
-     "Sector": "FMCG", "Quantity": 25, "PurchasePrice": 410.0},
+     "Sector": "FMCG", "Quantity": 25, "FallbackCurrentPrice": 410.0,
+     "PurchaseMultiplier": 0.96},   # small profit
+    {"Symbol": "ICICIBANK.NS", "StockName": "ICICI Bank",
+     "Sector": "Financial Services", "Quantity": 12, "FallbackCurrentPrice": 1150.0,
+     "PurchaseMultiplier": 1.08},   # small loss
+    {"Symbol": "LT.NS", "StockName": "Larsen & Toubro",
+     "Sector": "Infrastructure", "Quantity": 4, "FallbackCurrentPrice": 3600.0,
+     "PurchaseMultiplier": 0.85},   # large profit
+    {"Symbol": "SUNPHARMA.NS", "StockName": "Sun Pharmaceutical",
+     "Sector": "Healthcare", "Quantity": 8, "FallbackCurrentPrice": 1650.0,
+     "PurchaseMultiplier": 1.02},   # near-breakeven, slight loss
+    {"Symbol": "TATAMOTORS.NS", "StockName": "Tata Motors",
+     "Sector": "Automobile", "Quantity": 15, "FallbackCurrentPrice": 950.0,
+     "PurchaseMultiplier": 0.80},   # large profit
+    {"Symbol": "HINDALCO.NS", "StockName": "Hindalco Industries",
+     "Sector": "Metals", "Quantity": 20, "FallbackCurrentPrice": 650.0,
+     "PurchaseMultiplier": 1.20},   # large loss
 ]
 
 
@@ -72,20 +97,21 @@ def seed_demo_stocks_if_needed(user_id):
     from application.services import market_data  # lazy: avoid import cost at startup
 
     for stock in DEFAULT_DEMO_STOCKS:
-        current_price = stock["PurchasePrice"]
+        current_price = stock["FallbackCurrentPrice"]
         try:
             quote = market_data.get_quote(stock["Symbol"]) or {}
             if quote.get("price"):
                 current_price = float(quote["price"])
         except Exception:
             pass
+        purchase_price = round(current_price * stock["PurchaseMultiplier"], 2)
         entity = {
             "PartitionKey": "stock",
             "RowKey": str(uuid.uuid4()),
             "UserId": user_id,
             "StockName": stock["StockName"],
             "Quantity": stock["Quantity"],
-            "PurchasePrice": stock["PurchasePrice"],
+            "PurchasePrice": purchase_price,
             "CurrentPrice": current_price,
             "Sector": stock["Sector"],
             "Symbol": stock["Symbol"],

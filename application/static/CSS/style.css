@@ -751,14 +751,14 @@ a.plan-badge-elite:hover {
 .dash-card-trend.down { color: var(--danger); }
 
 .dashboard-charts { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .chart-canvas-wrap { position: relative; height: 280px; width: 100%; }
 .chart-canvas-wrap-sm { height: 240px; }
 .chart-canvas-wrap canvas { max-height: 100% !important; }
 .chart-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; }
 .chart-title i { color: var(--primary); margin-right: 6px; }
 .dashboard-bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.sector-card, .holdings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.sector-card, .holdings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .sector-card .table { margin-bottom: 0; font-size: 0.88rem; }
 .sector-card th { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; border: 0; padding-top: 0; }
 .sector-card td { vertical-align: middle; border-color: var(--border); }
