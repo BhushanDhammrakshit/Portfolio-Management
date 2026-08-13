@@ -810,8 +810,15 @@ a.plan-badge-elite:hover {
     /* Make charts slightly shorter on small screens */
     .chart-canvas-wrap { height: 200px; overflow: visible; }
 
-    /* Allow the sector table to scroll horizontally on small screens */
-    .sector-card { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; }
+    /* Allow the sector table to scroll horizontally on small screens.
+       transform:translate3d forces its own compositing layer, which works
+       around a WebKit bug where nested touch-scroll regions don't get
+       gesture recognition inside an `overflow: clip` ancestor (see body rule). */
+    .sector-card {
+        overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px;
+        overscroll-behavior-x: contain;
+        transform: translate3d(0, 0, 0);
+    }
     .sector-card table { min-width: 640px; }
 
     /* Compact holdings list: allow values to shrink and shrink action icons */
