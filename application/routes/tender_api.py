@@ -406,6 +406,10 @@ def fetch_and_parse_stock_news():
         if not stock:
             continue
         cls = _classify_sentiment(lower)
+        if cls["sentiment"] == "neutral":
+            # Neutral headlines carry no actionable bullish/bearish signal —
+            # skip them so the feed only shows bullish/bearish news.
+            continue
         key = (stock, lower[:60])
         if key in seen:
             continue
