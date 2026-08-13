@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, jsonify, session, redirect, url_fo
 from application import config
 from application.services import market_data
 from application.services import cache as shared_cache
+from application.services import snapshot_store
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
@@ -175,6 +176,12 @@ def _load(force=False):
     Hot path (99% of requests): one Redis GET — no provider calls.
     Cold path (cache empty): single-flight the build via a distributed
     lock so a thundering herd doesn't fan out to upstream.
+
+    Outside market hours (incl. the pre-open dead zone before 9:15 IST),
+    the broker feed reports ``net_change: 0`` for most symbols since it
+    hasn't started publishing today's session data yet. Rebuilding then
+    would show an all-flat heatmap, so a rebuild falls back to the last
+    snapshot captured while the market was actually live (snapshot_store).
     """
     if not force:
         cached = shared_cache.jget(_HEATMAP_KEY)
@@ -189,9 +196,11 @@ def _load(force=False):
         if not got:
             # Couldn't get the lock and still no data — degrade rather than hang.
             return cached or {"sectors": [], "ts": int(time.time())}
-        data = _build_heatmap_payload()
+        data = snapshot_store.serve_or_refresh(
+            _HEATMAP_KEY, _build_heatmap_payload, live=True, force=force)
         shared_cache.jset(_HEATMAP_KEY, data, ttl=max(config.HEATMAP_CACHE_TTL * 4, 60))
         return data
+
 
 
 @heatmap_bp.route("/heatmap-data")

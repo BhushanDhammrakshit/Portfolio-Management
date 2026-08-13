@@ -297,11 +297,21 @@ def _normalize_quote(symbol: str, raw: dict) -> Optional[dict]:
     try:
         ohlc = raw.get("ohlc") or {}
         ltp = raw.get("last_price") or raw.get("LTP") or ohlc.get("close") or 0
-        prev_close = ohlc.get("close") or ltp
-        # On intraday, ``ohlc.close`` is previous day's close.
-        if not prev_close:
-            prev_close = ltp
-        change = float(ltp) - float(prev_close) if prev_close else 0.0
+        # Per Dhan's docs, ohlc.close is TODAY's closing price (not
+        # yesterday's) — it equals ltp once the market closes, which made
+        # change/change_pct collapse to 0 after hours. Dhan already gives us
+        # ``net_change`` = "absolute change in LTP from previous day closing
+        # price", so derive change/prev_close from that instead.
+        net_change = raw.get("net_change")
+        if net_change not in (None, ""):
+            change = float(net_change)
+            prev_close = float(ltp) - change if ltp else 0.0
+        else:
+            # Fallback for payloads without net_change (e.g. some F&O rows).
+            prev_close = ohlc.get("close") or ltp
+            if not prev_close:
+                prev_close = ltp
+            change = float(ltp) - float(prev_close) if prev_close else 0.0
         change_pct = (change / float(prev_close) * 100.0) if prev_close else 0.0
 
         try:
