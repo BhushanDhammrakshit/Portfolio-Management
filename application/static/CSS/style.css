@@ -923,6 +923,20 @@ a.plan-badge-elite:hover {
 .algo-chat-input .btn { border-radius: 50%; width: 44px; height: 44px; padding: 0; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
 .algo-side { display: flex; flex-direction: column; gap: 16px; }
 .algo-side-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+
+/* Mobile: reclaim horizontal width for message text (smaller avatar/padding,
+   wider bubble) so lines don't wrap after only a couple of words, and let
+   the chat card fill most of the viewport instead of a small fixed height. */
+@media (max-width: 600px) {
+    .algo-chat-card { height: calc(100dvh - 100px); min-height: 620px; }
+    .algo-side { margin-top: 8px; }
+    .algo-chat-messages { padding: 12px 10px; gap: 10px; }
+    .algo-msg { max-width: 94%; gap: 8px; }
+    .algo-msg-avatar { width: 26px; height: 26px; font-size: 0.75rem; border-radius: 8px; }
+    .algo-msg-bubble { padding: 10px 12px; font-size: 0.9rem; }
+    .algo-chat-header { padding: 10px 14px; }
+    .algo-chat-input { padding: 10px 12px; }
+}
 .algo-side-card h5 { font-weight: 700; font-size: 0.92rem; margin-bottom: 12px; }
 .algo-side-card h5 i { color: var(--accent); margin-right: 6px; }
 .algo-quick-btn {
