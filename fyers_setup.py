@@ -7,6 +7,7 @@ for an access token and print it.
 Usage:
     python fyers_setup.py
 """
+
 import hashlib
 import os
 import re
