@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from application.services import cache as shared_cache, market_data
+from application.services import snapshot_store
 
 log = logging.getLogger(__name__)
 
@@ -392,11 +393,15 @@ def run_strategy(rules: List[Dict[str, Any]],
 
 def idea_of_the_day(style: str = "swing", force: bool = False) -> Dict[str, Any]:
     style = style if style in VALID_STYLES else "swing"
+    # Keyed by style+date so it naturally rolls over daily. Persisted via
+    # snapshot_store (Azure Table) rather than the plain Redis cache so it
+    # survives Redis daily-budget fallback, worker restarts, and dyno
+    # cycling instead of silently regenerating on every refresh.
     key = f"idea_of_day:{style}:{_dt.datetime.now(_IST).date().isoformat()}"
     if not force:
-        cached = shared_cache.jget(key)
+        cached = snapshot_store.get(key)
         if cached:
-            return {**cached, "cached": True}
+            return {**cached["payload"], "cached": True}
 
     # Build context: best candidate from each style's primary scan
     candidate = None; context_lines: List[str] = []
@@ -478,7 +483,7 @@ def idea_of_the_day(style: str = "swing", force: bool = False) -> Dict[str, Any]
         "cached": False,
     }
     try:
-        shared_cache.jset(key, payload, ttl=60 * 60 * 12)  # 12h
+        snapshot_store.put(key, payload)
     except Exception:
         pass
     return payload
