@@ -1,6 +1,8 @@
 """Intraday trading signals using RSI + MACD + EMA crossover strategy."""
 import datetime
+import math
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
 import numpy as np
@@ -16,21 +18,70 @@ intraday_api = Blueprint("intraday_api", __name__)
 # Shared global cache for the intraday scan result. First user to hit /scan
 # triggers a fresh run; subsequent users in the next 5 minutes get the cached
 # result. ``?refresh=1`` forces a fresh scan (also re-seeds the cache).
-_SCAN_CACHE_KEY = "intraday:scan:v1"
+_SCAN_CACHE_PREFIX = "intraday:scan:v2"
 _SCAN_CACHE_TTL = 300  # 5 minutes
 
-# Popular Indian stocks for intraday scanning
-INTRADAY_WATCHLIST = [
-    "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
-    "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "KOTAKBANK.NS", "LT.NS",
-    "HINDUNILVR.NS", "AXISBANK.NS", "BAJFINANCE.NS", "MARUTI.NS",
-    "SUNPHARMA.NS", "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS",
-    "HCLTECH.NS", "ADANIENT.NS", "TATAMOTORS.NS", "TATASTEEL.NS",
-    "NTPC.NS", "POWERGRID.NS", "ONGC.NS", "COALINDIA.NS",
-    "JSWSTEEL.NS", "M&M.NS", "BAJAJFINSV.NS", "TECHM.NS",
-]
+# Single source of truth for the scannable universe — same list the swing
+# scanner and the intraday tool-suite use (large-caps first, then mid-cap
+# movers), so a tier of N is always "the N most liquid names".
+INTRADAY_UNIVERSE = list(swing_scanner.UNIVERSE)
 
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+# ── Scan sizing ─────────────────────────────────────────────────────────
+# Each stock costs 2 provider calls: 15-min intraday history (always live)
+# and 90-day daily history (served from the Azure OHLC cache after the first
+# run of the day). Wall-clock time is therefore bounded by the provider's
+# request-rate cap, not by CPU, so the estimate below is derived from the
+# per-provider throttle that the provider modules actually enforce.
+_CALLS_PER_STOCK = 2
+_PROVIDER_RPS = {
+    "dhan": 5.0,        # 5 req/s cap on the chart endpoints
+    "fyers": 4.0,       # _MIN_REQUEST_INTERVAL = 0.25s per app
+    "upstox": 25.0,     # 25 req/s / 250 per min
+    "yfinance": 8.0,    # no published cap; conservative
+}
+_SCAN_MAX_WORKERS = 8
+_TIER_COUNTS = (25, 50, 100, len(INTRADAY_UNIVERSE))
+_TIER_META = {
+    25: ("Quick", "Top 25 large-caps"),
+    50: ("Balanced", "NIFTY 50 large-caps"),
+    100: ("Wide", "Large-caps + mid-cap movers"),
+}
+_DEFAULT_SCAN_COUNT = 50
+
+
+def _estimate_seconds(count: int) -> int:
+    rps = _PROVIDER_RPS.get(market_data.provider_name(), 5.0)
+    return max(5, int(math.ceil(count * _CALLS_PER_STOCK / rps)) + 3)
+
+
+def scan_tiers() -> list:
+    """Selectable universe sizes with a per-provider time estimate."""
+    out, seen = [], set()
+    for raw in _TIER_COUNTS:
+        count = min(raw, len(INTRADAY_UNIVERSE))
+        if count in seen:
+            continue
+        seen.add(count)
+        label, desc = _TIER_META.get(raw, ("Full universe", "Every tracked stock"))
+        out.append({
+            "count": count,
+            "label": label,
+            "description": desc,
+            "est_seconds": _estimate_seconds(count),
+        })
+    return out
+
+
+def _resolve_count(raw) -> int:
+    """Clamp a requested stock count to the nearest offered tier."""
+    allowed = [t["count"] for t in scan_tiers()]
+    try:
+        want = int(raw)
+    except (TypeError, ValueError):
+        want = _DEFAULT_SCAN_COUNT
+    return min(allowed, key=lambda c: abs(c - want))
 
 
 def _compute_rsi(series, period=14):
@@ -57,6 +108,43 @@ def _compute_vwap(df):
     cumvol = df["Volume"].cumsum()
     cumtp = (tp * df["Volume"]).cumsum()
     return cumtp / cumvol.replace(0, np.nan)
+
+
+def _compute_atr(df, period=14) -> float:
+    """Average true range on whatever bars ``df`` holds (here: 15-min)."""
+    prev_close = df["Close"].shift(1)
+    tr = pd.concat([
+        df["High"] - df["Low"],
+        (df["High"] - prev_close).abs(),
+        (df["Low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    atr = float(tr.tail(period).mean())
+    if not atr or math.isnan(atr) or atr <= 0:
+        atr = float(df["Close"].iloc[-1]) * 0.005  # ~0.5% fallback
+    return atr
+
+
+def _build_plan(is_long: bool, entry: float, stop_candidate: float,
+                target_candidate: float, atr: float) -> dict:
+    """Turn a raw entry/stop/target idea into a plan with a sane min R:R."""
+    stop_dist = (entry - stop_candidate) if is_long else (stop_candidate - entry)
+    if stop_dist <= 0:
+        stop_dist = max(atr, entry * 0.003)
+        stop_candidate = entry - stop_dist if is_long else entry + stop_dist
+
+    target_dist = (target_candidate - entry) if is_long else (entry - target_candidate)
+    if target_dist < 1.2 * stop_dist:
+        target_dist = 2 * stop_dist
+        target_candidate = entry + target_dist if is_long else entry - target_dist
+
+    return {
+        "entry": round(entry, 2),
+        "stop": round(stop_candidate, 2),
+        "target": round(target_candidate, 2),
+        "stop_pct": round(stop_dist / entry * 100, 2) if entry else 0,
+        "target_pct": round(target_dist / entry * 100, 2) if entry else 0,
+        "risk_reward": round(target_dist / stop_dist, 2) if stop_dist else 0,
+    }
 
 
 def _analyze_stock(symbol):
@@ -123,65 +211,70 @@ def _analyze_stock(symbol):
         day_low = float(today_data["Low"].min()) if not today_data.empty else last_price
 
         # --- Signal logic ---
-        # Score: +ve = bullish, -ve = bearish
-        score = 0
+        # Two independent vote pools, tallied separately so a "STRONG" score
+        # that's actually trend signals cancelling reversion signals (or
+        # vice versa) can be told apart from genuine agreement.
+        trend_score = 0
+        reversion_score = 0
         reasons = []
 
-        # RSI
+        # RSI (reversion pool)
         if rsi_val < 30:
-            score += 2
+            reversion_score += 2
             reasons.append("RSI oversold (<30) — potential bounce")
         elif rsi_val < 40:
-            score += 1
+            reversion_score += 1
             reasons.append("RSI approaching oversold")
         elif rsi_val > 70:
-            score -= 2
+            reversion_score -= 2
             reasons.append("RSI overbought (>70) — potential pullback")
         elif rsi_val > 60:
-            score -= 1
+            reversion_score -= 1
             reasons.append("RSI approaching overbought")
 
-        # MACD
+        # MACD (trend pool)
         if macd_cross == "bullish" and hist_val > 0:
-            score += 2
+            trend_score += 2
             reasons.append("MACD bullish crossover with rising histogram")
         elif macd_cross == "bullish":
-            score += 1
+            trend_score += 1
             reasons.append("MACD above signal line")
         elif macd_cross == "bearish" and hist_val < 0:
-            score -= 2
+            trend_score -= 2
             reasons.append("MACD bearish crossover with falling histogram")
         else:
-            score -= 1
+            trend_score -= 1
             reasons.append("MACD below signal line")
 
-        # EMA crossover
+        # EMA crossover (trend pool)
         if ema_cross == "bullish":
-            score += 1
+            trend_score += 1
             reasons.append("EMA 9 above EMA 21 (short-term uptrend)")
         else:
-            score -= 1
+            trend_score -= 1
             reasons.append("EMA 9 below EMA 21 (short-term downtrend)")
 
-        # VWAP
+        # VWAP (trend pool)
         if above_vwap:
-            score += 1
+            trend_score += 1
             reasons.append("Price above VWAP (institutional buying)")
         else:
-            score -= 1
+            trend_score -= 1
             reasons.append("Price below VWAP (institutional selling)")
 
         # Volume
         if vol_ratio > 1.5:
             reasons.append(f"Volume {vol_ratio:.1f}x above average (strong momentum)")
 
-        # Bollinger
+        # Bollinger (reversion pool)
         if last_price <= bb_lower:
-            score += 1
+            reversion_score += 1
             reasons.append("Price at lower Bollinger Band — potential reversal up")
         elif last_price >= bb_upper:
-            score -= 1
+            reversion_score -= 1
             reasons.append("Price at upper Bollinger Band — potential reversal down")
+
+        score = trend_score + reversion_score
 
         # Determine signal
         if score >= 3:
@@ -195,18 +288,44 @@ def _analyze_stock(symbol):
         else:
             signal = "HOLD"
 
+        # Setup classification: which vote pool actually drove the score.
+        # "mixed" = trend and reversion pools disagree (opposite signs) —
+        # the total can still look "STRONG" while the thesis is incoherent,
+        # so no trade plan is offered for those.
+        if trend_score == 0 and reversion_score == 0:
+            setup_type = "neutral"
+        elif trend_score * reversion_score < 0:
+            setup_type = "mixed"
+        elif abs(trend_score) >= abs(reversion_score):
+            setup_type = "trend"
+        else:
+            setup_type = "reversion"
+
+        # --- Trade plan (entry/stop/target/R:R) ---
+        atr = _compute_atr(df)
+        plan = None
+        direction = "long" if score > 0 else ("short" if score < 0 else None)
+        if direction and setup_type in ("trend", "reversion"):
+            is_long = direction == "long"
+            if setup_type == "trend":
+                entry = last_price
+                stop_candidate = day_low if is_long else day_high
+                target_candidate = bb_upper if is_long else bb_lower
+            else:  # reversion
+                entry = last_price
+                buf = 0.25 * atr
+                stop_candidate = (bb_lower - buf) if is_long else (bb_upper + buf)
+                target_candidate = vwap_val
+            plan = _build_plan(is_long, entry, stop_candidate, target_candidate, atr)
+            plan["direction"] = direction
+
         name = symbol.replace(".NS", "").replace(".BO", "")
 
-        # Initial candle payload — last 2 trading days of 15-min bars (≈ 50 bars).
-        # The frontend can request smaller (5m) or larger (1h) timeframes
-        # on-demand via /api/intraday/candles.
-        try:
-            ch = market_data.get_history(symbol, days=2, interval="15m")
-        except Exception:
-            ch = df  # fallback to whatever we already loaded
-        if ch is None or ch.empty:
-            ch = df
-        tail = ch.tail(80)
+        # Initial candle payload — reuse the 15-min frame already fetched
+        # above (one less provider call per stock). The frontend can request
+        # smaller (5m) or larger (1h) timeframes on-demand via
+        # /api/intraday/candles.
+        tail = df.tail(80)
         candles = []
         for ts, row in tail.iterrows():
             try:
@@ -246,6 +365,8 @@ def _analyze_stock(symbol):
             "vol_ratio": round(vol_ratio, 2),
             "signal": signal,
             "score": score,
+            "setup_type": setup_type,
+            "plan": plan,
             "reasons": reasons,
             "candles": candles,
         }
@@ -264,6 +385,10 @@ def intraday_page():
         name=session.get("name", "User"),
         email=session.get("email", ""),
         title="Intraday Scanner",
+        scan_tiers=scan_tiers(),
+        default_scan_count=_resolve_count(_DEFAULT_SCAN_COUNT),
+        universe_size=len(INTRADAY_UNIVERSE),
+        swing_tiers=list(swing_scanner.TIER_COUNTS),
     )
 
 
@@ -272,44 +397,57 @@ def scan_stocks():
     if "email" not in session:
         return jsonify({"error": "auth"}), 401
 
-    force = (request.args.get("refresh") == "1") or \
-            ((request.get_json(silent=True) or {}).get("refresh") is True)
+    body = request.get_json(silent=True) or {}
+    force = (request.args.get("refresh") == "1") or (body.get("refresh") is True)
     snapshot_only = request.args.get("snapshot") == "1"
+    count = _resolve_count(request.args.get("count", body.get("count")))
+    cache_key = f"{_SCAN_CACHE_PREFIX}:{count}"
+    snapshot_key = f"live:intraday_scan:{count}"
 
     if snapshot_only and not force:
-        data = snapshot_store.serve_snapshot("live:intraday_scan")
+        data = snapshot_store.serve_snapshot(snapshot_key)
         if data is None:
             return jsonify({"snapshot_missing": True})
         return jsonify(data)
 
     if not force:
-        cached = shared_cache.jget(_SCAN_CACHE_KEY)
+        cached = shared_cache.jget(cache_key)
         if isinstance(cached, dict) and cached.get("stocks") is not None:
             return jsonify({**cached, "cached": True})
 
+    symbols = INTRADAY_UNIVERSE[:count]
+    started = datetime.datetime.now(IST)
     results = []
-    for symbol in INTRADAY_WATCHLIST:
-        data = _analyze_stock(symbol)
-        if data:
-            results.append(data)
+    with ThreadPoolExecutor(max_workers=_SCAN_MAX_WORKERS) as ex:
+        futures = [ex.submit(_analyze_stock, s) for s in symbols]
+        for fut in as_completed(futures):
+            try:
+                data = fut.result()
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+                continue
+            if data:
+                results.append(data)
 
     results.sort(key=lambda x: x["score"], reverse=True)
-    scan_time = datetime.datetime.now(IST).strftime("%d %b %Y, %I:%M %p IST")
+    finished = datetime.datetime.now(IST)
 
     payload = {
         "stocks": results,
-        "scan_time": scan_time,
+        "scan_time": finished.strftime("%d %b %Y, %I:%M %p IST"),
+        "requested": count,
+        "elapsed_seconds": round((finished - started).total_seconds(), 1),
         "buy_count": len([r for r in results if "BUY" in r["signal"]]),
         "sell_count": len([r for r in results if "SELL" in r["signal"]]),
         "hold_count": len([r for r in results if r["signal"] == "HOLD"]),
         "cached": False,
     }
     try:
-        shared_cache.jset(_SCAN_CACHE_KEY, payload, ttl=_SCAN_CACHE_TTL)
+        shared_cache.jset(cache_key, payload, ttl=_SCAN_CACHE_TTL)
     except Exception:
         pass
     try:
-        snapshot_store.put("live:intraday_scan", payload)
+        snapshot_store.put(snapshot_key, payload)
     except Exception:
         pass
     return jsonify(payload)
@@ -329,10 +467,19 @@ def swing_scan():
     """
     if "email" not in session:
         return jsonify({"error": "auth"}), 401
-    force = (request.args.get("refresh") == "1") or \
-            ((request.get_json(silent=True) or {}).get("refresh") is True)
+    body = request.get_json(silent=True) or {}
+    force = (request.args.get("refresh") == "1") or (body.get("refresh") is True)
+    raw_count = request.args.get("count", body.get("count"))
+    count = None
+    if raw_count:
+        try:
+            want = int(raw_count)
+            count = min((c for c in swing_scanner.TIER_COUNTS if c >= want),
+                        default=swing_scanner.TIER_COUNTS[-1])
+        except (TypeError, ValueError):
+            count = None
     try:
-        payload = swing_scanner.scan(force_refresh=force)
+        payload = swing_scanner.scan(count=count, force_refresh=force)
         return jsonify(payload)
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import logging
+import threading
 import time
 from typing import Iterable, Optional
 
@@ -46,6 +47,29 @@ class DhanError(RuntimeError):
     pass
 
 
+# ── Throttle ────────────────────────────────────────────────────────────
+# Dhan caps the chart endpoints at 5 req/s and /marketfeed/quote at 1 req/s.
+# Callers that fan out across a thread pool (scanners) would otherwise blow
+# straight through those caps, so gate every request on a shared per-endpoint
+# minimum interval.
+_MIN_INTERVAL = {"/marketfeed/quote": 1.0}
+_DEFAULT_MIN_INTERVAL = 0.2  # 5 req/s
+
+_throttle_lock = threading.Lock()
+_last_request_at: dict[str, float] = {}
+
+
+def _throttle(path: str) -> None:
+    interval = _MIN_INTERVAL.get(path, _DEFAULT_MIN_INTERVAL)
+    with _throttle_lock:
+        now = time.monotonic()
+        nxt = max(now, _last_request_at.get(path, 0.0) + interval)
+        _last_request_at[path] = nxt
+        wait = nxt - now
+    if wait > 0:
+        time.sleep(wait)
+
+
 def _headers() -> dict:
     if not config.DHAN_ACCESS_TOKEN or not config.DHAN_CLIENT_ID:
         raise DhanError(
@@ -62,10 +86,12 @@ def _headers() -> dict:
 
 def _post(path: str, payload: dict, _retried: bool = False) -> dict:
     url = f"{_BASE}{path}"
+    _throttle(path)
     r = _HTTP.post(url, json=payload, headers=_headers(), timeout=_TIMEOUT)
     if r.status_code == 429:
         # Simple retry-once on rate limit.
         time.sleep(1.1)
+        _throttle(path)
         r = _HTTP.post(url, json=payload, headers=_headers(), timeout=_TIMEOUT)
     # Auto-refresh on 401 (token expired daily) — single retry.
     if r.status_code == 401 and not _retried:

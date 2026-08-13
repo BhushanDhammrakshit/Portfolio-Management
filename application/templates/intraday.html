@@ -42,9 +42,49 @@
         </button>
     </div>
 
+    <!-- Universe size chooser (intraday mode only) -->
+    {% if scan_tiers %}
+    <div class="scan-size-block mb-3" id="scanSizeBlock">
+        <div class="scan-size-head">
+            <span><i class="fa-solid fa-sliders me-1"></i>How many stocks should we scan?</span>
+            <span class="scan-size-note" id="scanSizeNote">Pick a size, then hit <b>Scan now</b>.</span>
+        </div>
+        <div class="scan-size-row">
+            {% for tier in scan_tiers %}
+            <button type="button" class="scan-size-btn{% if tier.count == default_scan_count %} active{% endif %}"
+                    data-count="{{ tier.count }}" data-est="{{ tier.est_seconds }}">
+                <span class="ss-count">{{ tier.count }}<small> stocks</small></span>
+                <span class="ss-label">{{ tier.label }}</span>
+                <span class="ss-desc">{{ tier.description }}</span>
+                <span class="ss-est"><i class="fa-regular fa-clock me-1"></i>~{{ tier.est_seconds }}s</span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Universe size chooser (swing mode only) -->
+    {% if swing_tiers %}
+    <div class="scan-size-block mb-3" id="swingSizeBlock" hidden>
+        <div class="scan-size-head">
+            <span><i class="fa-solid fa-sliders me-1"></i>How many stocks should we scan?</span>
+            <span class="scan-size-note" id="swingSizeNote">Pick a size, then hit <b>Scan now</b>.</span>
+        </div>
+        <div class="scan-size-row">
+            {% for count in swing_tiers %}
+            <button type="button" class="scan-size-btn swing-size-btn{% if loop.first %} active{% endif %}" data-count="{{ count }}">
+                <span class="ss-count">{{ count }}<small> stocks</small></span>
+                <span class="ss-label">{% if loop.first %}Core{% elif loop.last %}NIFTY 500{% else %}Extended{% endif %}</span>
+                <span class="ss-desc">{% if loop.first %}Curated large + mid-cap movers{% else %}Core + NIFTY 500 constituents{% endif %}</span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <div id="scanLoading" class="text-center py-5" hidden>
         <div class="app-spinner lg text-primary" role="status" aria-label="Scanning"></div>
-        <p class="mt-2 text-muted">Scanning 30 stocks with 15-min intraday data&hellip; This may take 30-60 seconds.</p>
+        <p class="mt-2 text-muted" id="scanLoadingText">Scanning stocks with 15-min intraday data&hellip;</p>
     </div>
 
     <div id="scanError" hidden></div>
@@ -85,9 +125,13 @@
         <!-- Filter bar -->
         <div class="tender-filter-bar mb-3">
             <button class="tender-filter-btn active" data-filter="all">All</button>
+            <button class="tender-filter-btn" data-filter="strong-buy">Strong Buy</button>
             <button class="tender-filter-btn" data-filter="buy">Buy</button>
+            <button class="tender-filter-btn" data-filter="strong-sell">Strong Sell</button>
             <button class="tender-filter-btn" data-filter="sell">Sell</button>
             <button class="tender-filter-btn" data-filter="hold">Hold</button>
+            <button class="tender-filter-btn" data-filter="has-plan">Has trade plan</button>
+            <button class="tender-filter-btn" data-filter="good-rr">High R:R (≥1.5)</button>
         </div>
 
         <!-- Signal cards grid -->
@@ -99,7 +143,7 @@
         <div class="empty-state">
             <div class="empty-icon"><i class="fa-solid fa-satellite-dish"></i></div>
             <h4>Ready to scan</h4>
-            <p>Click <strong>Scan now</strong> to analyze 30 NIFTY stocks using RSI, MACD, EMA crossover, and VWAP indicators for intraday trading signals.</p>
+            <p>Pick a universe size above, or click <strong>Start scan</strong> to analyze NIFTY stocks using RSI, MACD, EMA crossover, and VWAP indicators for intraday trading signals.</p>
             <button class="btn btn-primary" id="emptyStartBtn"><i class="fa-solid fa-satellite-dish me-1"></i>Start scan</button>
         </div>
     </div>
@@ -187,6 +231,29 @@
 .mode-btn-locked:hover { background:rgba(245,158,11,.08); border-color:#f59e0b; color:#b45309; }
 .mode-lock-pill { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:.62rem; font-weight:800; background:linear-gradient(135deg,#fde68a,#f59e0b); color:#78350f; vertical-align:middle; }
 
+/* Universe-size chooser */
+.scan-size-block { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.scan-size-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; font-size:.8rem; font-weight:700; margin-bottom:10px; }
+.scan-size-note { font-size:.7rem; font-weight:500; color:var(--text-muted); }
+.scan-size-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; }
+.scan-size-btn { display:flex; flex-direction:column; gap:2px; text-align:left; padding:11px 13px; border-radius:9px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); cursor:pointer; transition:all .12s; }
+.scan-size-btn:hover { border-color:var(--primary); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.07); }
+.scan-size-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; box-shadow:0 2px 10px rgba(37,99,235,.3); }
+.scan-size-btn[disabled] { opacity:.55; cursor:progress; transform:none; }
+.scan-size-btn .ss-count { font-size:1.15rem; font-weight:800; line-height:1.1; }
+.scan-size-btn .ss-count small { font-size:.68rem; font-weight:600; opacity:.75; }
+.scan-size-btn .ss-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; opacity:.85; }
+.scan-size-btn .ss-desc { font-size:.68rem; color:var(--text-muted); }
+.scan-size-btn .ss-est { font-size:.68rem; font-weight:700; margin-top:4px; color:#2563eb; }
+.scan-size-btn.active .ss-desc, .scan-size-btn.active .ss-est { color:rgba(255,255,255,.9); }
+[data-theme="dark"] .scan-size-btn .ss-est { color:#60a5fa; }
+
+/* Intraday trade plan (reuses swing-plan-cell coloring) */
+.intraday-plan-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:10px; }
+.intraday-setup-tag { margin-top:8px; font-size:.68rem; font-weight:700; color:#2563eb; }
+.intraday-setup-tag.muted { color:var(--text-muted); font-weight:600; }
+[data-theme="dark"] .intraday-setup-tag { color:#60a5fa; }
+
 /* Swing cards */
 .swing-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:box-shadow .15s, border-color .15s; border-left:4px solid var(--border); }
 .swing-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); border-color:var(--primary); }
@@ -237,13 +304,23 @@ const fmt = v => '₹' + Number(v||0).toLocaleString('en-IN', {maximumFractionDi
 let _scanData = [];
 let _mode = 'intraday';   // 'intraday' | 'swing'
 
+const _defaultTier = document.querySelector('#scanSizeBlock .scan-size-btn.active');
+let _scanCount = Number(_defaultTier && _defaultTier.dataset.count) || 50;
+let _scanEst = Number(_defaultTier && _defaultTier.dataset.est) || 30;
+
+const _defaultSwingTier = document.querySelector('#swingSizeBlock .swing-size-btn.active');
+let _swingCount = Number(_defaultSwingTier && _defaultSwingTier.dataset.count) || 112;
+
+const intradayCacheKey = () => 'intraday:scan:intraday:' + _scanCount;
+const swingCacheKey = () => 'intraday:scan:swing:' + _swingCount;
+
 const TAGLINES = {
-    intraday: 'RSI + MACD + EMA + VWAP strategy on top NIFTY 50 stocks.',
-    swing:    'Qullamaggie + Minervini momentum-breakout scanner — targets 10–15% over 1–2 weeks on NIFTY 100 + mid-cap movers.'
+    intraday: 'RSI + MACD + EMA + VWAP strategy on the most liquid NSE names.',
+    swing:    'Qullamaggie + Minervini momentum-breakout scanner — targets 10–15% over 1–2 weeks.'
 };
 const EMPTY_TEXT = {
-    intraday: 'Click <strong>Scan now</strong> to analyze 30 NIFTY stocks using RSI, MACD, EMA crossover, and VWAP indicators for intraday trading signals.',
-    swing:    'Click <strong>Scan now</strong> to run the swing-trade scanner across ~110 large + mid-cap stocks. Looks for Stage-2 uptrends, VCP setups, RS leadership, and pivot breakouts on volume.'
+    intraday: 'Pick a universe size above, or click <strong>Start scan</strong> to analyze NIFTY stocks using RSI, MACD, EMA crossover, and VWAP indicators for intraday trading signals.',
+    swing:    'Pick a universe size above, or click <strong>Start scan</strong> to run the swing-trade scanner. Looks for Stage-2 uptrends, VCP setups, RS leadership, and pivot breakouts on volume.'
 };
 
 function applyModeUI() {
@@ -252,7 +329,41 @@ function applyModeUI() {
     if (empty) empty.innerHTML = EMPTY_TEXT[_mode];
     // Hide intraday-only filter bar in swing mode
     document.querySelector('.tender-filter-bar').style.display = (_mode === 'intraday') ? '' : 'none';
+    const sizeBlock = document.getElementById('scanSizeBlock');
+    if (sizeBlock) sizeBlock.hidden = (_mode !== 'intraday');
+    const swingBlock = document.getElementById('swingSizeBlock');
+    if (swingBlock) swingBlock.hidden = (_mode !== 'swing');
 }
+
+function updateScanHint() {
+    const note = document.getElementById('scanSizeNote');
+    if (note) note.innerHTML = 'Selected <b>' + _scanCount + ' stocks</b> (~' + _scanEst + 's) — hit <b>Scan now</b> to run.';
+}
+
+function updateSwingHint() {
+    const note = document.getElementById('swingSizeNote');
+    if (note) note.innerHTML = 'Selected <b>' + _swingCount + ' stocks</b> — hit <b>Scan now</b> to run.';
+}
+
+// Universe-size choosers — selection only; the scan starts on "Scan now".
+document.querySelectorAll('#scanSizeBlock .scan-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#scanSizeBlock .scan-size-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _scanCount = Number(btn.dataset.count) || _scanCount;
+        _scanEst = Number(btn.dataset.est) || _scanEst;
+        updateScanHint();
+    });
+});
+
+document.querySelectorAll('#swingSizeBlock .swing-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#swingSizeBlock .swing-size-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _swingCount = Number(btn.dataset.count) || _swingCount;
+        updateSwingHint();
+    });
+});
 
 document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -280,7 +391,8 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
         document.getElementById('scanError').hidden = true;
         // Restore cached payload for this mode if available
         try {
-            const entry = ppCache.getEntry('intraday:scan:' + _mode);
+            const key = (_mode === 'intraday') ? intradayCacheKey() : swingCacheKey();
+            const entry = ppCache.getEntry(key);
             if (entry && entry.v && entry.v.stocks && entry.v.stocks.length) {
                 _scanData = entry.v.stocks;
                 renderResults(entry.v, entry.t);
@@ -301,8 +413,10 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
 (async function restoreCached() {
     let hasCached = false;
     try {
-        // Prefer the new per-mode key, but fall back to the legacy single key.
-        const entry = ppCache.getEntry('intraday:scan:intraday') || ppCache.getEntry('intraday:scan');
+        // Prefer the current universe-size key, then any legacy key.
+        const entry = ppCache.getEntry(intradayCacheKey())
+            || ppCache.getEntry('intraday:scan:intraday')
+            || ppCache.getEntry('intraday:scan');
         if (entry && entry.v && entry.v.stocks && entry.v.stocks.length) {
             _scanData = entry.v.stocks;
             renderResults(entry.v, entry.t);
@@ -319,11 +433,11 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
     // Try Azure snapshot, then silent live revalidate
     if (!hasCached) {
         try {
-            const r = await fetch('/api/intraday/scan?snapshot=1');
+            const r = await fetch('/api/intraday/scan?snapshot=1&count=' + _scanCount);
             const data = await r.json().catch(() => ({}));
             if (data && data.stocks && data.stocks.length) {
                 _scanData = data.stocks;
-                try { ppCache.set('intraday:scan:intraday', data); } catch (e) {}
+                try { ppCache.set(intradayCacheKey(), data); } catch (e) {}
                 renderResults(data);
                 document.getElementById('emptyState').hidden = true;
                 document.getElementById('scanContent').hidden = false;
@@ -340,27 +454,39 @@ async function runScan() {
     const content = document.getElementById('scanContent');
     const errorDiv = document.getElementById('scanError');
     const emptyState = document.getElementById('emptyState');
+    const sizeBtns = document.querySelectorAll('.scan-size-btn, .swing-size-btn');
+    const loadingText = document.getElementById('scanLoadingText');
 
     btn.disabled = true;
     btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Scanning…';
+    sizeBtns.forEach(b => { b.disabled = true; });
+    if (loadingText) {
+        loadingText.innerHTML = (_mode === 'swing')
+            ? 'Running the swing scanner on <strong>' + _swingCount + '</strong> stocks&hellip;'
+            : 'Scanning <strong>' + _scanCount + '</strong> stocks with 15-min intraday data&hellip; estimated ~' + _scanEst + 's.';
+    }
     loading.hidden = false;
     content.hidden = true;
     errorDiv.hidden = true;
     emptyState.hidden = true;
 
-    const url = (_mode === 'swing') ? '/api/intraday/swing-scan' : '/api/intraday/scan';
+    const url = (_mode === 'swing')
+        ? '/api/intraday/swing-scan?count=' + _swingCount
+        : '/api/intraday/scan?count=' + _scanCount;
     try {
         const r = await fetch(url, { method: 'POST' });
         const data = await r.json();
         if (window.PlanGate && window.PlanGate.handle(r, data)) {
             loading.hidden = true;
             btn.disabled = false;
+            sizeBtns.forEach(b => { b.disabled = false; });
             btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
             return;
         }
         if (data.error) throw new Error(data.error);
         _scanData = data.stocks;
-        try { ppCache.set('intraday:scan:' + _mode, data); } catch (e) {}
+        const key = (_mode === 'swing') ? swingCacheKey() : intradayCacheKey();
+        try { ppCache.set(key, data); } catch (e) {}
         renderResults(data);
         loading.hidden = true;
         content.hidden = false;
@@ -370,6 +496,7 @@ async function runScan() {
         loading.hidden = true;
     }
     btn.disabled = false;
+    sizeBtns.forEach(b => { b.disabled = false; });
     btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
 }
 
@@ -413,7 +540,8 @@ function renderResults(data, cachedAt) {
     resetIntradaySummaryCards();
     const suffix = cachedAt ? ' (' + ppCache.ago(Date.now() - cachedAt) + ')' : '';
     const timeOnly = (data.scan_time.split(',')[1] || data.scan_time).trim();
-    document.getElementById('scanTime').textContent = 'Updated ' + timeOnly + suffix;
+    const took = data.elapsed_seconds ? ' · took ' + data.elapsed_seconds + 's' : '';
+    document.getElementById('scanTime').textContent = 'Updated ' + timeOnly + suffix + took;
     document.getElementById('buyCount').textContent = data.buy_count;
     document.getElementById('sellCount').textContent = data.sell_count;
     document.getElementById('holdCount').textContent = data.hold_count;
@@ -426,7 +554,13 @@ function renderResults(data, cachedAt) {
             (s.signal.includes('BUY') ? 'strong-buy' : 'strong-sell') :
             (s.signal === 'BUY' ? 'buy' : (s.signal === 'SELL' ? 'sell' : 'hold'));
         const changeCls = s.day_change >= 0 ? 'gain-positive' : 'gain-negative';
-        const filterTag = s.signal.includes('BUY') ? 'buy' : (s.signal.includes('SELL') ? 'sell' : 'hold');
+        // Space-separated tags so "Buy" also matches STRONG BUY cards.
+        const side = s.signal.includes('BUY') ? 'buy' : (s.signal.includes('SELL') ? 'sell' : 'hold');
+        let filterTag = s.signal.includes('STRONG') ? side + ' strong-' + side : side;
+        if (s.plan) {
+            filterTag += ' has-plan';
+            if (s.plan.risk_reward >= 1.5) filterTag += ' good-rr';
+        }
 
         return `<div class="signal-card signal-${sigLower}" data-filter="${filterTag}" data-idx="${i}" onclick="showDetail(${i})">
             <div class="signal-card-header">
@@ -447,6 +581,15 @@ function renderResults(data, cachedAt) {
                 <div class="signal-ind"><span class="signal-ind-label">VWAP</span><span class="signal-ind-value" style="color:${s.above_vwap ? 'var(--success)' : 'var(--danger)'}">${s.above_vwap ? 'Above' : 'Below'}</span></div>
             </div>
             <ul class="signal-reason">${s.reasons.slice(0, 3).map(r => `<li>${r}</li>`).join('')}</ul>
+            ${s.plan ? `
+            <div class="intraday-plan-grid">
+                <div class="swing-plan-cell entry"><small>Entry</small><strong>${fmt(s.plan.entry)}</strong></div>
+                <div class="swing-plan-cell stop"><small>Stop</small><strong>${fmt(s.plan.stop)}</strong></div>
+                <div class="swing-plan-cell target"><small>Target</small><strong>${fmt(s.plan.target)}</strong></div>
+                <div class="swing-plan-cell rr"><small>R:R</small><strong>${s.plan.risk_reward}</strong></div>
+            </div>
+            <div class="intraday-setup-tag">${s.setup_type === 'trend' ? 'Trend-continuation setup' : 'Reversion / bounce setup'}</div>
+            ` : `<div class="intraday-setup-tag muted">${s.setup_type === 'mixed' ? 'Mixed signal — no trade plan' : 'No clear setup'}</div>`}
         </div>`;
     }).join('');
 }
@@ -655,6 +798,18 @@ function showDetail(idx) {
             ${s.reasons.map(r => `<li>${r}</li>`).join('')}
         </ul>
 
+        ${s.plan ? `
+        <h6 class="fw-bold mt-3 mb-2"><i class="fa-solid fa-crosshairs me-1 text-primary"></i>Trade plan (${s.setup_type === 'trend' ? 'trend-continuation' : 'reversion / bounce'})</h6>
+        <div class="swing-plan-grid">
+            <div class="swing-plan-cell entry"><small>Entry</small><strong>${fmt(s.plan.entry)}</strong></div>
+            <div class="swing-plan-cell stop"><small>Stop</small><strong>${fmt(s.plan.stop)}</strong></div>
+            <div class="swing-plan-cell target"><small>Target</small><strong>${fmt(s.plan.target)}</strong></div>
+            <div class="swing-plan-cell rr"><small>R:R</small><strong>${s.plan.risk_reward}</strong></div>
+        </div>
+        ` : `
+        <div class="alert alert-secondary mt-3" style="font-size:0.8rem"><i class="fa-solid fa-triangle-exclamation me-1"></i>${s.setup_type === 'mixed' ? 'Trend and reversion indicators disagree — no trade plan offered for a mixed thesis.' : 'No directional edge right now.'}</div>
+        `}
+
         <div class="alert ${s.signal.includes('BUY') ? 'alert-success' : (s.signal.includes('SELL') ? 'alert-danger' : 'alert-warning')} mt-3" style="font-size:0.82rem">
             <i class="fa-solid fa-circle-info me-1"></i>
             <strong>Strategy:</strong> RSI(14) + MACD(12,26,9) + EMA(9/21) crossover + VWAP on 15-min bars.
@@ -680,7 +835,8 @@ document.querySelectorAll('.tender-filter-btn').forEach(btn => {
         btn.classList.add('active');
         const f = btn.dataset.filter;
         document.querySelectorAll('.signal-card').forEach(card => {
-            card.style.display = (f === 'all' || card.dataset.filter === f) ? '' : 'none';
+            const tags = (card.dataset.filter || '').split(' ');
+            card.style.display = (f === 'all' || tags.includes(f)) ? '' : 'none';
         });
     });
 });

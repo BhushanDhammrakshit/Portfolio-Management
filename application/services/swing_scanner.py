@@ -37,6 +37,7 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -44,6 +45,7 @@ import pandas as pd
 
 from application.services import cache as shared_cache, market_data
 from application.services import snapshot_store
+from application.services import nifty500
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +105,36 @@ _MID_CAP_MOVERS = [
 ]
 
 UNIVERSE = _LARGE_CAP + _MID_CAP_MOVERS
+
+# ── Extended universe (200/300/400/500 tiers) ───────────────────────────
+# The curated UNIVERSE always comes first (hand-picked for swing-quality
+# liquidity); anything beyond that is filled from the official NSE NIFTY
+# 500 constituent list, deduped against UNIVERSE. Both lists are static, so
+# this is computed once at import time — no ranking/API calls needed.
+
+
+def _build_extended_universe() -> List[str]:
+    seen = set(UNIVERSE)
+    merged = list(UNIVERSE)
+    for sym in nifty500.symbols():
+        if sym not in seen:
+            seen.add(sym)
+            merged.append(sym)
+    return merged
+
+
+EXTENDED_UNIVERSE: List[str] = _build_extended_universe()
+
+TIER_COUNTS = tuple(sorted(set(
+    c for c in (len(UNIVERSE), 200, 300, 400, len(EXTENDED_UNIVERSE))
+    if c <= len(EXTENDED_UNIVERSE)
+)))
+
+
+def get_universe(count: int) -> List[str]:
+    """Return the scannable universe for a given tier size."""
+    n = max(1, min(count, len(EXTENDED_UNIVERSE)))
+    return EXTENDED_UNIVERSE[:n]
 
 
 # ── Factor computation ─────────────────────────────────────────────────
@@ -372,12 +404,16 @@ def _score_setup(f: Dict[str, Any]) -> Dict[str, Any]:
 
 # ── Public scan ────────────────────────────────────────────────────────
 
-def scan(force_refresh: bool = False) -> Dict[str, Any]:
+def scan(count: Optional[int] = None, force_refresh: bool = False) -> Dict[str, Any]:
+    count = count or len(UNIVERSE)
+    key = f"{_CACHE_KEY}:{count}"
     return snapshot_store.serve_or_refresh(
-        _CACHE_KEY, _build_scan, live=False, force=force_refresh)
+        key, lambda: _build_scan(count), live=False, force=force_refresh)
 
 
-def _build_scan() -> Dict[str, Any]:
+def _build_scan(count: Optional[int] = None) -> Dict[str, Any]:
+    universe = get_universe(count or len(UNIVERSE))
+
     # Benchmark (NIFTY) for relative-strength comparison.
     try:
         bench = market_data.get_history("^NSEI", days=200, interval="1d")
@@ -385,15 +421,18 @@ def _build_scan() -> Dict[str, Any]:
         bench = None
 
     results: List[Dict[str, Any]] = []
-    for sym in UNIVERSE:
-        try:
-            f = _compute_factors(sym, bench)
-            if not f:
-                continue
-            scoring = _score_setup(f)
-            results.append({**f, **scoring})
-        except Exception as e:  # noqa: BLE001
-            log.debug("swing.scan %s skipped: %s", sym, e)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = {ex.submit(_compute_factors, sym, bench): sym for sym in universe}
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            try:
+                f = fut.result()
+                if not f:
+                    continue
+                scoring = _score_setup(f)
+                results.append({**f, **scoring})
+            except Exception as e:  # noqa: BLE001
+                log.debug("swing.scan %s skipped: %s", sym, e)
 
     # Sort: highest score first, then highest ADR (move potential)
     results.sort(key=lambda x: (x["score"], x["adr_pct"]), reverse=True)
@@ -406,10 +445,11 @@ def _build_scan() -> Dict[str, Any]:
     payload = {
         "stocks": results,
         "scan_time": scan_time,
-        "universe_size": len(UNIVERSE),
+        "universe_size": len(universe),
         "scanned": len(results),
         "grade_counts": grade_counts,
         "strategy": "Qullamaggie + Minervini Momentum Breakout",
         "cached": False,
     }
     return payload
+
