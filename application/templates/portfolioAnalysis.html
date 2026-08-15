@@ -7,6 +7,15 @@
 .pa-search input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.88rem}
 .pa-search i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.85rem}
 
+/* ── Search-any-stock panel ──────────────────────────────────── */
+.pa-external-card{margin-bottom:20px;padding:18px 20px}
+.pa-external-title{display:flex;align-items:center;gap:8px;font-size:.98rem;font-weight:800;color:var(--text);margin-bottom:6px}
+.pa-external-hint{font-size:.82rem;color:var(--text-muted);margin-bottom:14px}
+.pa-external-row{margin-bottom:4px}
+.pa-external-row .pa-search{max-width:420px}
+#paExternalResult:empty{display:none}
+#paExternalResult{margin-top:16px}
+
 /* ── Summary strip ─────────────────────────────────────────── */
 .pa-summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;flex-wrap:wrap;align-items:center;gap:14px}
 .pa-summary.show{display:flex}
@@ -140,6 +149,211 @@
     {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings</span>{% endif %}
 </header>
 
+<!-- Search & analyze any stock, even ones outside your portfolio -->
+<div class="surface-card pa-external-card">
+    <h6 class="pa-external-title"><i class="fa-solid fa-magnifying-glass-chart"></i>Analyze any stock</h6>
+    <p class="pa-external-hint">Get an AI Buy / Hold / Sell signal for any listed stock — even ones you don't own yet.</p>
+    <div class="pa-external-row">
+        <div class="pa-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="paExternalSearch" data-stock-suggest data-stock-suggest-on-pick="paExternalPick"
+                   placeholder="Search any stock (e.g. Reliance, TCS, INFY)…" autocomplete="off">
+        </div>
+    </div>
+    <div id="paExternalResult"></div>
+</div>
+
+<script>
+const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+
+const ACTION_META = {
+    'STRONG BUY':  { cls: 'pa-pill-strong-buy',  icon: 'fa-rocket' },
+    'BUY':         { cls: 'pa-pill-buy',         icon: 'fa-arrow-up' },
+    'ACCUMULATE':  { cls: 'pa-pill-accumulate',  icon: 'fa-cart-plus' },
+    'HOLD':        { cls: 'pa-pill-hold',        icon: 'fa-hand' },
+    'BOOK PROFIT': { cls: 'pa-pill-book-profit', icon: 'fa-coins' },
+    'REDUCE':      { cls: 'pa-pill-reduce',      icon: 'fa-arrow-down' },
+    'SELL':        { cls: 'pa-pill-sell',        icon: 'fa-circle-minus' },
+    'STRONG SELL': { cls: 'pa-pill-strong-sell', icon: 'fa-circle-xmark' },
+};
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function badgeClass(level, type) {
+    const v = (level || '').toLowerCase();
+    if (type === 'risk') {
+        if (v.includes('high')) return 'risk-high';
+        if (v.includes('low')) return 'risk-low';
+        return 'risk-med';
+    }
+    if (v.includes('high')) return 'lvl-high';
+    if (v.includes('low')) return 'lvl-low';
+    return 'lvl-med';
+}
+
+function renderActionPill(action) {
+    if (!action) {
+        return `<div class="pa-action-pill pa-pending"><i class="fa-regular fa-clock"></i> Not analyzed</div>`;
+    }
+    const meta = ACTION_META[action] || ACTION_META['HOLD'];
+    return `<div class="pa-action-pill ${meta.cls}"><i class="fa-solid ${meta.icon}"></i> ${action}</div>`;
+}
+
+function renderSources(sources) {
+    if (!sources || !sources.length) return '';
+    const items = sources.map(s => {
+        const link = s.url
+            ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || '(untitled)')}</a>`
+            : escapeHtml(s.title || '(untitled)');
+        const badge = s.doc_type === 'filing'
+            ? '<span class="pa-src-badge filing">Filing</span>'
+            : '<span class="pa-src-badge news">News</span>';
+        return `<li>${badge}<span class="pa-src-meta">[${s.n}] ${escapeHtml(s.source || '')} \u00b7 ${escapeHtml(s.age || '')}</span>${link}</li>`;
+    }).join('');
+    return `
+        <div class="pa-sources-block">
+            <div class="pa-sources-title"><i class="fa-solid fa-book-open-reader me-1"></i>Sources used by AI <span class="pa-sources-count">(${sources.length})</span></div>
+            <ul class="pa-sources-list">${items}</ul>
+        </div>
+    `;
+}
+
+function formatMd(text) {
+    // Defensive: if the AI dumped its full JSON envelope into the summary
+    // field (older cached responses), strip out the JSON and surface only
+    // the narrative. The KPI tiles above already render the structured
+    // fields, so the user shouldn't see them as raw JSON here.
+    let s = String(text || '').trim();
+    if (s.startsWith('```')) {
+        s = s.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
+    }
+    if (s.startsWith('{') && s.endsWith('}')) {
+        try {
+            const parsed = JSON.parse(s);
+            if (parsed && typeof parsed === 'object') {
+                if (typeof parsed.summary === 'string' && parsed.summary.trim()) {
+                    s = parsed.summary.trim();
+                } else {
+                    const parts = [];
+                    if (parsed.what_to_do) parts.push(`**Next action:** ${parsed.what_to_do}`);
+                    if (Array.isArray(parsed.key_drivers) && parsed.key_drivers.length)
+                        parts.push('**Key drivers:** ' + parsed.key_drivers.join('; '));
+                    if (Array.isArray(parsed.key_risks) && parsed.key_risks.length)
+                        parts.push('**Key risks:** ' + parsed.key_risks.join('; '));
+                    s = parts.join('\n\n') || s;
+                }
+            }
+        } catch (e) { /* not valid JSON — render as-is */ }
+    }
+    return s
+        .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
+        .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/^/, '<p>') + '</p>';
+}
+
+function renderExternalResult(stock, data) {
+    const upsideCls = (data.upside_pct || 0) >= 0 ? 'gain-positive' : 'gain-negative';
+    const upsideSign = (data.upside_pct || 0) >= 0 ? '+' : '';
+    const drivers = (data.key_drivers || []).map(d => `<li>${escapeHtml(d)}</li>`).join('') || '<li class="text-muted">N/A</li>';
+    const risks = (data.key_risks || []).map(d => `<li>${escapeHtml(d)}</li>`).join('') || '<li class="text-muted">N/A</li>';
+    return `
+        <div class="pa-card open">
+            <div class="pa-card-header" style="cursor:default">
+                <div class="pa-card-action">${renderActionPill(data.action)}</div>
+                <div class="pa-card-stock">
+                    <div class="pa-card-name">${escapeHtml(stock.StockName)}</div>
+                    <div class="pa-card-meta">
+                        ${stock.Symbol ? `<span class="symbol-pill">${escapeHtml(stock.Symbol)}</span>` : ''}
+                        <span>${escapeHtml(stock.Sector || 'Other')}</span>
+                        <span><i class="fa-solid fa-circle-info me-1"></i>Not in your portfolio</span>
+                    </div>
+                </div>
+                <div class="pa-card-pl">
+                    <div class="pa-card-pl-value">${fmt(stock.CurrentPrice)}</div>
+                    <div class="pa-card-pl-pct text-muted">Current price</div>
+                </div>
+            </div>
+            <div class="pa-card-body" style="display:block">
+                <div class="pa-action-message"><strong>${escapeHtml(data.action)}:</strong> ${escapeHtml(data.what_to_do || '')}</div>
+                <div class="pa-kpis">
+                    <div class="pa-kpi"><div class="pa-kpi-label">Confidence</div><div class="pa-kpi-value ${badgeClass(data.confidence,'lvl')}">${escapeHtml(data.confidence)}</div></div>
+                    <div class="pa-kpi"><div class="pa-kpi-label">Horizon</div><div class="pa-kpi-value">${escapeHtml(data.horizon)}</div></div>
+                    <div class="pa-kpi"><div class="pa-kpi-label">Risk</div><div class="pa-kpi-value ${badgeClass(data.risk,'risk')}">${escapeHtml(data.risk)}</div></div>
+                    <div class="pa-kpi"><div class="pa-kpi-label">12M Target</div><div class="pa-kpi-value">${fmt(data.target_price)}</div></div>
+                    <div class="pa-kpi"><div class="pa-kpi-label">Stop-loss</div><div class="pa-kpi-value">${fmt(data.stop_loss)}</div></div>
+                    <div class="pa-kpi"><div class="pa-kpi-label">Upside</div><div class="pa-kpi-value ${upsideCls}">${upsideSign}${(data.upside_pct||0).toFixed(2)}%</div></div>
+                </div>
+                <div class="pa-dr-grid">
+                    <div class="pa-dr-card pa-drivers"><h6><i class="fa-solid fa-circle-check me-1"></i>Key drivers</h6><ul>${drivers}</ul></div>
+                    <div class="pa-dr-card pa-risks"><h6><i class="fa-solid fa-triangle-exclamation me-1"></i>Key risks</h6><ul>${risks}</ul></div>
+                </div>
+                <details class="pa-full-toggle" open>
+                    <summary>Read full analysis</summary>
+                    <div class="pa-full-body">${formatMd(data.summary || '')}</div>
+                    ${data.source ? `<div class="pa-source"><i class="fa-solid fa-circle-info me-1"></i>Source: ${escapeHtml(data.source)}</div>` : ''}
+                </details>
+                ${renderSources(data.sources_used)}
+                <div class="pa-disclaimer"><i class="fa-solid fa-triangle-exclamation me-1"></i>AI-generated educational content. Not investment advice. Not SEBI registered.</div>
+                <div class="text-end mt-2">
+                    <a href="{{ url_for('portfolioMaker') }}" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>Add to portfolio</a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function paExternalPick(item) {
+    const resultBox = document.getElementById('paExternalResult');
+    if (!item || !item.symbol) return;
+    resultBox.innerHTML = '<div class="pa-loading"><div class="app-spinner text-primary me-1"></div>Fetching quote &amp; generating AI signal…</div>';
+
+    let info = {};
+    try {
+        const ir = await fetch(`/api/stock/info?symbol=${encodeURIComponent(item.symbol)}`);
+        info = await ir.json();
+    } catch (e) { /* fall back to defaults below */ }
+
+    const stock = {
+        StockName: info.name || item.name || item.symbol,
+        Symbol: item.symbol,
+        Sector: info.sector || '',
+        Exchange: info.exchange || item.exchange || '',
+        Quantity: 0,
+        PurchasePrice: info.price || 0,
+        CurrentPrice: info.price || 0,
+    };
+
+    try {
+        const r = await fetch('/api/stock_analysis', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ stock })
+        });
+        const data = await r.json();
+        if (r.status === 402) {
+            resultBox.innerHTML = `<div class="text-center py-3">
+                <div class="text-warning mb-2"><i class="fa-solid fa-crown me-1"></i><strong>${data.message || 'Upgrade required'}</strong></div>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="window.appUpgrade({title:'Monthly AI limit reached', message:'${(data.message||'').replace(/'/g,"\\'")}', requiredPlan:'${data.required_plan||"pro"}'})">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>View plans
+                </button>
+            </div>`;
+        } else if (data && data.action) {
+            resultBox.innerHTML = renderExternalResult(stock, data);
+        } else {
+            resultBox.innerHTML = '<div class="text-danger py-2">Could not generate analysis.</div>';
+        }
+    } catch (e) {
+        resultBox.innerHTML = '<div class="text-danger py-2">Network error.</div>';
+    }
+}
+</script>
+
 {% if not stocks %}
 <div class="surface-card">
     <div class="empty-state">
@@ -187,45 +401,9 @@
 
 <script>
 const stocks = {{ stocks|tojson }};
-const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
 const cache = {}; // stockName -> insight data
 const selected = new Set();
 let activeFilter = null; // 'BUY' | 'HOLD' | etc, or null = all
-
-const ACTION_META = {
-    'STRONG BUY':  { cls: 'pa-pill-strong-buy',  icon: 'fa-rocket' },
-    'BUY':         { cls: 'pa-pill-buy',         icon: 'fa-arrow-up' },
-    'ACCUMULATE':  { cls: 'pa-pill-accumulate',  icon: 'fa-cart-plus' },
-    'HOLD':        { cls: 'pa-pill-hold',        icon: 'fa-hand' },
-    'BOOK PROFIT': { cls: 'pa-pill-book-profit', icon: 'fa-coins' },
-    'REDUCE':      { cls: 'pa-pill-reduce',      icon: 'fa-arrow-down' },
-    'SELL':        { cls: 'pa-pill-sell',        icon: 'fa-circle-minus' },
-    'STRONG SELL': { cls: 'pa-pill-strong-sell', icon: 'fa-circle-xmark' },
-};
-
-function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function badgeClass(level, type) {
-    const v = (level || '').toLowerCase();
-    if (type === 'risk') {
-        if (v.includes('high')) return 'risk-high';
-        if (v.includes('low')) return 'risk-low';
-        return 'risk-med';
-    }
-    if (v.includes('high')) return 'lvl-high';
-    if (v.includes('low')) return 'lvl-low';
-    return 'lvl-med';
-}
-
-function renderActionPill(action) {
-    if (!action) {
-        return `<div class="pa-action-pill pa-pending"><i class="fa-regular fa-clock"></i> Not analyzed</div>`;
-    }
-    const meta = ACTION_META[action] || ACTION_META['HOLD'];
-    return `<div class="pa-action-pill ${meta.cls}"><i class="fa-solid ${meta.icon}"></i> ${action}</div>`;
-}
 
 function renderCardBody(stock, data) {
     const qty = stock.Quantity || 0;
@@ -297,62 +475,6 @@ function renderCardBody(stock, data) {
         <div class="pa-disclaimer"><i class="fa-solid fa-triangle-exclamation me-1"></i>AI-generated educational content. Not investment advice. Not SEBI registered.</div>
         ${reAnalyzeBtn}
     `;
-}
-
-function renderSources(sources) {
-    if (!sources || !sources.length) return '';
-    const items = sources.map(s => {
-        const link = s.url
-            ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || '(untitled)')}</a>`
-            : escapeHtml(s.title || '(untitled)');
-        const badge = s.doc_type === 'filing'
-            ? '<span class="pa-src-badge filing">Filing</span>'
-            : '<span class="pa-src-badge news">News</span>';
-        return `<li>${badge}<span class="pa-src-meta">[${s.n}] ${escapeHtml(s.source || '')} \u00b7 ${escapeHtml(s.age || '')}</span>${link}</li>`;
-    }).join('');
-    return `
-        <div class="pa-sources-block">
-            <div class="pa-sources-title"><i class="fa-solid fa-book-open-reader me-1"></i>Sources used by AI <span class="pa-sources-count">(${sources.length})</span></div>
-            <ul class="pa-sources-list">${items}</ul>
-        </div>
-    `;
-}
-
-function formatMd(text) {
-    // Defensive: if the AI dumped its full JSON envelope into the summary
-    // field (older cached responses), strip out the JSON and surface only
-    // the narrative. The KPI tiles above already render the structured
-    // fields, so the user shouldn't see them as raw JSON here.
-    let s = String(text || '').trim();
-    if (s.startsWith('```')) {
-        s = s.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
-    }
-    if (s.startsWith('{') && s.endsWith('}')) {
-        try {
-            const parsed = JSON.parse(s);
-            if (parsed && typeof parsed === 'object') {
-                if (typeof parsed.summary === 'string' && parsed.summary.trim()) {
-                    s = parsed.summary.trim();
-                } else {
-                    const parts = [];
-                    if (parsed.what_to_do) parts.push(`**Next action:** ${parsed.what_to_do}`);
-                    if (Array.isArray(parsed.key_drivers) && parsed.key_drivers.length)
-                        parts.push('**Key drivers:** ' + parsed.key_drivers.join('; '));
-                    if (Array.isArray(parsed.key_risks) && parsed.key_risks.length)
-                        parts.push('**Key risks:** ' + parsed.key_risks.join('; '));
-                    s = parts.join('\n\n') || s;
-                }
-            }
-        } catch (e) { /* not valid JSON — render as-is */ }
-    }
-    return s
-        .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
-        .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>')
-        .replace(/^/, '<p>') + '</p>';
 }
 
 function renderCards() {

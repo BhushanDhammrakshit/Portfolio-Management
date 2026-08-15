@@ -190,6 +190,10 @@
             state.items = [];
             pop.innerHTML = '';
             close();
+            // Suppress this widget's own 'input' listener from re-searching/reopening
+            // the dropdown in response to the synthetic event dispatched below (which
+            // exists only so other page listeners see the value change).
+            state.ignoreNextInput = true;
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
             if (onPickName && typeof window[onPickName] === 'function') {
@@ -198,6 +202,11 @@
         }
 
         input.addEventListener('input', () => {
+            if (state.ignoreNextInput) {
+                state.ignoreNextInput = false;
+                close();
+                return;
+            }
             const q = (input.value || '').trim();
             state.lastQ = q;
             clearTimeout(state.timer);
