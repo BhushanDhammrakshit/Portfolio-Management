@@ -43,6 +43,15 @@ _STALE_STORE_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
     "_optionchain_last.json",
 )
+
+# Per-panel last-known-good caches for Block Deals and OI-based Support &
+# Resistance. These panels derive from ``payload["rows"]`` and can come back
+# empty (thin/partial upstream rows) even when the overall option-chain fetch
+# technically "succeeds". Rather than showing a blank panel, we serve the
+# last non-empty snapshot, tagged stale, same as the whole-payload fallback.
+_SR_LAST_GOOD_KEY = "optionchain:sr_levels:last_good:v1"
+_BLOCK_LAST_GOOD_KEY = "optionchain:block_deals:last_good:v1"
+_PANEL_LAST_GOOD_TTL = 24 * 3600
 _STALE_STORE_LOCK = threading.Lock()
 # Beyond this age, we still serve the snapshot but mark it as "very stale"
 # so the UI can warn more aggressively.
@@ -249,10 +258,10 @@ def get_nifty_option_chain(force_refresh: bool = False) -> Dict[str, Any]:
 
     # New panels: OI-based support/resistance and
     # unusual-options-activity ("block deals") tracker.
-    payload["sr_levels"] = _compute_sr_levels(
+    payload["sr_levels"] = _sr_levels_with_fallback(
         payload.get("rows") or [], payload.get("spot") or 0,
     )
-    payload["block_deals"] = _compute_block_deals(
+    payload["block_deals"] = _block_deals_with_fallback(
         payload.get("rows") or [], payload.get("spot") or 0,
     )
 
@@ -1741,6 +1750,26 @@ def _compute_sr_levels(rows: List[Dict[str, Any]], spot: float,
     }
 
 
+def _sr_levels_with_fallback(rows: List[Dict[str, Any]], spot: float) -> Dict[str, Any]:
+    """``_compute_sr_levels`` + last-known-good fallback when rows are empty
+    or lack usable OI data, so the panel never goes blank."""
+    levels = _compute_sr_levels(rows, spot)
+    if levels.get("support") or levels.get("resistance"):
+        levels["stale"] = False
+        try:
+            shared_cache.jset(_SR_LAST_GOOD_KEY, levels, ttl=_PANEL_LAST_GOOD_TTL)
+        except Exception:
+            pass
+        return levels
+    try:
+        last_good = shared_cache.jget(_SR_LAST_GOOD_KEY)
+    except Exception:
+        last_good = None
+    if isinstance(last_good, dict) and (last_good.get("support") or last_good.get("resistance")):
+        return {**last_good, "stale": True}
+    return levels
+
+
 # ── Block-deal / Unusual-Options-Activity tracker ──────────────────────
 #
 # True F&O block deals aren't published live by NSE. We approximate
@@ -2115,6 +2144,27 @@ def _compute_block_deals(rows: List[Dict[str, Any]], spot: float,
         "date": now_ist.strftime("%d-%b-%Y"),
         "time": now_ist.strftime("%H:%M:%S"),
     }
+
+
+def _block_deals_with_fallback(rows: List[Dict[str, Any]], spot: float) -> Dict[str, Any]:
+    """``_compute_block_deals`` + last-known-good fallback when no deals
+    qualify (thin/partial rows), so the panel doesn't flash empty on a
+    momentary upstream hiccup."""
+    blk = _compute_block_deals(rows, spot)
+    if blk.get("deals"):
+        blk["stale"] = False
+        try:
+            shared_cache.jset(_BLOCK_LAST_GOOD_KEY, blk, ttl=_PANEL_LAST_GOOD_TTL)
+        except Exception:
+            pass
+        return blk
+    try:
+        last_good = shared_cache.jget(_BLOCK_LAST_GOOD_KEY)
+    except Exception:
+        last_good = None
+    if isinstance(last_good, dict) and last_good.get("deals"):
+        return {**last_good, "stale": True}
+    return blk
 
 
 # ── NSE Market Breadth + Movers ───────────────────────────────────────

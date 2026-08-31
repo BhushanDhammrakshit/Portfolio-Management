@@ -1758,6 +1758,9 @@ function renderSrLevels(sr, spot) {
     } else {
         summary = 'Insufficient OI data to map support/resistance.';
     }
+    if (sr.stale) {
+        summary += ' <span style="color:#f59e0b;font-weight:700"><i class="fa-solid fa-triangle-exclamation me-1"></i>Showing last available snapshot — live OI data is temporarily unavailable.</span>';
+    }
     document.getElementById('ocSrSummary').innerHTML = summary;
 }
 
@@ -1769,8 +1772,11 @@ function renderBlockDeals(blk) {
     const asOfHtml = asOf
         ? `<span style="color:var(--text-muted);font-weight:600"><i class="fa-regular fa-clock me-1"></i>${escapeHtml(asOf)}</span>`
         : '';
+    const staleHtml = blk && blk.stale
+        ? '<span style="color:#f59e0b;font-weight:700"><i class="fa-solid fa-triangle-exclamation me-1"></i>Last available snapshot</span>'
+        : '';
     totalEl.innerHTML = deals.length
-        ? `${asOfHtml}${asOfHtml ? ' · ' : ''}${blk.count || deals.length} large trades · ₹${(blk.total_notional_cr || 0).toLocaleString('en-IN')} Cr total`
+        ? `${asOfHtml}${asOfHtml ? ' · ' : ''}${blk.count || deals.length} large trades · ₹${(blk.total_notional_cr || 0).toLocaleString('en-IN')} Cr total${staleHtml ? ' · ' + staleHtml : ''}`
         : (asOfHtml || '—');
 
     if (!deals.length) {
