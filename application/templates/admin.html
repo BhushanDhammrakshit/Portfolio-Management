@@ -155,6 +155,39 @@
 .act-tl-event{font-weight:600}
 .act-tl-meta{font-size:.72rem;color:var(--text-muted);margin-top:2px}
 
+/* Timeline view toggle */
+.act-tl-viewtoggle{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px;margin-left:auto;margin-right:8px}
+.act-tl-viewbtn{border:none;background:transparent;color:var(--text-muted);font-size:.72rem;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.act-tl-viewbtn i{font-size:.7rem}
+.act-tl-viewbtn.active{background:#6366f1;color:#fff}
+
+/* Journey map */
+.act-map-summary{display:flex;gap:10px;flex-wrap:wrap;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.act-map-stat{flex:1;min-width:100px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+.act-map-stat-val{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums}
+.act-map-stat-lbl{font-size:.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-top:2px}
+.act-map-stat-click{cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.act-map-stat-click:hover{border-color:#6366f1}
+.act-map-stat-click.active{border-color:#6366f1;background:rgba(99,102,241,.08)}
+.act-map-stat-lbl i{transition:transform .15s ease}
+.act-map-stat-click.active .act-map-stat-lbl i{transform:rotate(180deg)}
+.act-tool-table-wrap{margin-bottom:16px}
+.act-tool-table-wrap .adm-table-wrap{max-height:none}
+.act-map-day{font-size:.68rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px;padding-left:44px}
+.act-map-day:first-of-type{margin-top:0}
+.act-map-track{position:relative}
+.act-map-node{position:relative;display:flex;gap:12px;padding:0 0 18px 0}
+.act-map-node:last-child{padding-bottom:0}
+.act-map-node::before{content:'';position:absolute;left:15px;top:32px;bottom:-18px;width:2px;background:var(--border)}
+.act-map-node:last-child::before{display:none}
+.act-map-icon{flex:0 0 32px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;color:#fff;z-index:1}
+.act-map-card{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;min-width:0}
+.act-map-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.act-map-title{font-size:.84rem;font-weight:700}
+.act-map-time{font-size:.68rem;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.act-map-sub{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+.act-map-dur{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 8px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8;margin-top:4px}
+
 /* User search suggestions */
 .act-suggest-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;z-index:60;display:none}
 .act-suggest-list.show{display:block}
@@ -319,13 +352,17 @@
 
   <!-- User timeline modal -->
   <div class="adm-modal-overlay" id="actTimelineModal">
-    <div class="adm-modal" style="max-width:620px;max-height:85vh">
+    <div class="adm-modal" style="max-width:680px;max-height:85vh">
       <div class="adm-modal-header">
         <i class="fa-solid fa-clock-rotate-left" style="color:#6366f1"></i>
         <span class="modal-title" id="actTimelineTitle">Activity Timeline</span>
+        <div class="act-tl-viewtoggle" id="actTimelineViewToggle">
+          <button type="button" class="act-tl-viewbtn active" data-view="map"><i class="fa-solid fa-diagram-project"></i>Map</button>
+          <button type="button" class="act-tl-viewbtn" data-view="list"><i class="fa-solid fa-list"></i>List</button>
+        </div>
         <button class="adm-modal-close" id="actTimelineClose"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="adm-modal-body" id="actTimelineBody" style="overflow-y:auto;max-height:60vh"></div>
+      <div class="adm-modal-body" id="actTimelineBody" style="overflow-y:auto;max-height:64vh"></div>
       <div class="adm-modal-footer">
         <button class="btn btn-primary btn-sm" id="actTimelineDone">Close</button>
       </div>
@@ -1241,29 +1278,248 @@
     });
   }
 
+  // ── Feature/event metadata for the journey map ──────────────────────
+  const FEATURE_META = {
+    dashboard:       { icon: 'fa-house',              color: '#6366f1', label: 'Dashboard' },
+    intraday_tools:  { icon: 'fa-bolt',                color: '#f59e0b', label: 'Intraday Tools' },
+    swing_tools:     { icon: 'fa-arrow-trend-up',      color: '#22c55e', label: 'Swing Tools' },
+    option_chain:    { icon: 'fa-layer-group',         color: '#0ea5e9', label: 'Option Chain' },
+    investing_tools: { icon: 'fa-vault',               color: '#a855f7', label: 'Investing Tools' },
+    mutual_funds:    { icon: 'fa-coins',               color: '#14b8a6', label: 'Mutual Funds' },
+    ai_tools:        { icon: 'fa-wand-magic-sparkles',  color: '#ec4899', label: 'AI Tools' },
+  };
+  const EVENT_META = {
+    login:          { icon: 'fa-right-to-bracket', color: '#6366f1', label: 'Logged in' },
+    signup:         { icon: 'fa-user-plus',        color: '#6366f1', label: 'Signed up' },
+    email_verified: { icon: 'fa-envelope-circle-check', color: '#22c55e', label: 'Verified email' },
+    holding_added:  { icon: 'fa-briefcase',        color: '#22c55e', label: 'Added holding' },
+    plan_upgraded:  { icon: 'fa-crown',            color: '#f59e0b', label: 'Upgraded plan' },
+    plan_cancelled: { icon: 'fa-ban',              color: '#ef4444', label: 'Cancelled plan' },
+    ai_query_run:   { icon: 'fa-robot',            color: '#ec4899', label: 'Ran AI query' },
+    server_error:   { icon: 'fa-triangle-exclamation', color: '#ef4444', label: 'Server error' },
+    client_error:   { icon: 'fa-bug',              color: '#ef4444', label: 'Client error' },
+  };
+  const DEFAULT_META = { icon: 'fa-circle-dot', color: '#94a3b8', label: null };
+
+  function _featureMeta(feature) {
+    return FEATURE_META[feature] || { icon: 'fa-puzzle-piece', color: '#94a3b8', label: _titleCase(feature || 'unknown') };
+  }
+  function _titleCase(s) {
+    return String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function _fmtSecs(s) {
+    s = Math.max(0, Math.round(s || 0));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60), r = s % 60;
+    return r ? `${m}m ${r}s` : `${m}m`;
+  }
+  function _dayLabel(d) {
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt)) return '';
+      return dt.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return ''; }
+  }
+
+  // Collapse the raw event log (newest-first) into chronological "visit"
+  // nodes: a feature_viewed + its trailing time_spent heartbeats become one
+  // node so the map reads as an actual journey (where they went, how long
+  // they stayed) instead of one row per raw event.
+  function buildJourneyNodes(events) {
+    const chrono = [...events].reverse(); // oldest -> newest
+    const nodes = [];
+    for (const e of chrono) {
+      const meta = (() => { try { return JSON.parse(e.meta || '{}'); } catch { return {}; } })();
+      if (e.event === 'time_spent') {
+        const feature = meta.feature || 'unknown';
+        const secs = parseFloat(meta.seconds) || 0;
+        const last = nodes[nodes.length - 1];
+        if (last && last.kind === 'visit' && last.feature === feature) {
+          last.seconds += secs;
+          last.time = e.time; // extend to last heartbeat time
+          continue;
+        }
+        nodes.push({ kind: 'visit', feature, seconds: secs, time: e.time, viewed: false });
+        continue;
+      }
+      if (e.event.startsWith('feature_viewed:')) {
+        const feature = e.event.split(':')[1] || 'unknown';
+        const last = nodes[nodes.length - 1];
+        if (last && last.kind === 'visit' && last.feature === feature && !last.viewed) {
+          last.viewed = true;
+          continue;
+        }
+        nodes.push({ kind: 'visit', feature, seconds: 0, time: e.time, viewed: true });
+        continue;
+      }
+      let label = null, sub = null;
+      if (e.event.startsWith('api_call:')) {
+        label = `Used ${_titleCase(e.event.split(':')[1])} API`;
+      } else {
+        const em = EVENT_META[e.event];
+        if (em) label = em.label;
+      }
+      const entries = Object.entries(meta).filter(([, v]) => v);
+      if (entries.length) sub = entries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+      nodes.push({ kind: 'event', event: e.event, label: label || _titleCase(e.event), sub, time: e.time, plan: e.plan });
+    }
+    return nodes.reverse(); // newest-first for display, like the list view
+  }
+
+  function renderJourneyMap(events) {
+    const nodes = buildJourneyNodes(events);
+    if (!nodes.length) {
+      return '<div class="adm-empty"><i class="fa-solid fa-inbox"></i>No events recorded for this user</div>';
+    }
+    // Summary stats
+    const visits = nodes.filter(n => n.kind === 'visit');
+    const totalSecs = visits.reduce((a, n) => a + n.seconds, 0);
+    const byFeature = {};
+    visits.forEach(n => { byFeature[n.feature] = (byFeature[n.feature] || 0) + n.seconds; });
+    const topFeature = Object.entries(byFeature).sort((a, b) => b[1] - a[1])[0];
+    const summary = `<div class="act-map-summary">
+      <div class="act-map-stat"><div class="act-map-stat-val">${nodes.length}</div><div class="act-map-stat-lbl">Steps</div></div>
+      <div class="act-map-stat act-map-stat-click" id="actToolsVisitedStat" onclick="toggleToolBreakdown()"><div class="act-map-stat-val">${new Set(visits.map(n => n.feature)).size}</div><div class="act-map-stat-lbl">Tools visited <i class="fa-solid fa-chevron-down"></i></div></div>
+      <div class="act-map-stat"><div class="act-map-stat-val">${_fmtSecs(totalSecs)}</div><div class="act-map-stat-lbl">Time on tools</div></div>
+      <div class="act-map-stat"><div class="act-map-stat-val">${topFeature ? _featureMeta(topFeature[0]).label : '\u2014'}</div><div class="act-map-stat-lbl">Most used</div></div>
+    </div>
+    <div class="act-tool-table-wrap" id="actToolTableWrap" style="display:none"></div>`;
+
+    let lastDay = null, html = '';
+    nodes.forEach(n => {
+      const day = n.time ? n.time.slice(0, 10) : '';
+      if (day && day !== lastDay) {
+        html += `<div class="act-map-day">${_dayLabel(n.time)}</div>`;
+        lastDay = day;
+      }
+      if (n.kind === 'visit') {
+        const fm = _featureMeta(n.feature);
+        const durBadge = n.seconds > 0 ? `<span class="act-map-dur"><i class="fa-solid fa-stopwatch" style="margin-right:4px"></i>${_fmtSecs(n.seconds)}</span>` : '';
+        html += `<div class="act-map-node">
+          <div class="act-map-icon" style="background:${fm.color}"><i class="fa-solid ${fm.icon}"></i></div>
+          <div class="act-map-card">
+            <div class="act-map-title-row"><span class="act-map-title">${fm.label}</span><span class="act-map-time">${fmtDateTime(n.time)}</span></div>
+            <div class="act-map-sub">${n.viewed ? 'Opened tool' : 'Active session'}</div>
+            ${durBadge}
+          </div>
+        </div>`;
+      } else {
+        const em = EVENT_META[n.event] || DEFAULT_META;
+        html += `<div class="act-map-node">
+          <div class="act-map-icon" style="background:${em.color}"><i class="fa-solid ${em.icon}"></i></div>
+          <div class="act-map-card">
+            <div class="act-map-title-row"><span class="act-map-title">${n.label}${n.plan ? ` <span class="plan-pill plan-${n.plan}" style="font-size:.6rem;padding:1px 6px">${n.plan}</span>` : ''}</span><span class="act-map-time">${fmtDateTime(n.time)}</span></div>
+            ${n.sub ? `<div class="act-map-sub">${n.sub}</div>` : ''}
+          </div>
+        </div>`;
+      }
+    });
+    return summary + '<div class="act-map-track">' + html + '</div>';
+  }
+
+  // Per-tool aggregate breakdown (visits, total time, share, last visited)
+  // for the "Tools visited" stat drill-down — mirrors the adm-table look
+  // used elsewhere in the admin dashboard (e.g. Time Spent per Tool card).
+  function renderToolBreakdownTable(events) {
+    const visits = buildJourneyNodes(events).filter(n => n.kind === 'visit');
+    if (!visits.length) {
+      return '<div style="font-size:.82rem;color:var(--text-muted);padding:10px 0">No tool usage recorded yet.</div>';
+    }
+    const agg = {};
+    visits.forEach(n => {
+      const a = agg[n.feature] || (agg[n.feature] = { seconds: 0, visits: 0, last: null });
+      a.seconds += n.seconds;
+      a.visits += 1;
+      if (!a.last || new Date(n.time) > new Date(a.last)) a.last = n.time;
+    });
+    const rows = Object.entries(agg).sort((a, b) => b[1].seconds - a[1].seconds);
+    const totalSecs = rows.reduce((s, [, v]) => s + v.seconds, 0) || 1;
+    return `<div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead><tr><th></th><th>Tool</th><th class="num">Visits</th><th class="num">Time Spent</th><th class="num">Share</th><th>Last Visited</th></tr></thead>
+        <tbody>
+          ${rows.map(([feature, v]) => {
+            const fm = _featureMeta(feature);
+            const pct = Math.round((v.seconds / totalSecs) * 100);
+            return `<tr>
+              <td><span class="act-map-icon" style="width:22px;height:22px;font-size:.62rem;background:${fm.color}"><i class="fa-solid ${fm.icon}"></i></span></td>
+              <td>${fm.label}</td>
+              <td class="num">${v.visits}</td>
+              <td class="num">${_fmtSecs(v.seconds)}</td>
+              <td class="num">${pct}%</td>
+              <td>${fmtDateTime(v.last)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  window.toggleToolBreakdown = function toggleToolBreakdown() {
+    _toolTableOpen = !_toolTableOpen;
+    _applyToolBreakdownState();
+  }
+
+  function _applyToolBreakdownState() {
+    const wrap = document.getElementById('actToolTableWrap');
+    const stat = document.getElementById('actToolsVisitedStat');
+    if (!wrap || !stat) return;
+    if (_toolTableOpen) {
+      wrap.innerHTML = renderToolBreakdownTable(_tlEvents);
+      wrap.style.display = 'block';
+      stat.classList.add('active');
+    } else {
+      wrap.style.display = 'none';
+      stat.classList.remove('active');
+    }
+  }
+
+  function renderJourneyList(events) {
+    return events.map(e => {
+      let meta = '';
+      try { const m = JSON.parse(e.meta || '{}'); meta = Object.entries(m).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' · '); } catch {}
+      return `<div class="act-tl-item">
+        <span class="act-tl-time">${fmtDateTime(e.time)}</span>
+        <div>
+          <div class="act-tl-event">${e.event}${e.plan ? ` <span class="plan-pill plan-${e.plan}" style="font-size:.6rem;padding:1px 6px">${e.plan}</span>` : ''}</div>
+          ${meta ? `<div class="act-tl-meta">${meta}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  let _tlEvents = [];
+  let _tlView = 'map';
+  let _toolTableOpen = false;
+
+  function _renderTimelineBody() {
+    const body = document.getElementById('actTimelineBody');
+    if (!_tlEvents.length) {
+      body.innerHTML = '<div class="adm-empty"><i class="fa-solid fa-inbox"></i>No events recorded for this user</div>';
+      return;
+    }
+    body.innerHTML = _tlView === 'map' ? renderJourneyMap(_tlEvents) : renderJourneyList(_tlEvents);
+    if (_tlView === 'map') _applyToolBreakdownState();
+  }
+
+  document.getElementById('actTimelineViewToggle').addEventListener('click', e => {
+    const btn = e.target.closest('.act-tl-viewbtn');
+    if (!btn) return;
+    _tlView = btn.dataset.view;
+    document.querySelectorAll('.act-tl-viewbtn').forEach(b => b.classList.toggle('active', b === btn));
+    _renderTimelineBody();
+  });
+
   window.showUserTimeline = async function showUserTimeline(userId, label) {
     const overlay = document.getElementById('actTimelineModal');
     document.getElementById('actTimelineTitle').textContent = 'Timeline: ' + (label || userId);
     document.getElementById('actTimelineBody').innerHTML = '<div class="adm-loading"><div class="app-spinner"></div>Loading events…</div>';
     overlay.classList.add('show');
+    _toolTableOpen = false;
     try {
       const d = await fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/events?limit=100`);
-      const events = d.events || [];
-      if (!events.length) {
-        document.getElementById('actTimelineBody').innerHTML = '<div class="adm-empty"><i class="fa-solid fa-inbox"></i>No events recorded for this user</div>';
-        return;
-      }
-      document.getElementById('actTimelineBody').innerHTML = events.map(e => {
-        let meta = '';
-        try { const m = JSON.parse(e.meta || '{}'); meta = Object.entries(m).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' · '); } catch {}
-        return `<div class="act-tl-item">
-          <span class="act-tl-time">${fmtDateTime(e.time)}</span>
-          <div>
-            <div class="act-tl-event">${e.event}${e.plan ? ` <span class="plan-pill plan-${e.plan}" style="font-size:.6rem;padding:1px 6px">${e.plan}</span>` : ''}</div>
-            ${meta ? `<div class="act-tl-meta">${meta}</div>` : ''}
-          </div>
-        </div>`;
-      }).join('');
+      _tlEvents = d.events || [];
+      _renderTimelineBody();
     } catch (e) {
       document.getElementById('actTimelineBody').innerHTML = `<div class="adm-empty"><i class="fa-solid fa-triangle-exclamation"></i>Failed: ${e.message}</div>`;
     }
