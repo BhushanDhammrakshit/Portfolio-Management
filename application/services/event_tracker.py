@@ -311,6 +311,41 @@ def compute_activity_stats(users: list[dict]) -> dict:
     wau = len({e["user_id"] for e in events_7d})
     mau = len({e["user_id"] for e in events_30d})
 
+    user_lookup_top = {u.get("id"): u for u in (users or []) if u.get("id")}
+
+    def _active_users_list(evs: list[dict]) -> list[dict]:
+        """Distinct users in `evs` with their last-seen time (newest first)."""
+        last_seen: dict[str, str] = {}
+        for e in evs:
+            uid = e["user_id"]
+            if uid not in last_seen or e["time"] > last_seen[uid]:
+                last_seen[uid] = e["time"]
+        out = []
+        for uid, t in last_seen.items():
+            u = user_lookup_top.get(uid, {})
+            out.append({
+                "user_id": uid,
+                "name": u.get("name") or "",
+                "email": u.get("email") or "",
+                "last_active": t,
+            })
+        out.sort(key=lambda x: x["last_active"], reverse=True)
+        return out
+
+    dau_users = _active_users_list(events_24h)
+    wau_users = _active_users_list(events_7d)
+    mau_users = _active_users_list(events_30d)
+
+    recent_events = []
+    for e in sorted(events_30d, key=lambda x: x["time"], reverse=True)[:300]:
+        u = user_lookup_top.get(e["user_id"], {})
+        recent_events.append({
+            "time": e["time"],
+            "event": e["event"],
+            "user_id": e["user_id"],
+            "user_label": u.get("name") or u.get("email") or e["user_id"],
+        })
+
     # Feature adoption (count distinct users per feature)
     feature_users: dict[str, set] = {}
     feature_total: dict[str, int] = {}
@@ -375,6 +410,10 @@ def compute_activity_stats(users: list[dict]) -> dict:
         "dau": dau,
         "wau": wau,
         "mau": mau,
+        "dau_users": dau_users,
+        "wau_users": wau_users,
+        "mau_users": mau_users,
+        "recent_events": recent_events,
         "feature_adoption": adoption,
         "funnel": funnel,
         "top_events": [{"event": ev, "count": c} for ev, c in top_events],

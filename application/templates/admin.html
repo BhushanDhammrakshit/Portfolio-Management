@@ -15,6 +15,8 @@
 /* KPI cards */
 .adm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
 .adm-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.adm-kpi.clickable{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.adm-kpi.clickable:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
 .adm-kpi .k-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted)}
 .adm-kpi .k-val{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
 .adm-kpi .k-sub{font-size:.72rem;color:var(--text-muted)}
@@ -407,6 +409,22 @@
     </div>
   </div>
 </div>
+
+<!-- Activity KPI drill-down modal -->
+<div class="adm-modal-overlay" id="admActUsersModal">
+  <div class="adm-modal" style="max-width:560px">
+    <div class="adm-modal-header">
+      <i class="fa-solid fa-users" style="color:#6366f1" id="admActUsersIcon"></i>
+      <span class="modal-title" id="admActUsersTitle">Active Users</span>
+      <button class="adm-modal-close" id="admActUsersCloseX"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="adm-modal-body" id="admActUsersBody" style="padding:0;overflow:hidden"></div>
+    <div class="adm-modal-footer">
+      <button class="btn btn-primary btn-sm" id="admActUsersDone">Done</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 (function(){
@@ -919,6 +937,79 @@
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
   });
 
+  // ── Activity KPI drill-down (DAU/WAU/MAU/Events tiles) ────────────────
+  const ACT_KIND_META = {
+    dau: { title: 'Active Users — Last 24h', icon: 'fa-user-clock' },
+    wau: { title: 'Active Users — Last 7 Days', icon: 'fa-user-clock' },
+    mau: { title: 'Active Users — Last 30 Days', icon: 'fa-user-clock' },
+    events: { title: 'Recent Events — Last 30 Days', icon: 'fa-bolt' },
+  };
+
+  function _fmtActTime(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      });
+    } catch (e) { return iso; }
+  }
+
+  function openActivityUsersModal(kind) {
+    const d = _activityData;
+    if (!d) return;
+    const meta = ACT_KIND_META[kind] || { title: 'Details', icon: 'fa-circle-info' };
+    document.getElementById('admActUsersTitle').textContent = meta.title;
+    document.getElementById('admActUsersIcon').className = 'fa-solid ' + meta.icon;
+    const body = document.getElementById('admActUsersBody');
+
+    if (kind === 'events') {
+      const rows = d.recent_events || [];
+      body.innerHTML = rows.length ? `
+        <div class="act-err-list" style="max-height:60vh;overflow-y:auto;padding:18px 22px">
+          ${rows.map(e => `
+            <div class="act-err-item">
+              <div class="act-err-time">${_fmtActTime(e.time)}</div>
+              <div class="act-err-body">
+                <span class="act-err-user" data-uid="${e.user_id}" data-label="${(e.user_label || '').replace(/"/g, '&quot;')}">${e.user_label}</span>
+                <span class="act-err-msg">${e.event}</span>
+              </div>
+            </div>`).join('')}
+        </div>` : '<div class="adm-empty" style="padding:18px 22px"><i class="fa-solid fa-inbox"></i>No events recorded</div>';
+    } else {
+      const rows = d[`${kind}_users`] || [];
+      body.innerHTML = rows.length ? `
+        <div class="adm-table-wrap" style="border:none;border-radius:0">
+          <div class="adm-table-scroll" style="max-height:60vh">
+            <table class="adm-table" style="margin-top:0">
+              <thead><tr><th>User</th><th>Last Active</th></tr></thead>
+              <tbody>
+                ${rows.map(u => `
+                  <tr>
+                    <td><span class="act-err-user" data-uid="${u.user_id}" data-label="${(u.name || u.email || u.user_id || '').replace(/"/g, '&quot;')}">${u.name || u.email || u.user_id}</span></td>
+                    <td>${_fmtActTime(u.last_active)}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>` : '<div class="adm-empty" style="padding:18px 22px"><i class="fa-solid fa-inbox"></i>No active users in this period</div>';
+    }
+
+    body.querySelectorAll('.act-err-user').forEach(el => {
+      el.addEventListener('click', () => {
+        document.getElementById('admActUsersModal').classList.remove('show');
+        showUserTimeline(el.dataset.uid, el.dataset.label);
+      });
+    });
+
+    document.getElementById('admActUsersModal').classList.add('show');
+  }
+
+  document.getElementById('admActUsersCloseX').addEventListener('click', () => document.getElementById('admActUsersModal').classList.remove('show'));
+  document.getElementById('admActUsersDone').addEventListener('click', () => document.getElementById('admActUsersModal').classList.remove('show'));
+  document.getElementById('admActUsersModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
+  });
+
   // ── Email templates tab ───────────────────────────────────────────────
   let _emailTemplates = [];
   let _emailSendKey = '';
@@ -1072,14 +1163,17 @@
 
     // KPI cards
     const kpis = [
-      { label: 'DAU', val: d.dau || 0, color: '#16a34a' },
-      { label: 'WAU', val: d.wau || 0, color: '#6366f1' },
-      { label: 'MAU', val: d.mau || 0, color: '#0ea5e9' },
-      { label: 'Events (30d)', val: d.total_events_30d || 0, color: '#f59e0b' },
+      { label: 'DAU', val: d.dau || 0, color: '#16a34a', kind: 'dau' },
+      { label: 'WAU', val: d.wau || 0, color: '#6366f1', kind: 'wau' },
+      { label: 'MAU', val: d.mau || 0, color: '#0ea5e9', kind: 'mau' },
+      { label: 'Events (30d)', val: d.total_events_30d || 0, color: '#f59e0b', kind: 'events' },
     ];
     document.getElementById('actKpis').innerHTML = kpis.map(k =>
-      `<div class="adm-kpi"><span class="k-label">${k.label}</span><span class="k-val" style="color:${k.color}">${k.val.toLocaleString()}</span></div>`
+      `<div class="adm-kpi clickable" data-kind="${k.kind}"><span class="k-label">${k.label}</span><span class="k-val" style="color:${k.color}">${k.val.toLocaleString()}</span></div>`
     ).join('');
+    document.getElementById('actKpis').querySelectorAll('.adm-kpi.clickable').forEach(el => {
+      el.addEventListener('click', () => openActivityUsersModal(el.dataset.kind));
+    });
 
     // Feature adoption bars
     const adoption = d.feature_adoption || [];
