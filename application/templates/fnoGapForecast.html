@@ -1,113 +1,134 @@
 {% extends "layout.html" %}
-{% from "_upgrade_lock.html" import upgrade_card %}
+{% from "_icons.html" import icon %}
 {% block content %}
 <style>
-.fno-wrap{max-width:1180px;margin:0 auto}
-.fno-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:6px}
-.fno-head h2{font-size:1.4rem;font-weight:800;margin:0;display:flex;align-items:center;gap:10px}
-.fno-head p{font-size:.84rem;color:var(--text-muted);margin:4px 0 0;max-width:640px}
-.fno-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.fno-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
-.fno-btn:hover{background:var(--surface-2)}
-.fno-meta{font-size:.74rem;color:var(--text-muted);margin:10px 0 14px}
-.fno-filters{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
-.fno-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:.75rem;font-weight:600;cursor:pointer}
-.fno-chip.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-color:transparent}
-.fno-table{width:100%;font-size:.82rem;border-collapse:collapse}
-.fno-table th{background:var(--surface-2);text-align:left;padding:9px 10px;font-weight:600;color:var(--text-muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
-.fno-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
-.fno-table tbody tr{cursor:pointer;transition:background .12s}
-.fno-table tbody tr:hover td{background:var(--surface-2)}
-.fno-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
-.fno-sym{font-weight:700}
-.fno-sym .nm{display:block;font-weight:500;font-size:.7rem;color:var(--text-muted)}
-.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-.pill-up{background:rgba(22,163,74,.13);color:#16a34a}
-.pill-dn{background:rgba(220,38,38,.13);color:#dc2626}
-.pill-flat{background:rgba(100,116,139,.14);color:var(--text-muted)}
-.pos{color:#16a34a;font-weight:600}.neg{color:#dc2626;font-weight:600}
-.prob-bar{position:relative;height:18px;background:var(--surface-2);border-radius:5px;overflow:hidden;min-width:78px}
-.prob-fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
-.prob-txt{position:absolute;left:7px;top:0;line-height:18px;font-size:.7rem;font-weight:700;color:var(--text)}
-.fno-empty{padding:40px;text-align:center;color:var(--text-muted)}
-.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:#6366f1;border-radius:50%;animation:fspin .7s linear infinite;vertical-align:-2px}
-@keyframes fspin{to{transform:rotate(360deg)}}
-/* detail drawer */
-.fno-drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:.2s;z-index:1050}
-.fno-drawer-bg.open{opacity:1;visibility:visible}
-.fno-drawer{position:fixed;top:0;right:0;bottom:0;width:min(540px,94vw);background:var(--surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .25s;z-index:1051;overflow-y:auto;padding:20px}
-.fno-drawer.open{transform:translateX(0)}
-.fno-drawer h3{font-size:1.15rem;font-weight:800;margin:0}
-.fno-drawer .sub{font-size:.78rem;color:var(--text-muted);margin-top:2px}
-.fno-close{position:absolute;top:16px;right:16px;border:none;background:var(--surface-2);width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--text);font-size:1rem}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:14px 0}
-.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-.kpi .lbl{font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
-.kpi .val{font-size:1.15rem;font-weight:800;margin-top:3px}
-.sec-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;margin:18px 0 8px}
-.fno-d-summary{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:.85rem;line-height:1.5}
-.hist-table{width:100%;font-size:.76rem;border-collapse:collapse}
-.hist-table th{text-align:left;padding:6px 8px;color:var(--text-muted);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
-.hist-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
-.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:.64rem;font-weight:700}
-.tag-hit{background:rgba(22,163,74,.14);color:#16a34a}
-.tag-miss{background:rgba(220,38,38,.14);color:#dc2626}
-.tag-pend{background:rgba(245,158,11,.16);color:#b45309}
-.disclaimer{font-size:.72rem;color:var(--text-muted);margin-top:18px;line-height:1.5}
+/* Detail drawer — the only surface that is still bespoke. */
+.fno-drawer-bg{position:fixed;inset:0;z-index:var(--z-modal);background:var(--overlay);opacity:0;visibility:hidden;transition:opacity var(--transition);}
+.fno-drawer-bg.open{opacity:1;visibility:visible;}
+.fno-drawer{position:fixed;z-index:calc(var(--z-modal) + 1);top:0;right:0;bottom:0;width:min(540px,94vw);overflow-y:auto;padding:var(--space-5);background:var(--bg-surface);border-left:var(--border-width) solid var(--border);transform:translateX(100%);transition:transform var(--transition);}
+.fno-drawer.open{transform:translateX(0);}
+.fno-drawer h3{margin:0;color:var(--text-primary);font-size:var(--fs-section-title);font-weight:var(--fw-semibold);}
+.fno-drawer .sub{margin-top:var(--space-1);color:var(--text-muted);font-size:var(--fs-caption);}
+.fno-close{position:absolute;top:var(--space-4);right:var(--space-4);display:inline-flex;width:var(--control-height-small);height:var(--control-height-small);align-items:center;justify-content:center;color:var(--text-secondary);background:var(--bg-subtle);border:0;border-radius:var(--radius);cursor:pointer;}
+.fno-close:hover{color:var(--text-primary);background:var(--border);}
+.fno-drawer .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-2);margin:var(--space-4) 0;}
+.fno-drawer .kpi{padding:var(--space-2) var(--space-3);background:var(--bg-subtle);border-radius:var(--radius);}
+.fno-drawer .kpi .lbl{color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);text-transform:uppercase;}
+.fno-drawer .kpi .val{margin-top:var(--space-1);color:var(--text-primary);font-family:var(--font-mono);font-size:var(--fs-kpi-value);font-weight:var(--fw-semibold);line-height:var(--lh-kpi-value);}
+.fno-drawer .sec-title{margin:var(--space-4) 0 var(--space-2);color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);text-transform:uppercase;}
+.fno-drawer .fno-d-summary{padding:var(--space-3);color:var(--text-secondary);background:var(--bg-subtle);border-radius:var(--radius);font-size:var(--fs-label);line-height:1.6;}
+.fno-drawer .hist-table{width:100%;border-collapse:collapse;font-size:var(--fs-label);}
+.fno-drawer .hist-table th{padding:var(--space-2);color:var(--text-muted);border-bottom:var(--border-width) solid var(--border);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);text-align:left;text-transform:uppercase;}
+.fno-drawer .hist-table td{padding:var(--space-2);border-bottom:var(--border-width) solid var(--border);font-variant-numeric:tabular-nums;}
+.fno-drawer .tag{display:inline-flex;padding:2px 7px;border-radius:var(--radius-tag);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);}
+.fno-drawer .tag-hit{color:var(--positive);background:var(--positive-bg);}
+.fno-drawer .tag-miss{color:var(--negative);background:var(--negative-bg);}
+.fno-drawer .tag-pend{color:var(--warning-ink);background:var(--warning-bg);}
+.fno-drawer .pill{display:inline-flex;padding:2px 8px;border-radius:var(--radius-tag);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);}
+.pill-up{color:var(--positive);background:var(--positive-bg);}
+.pill-dn{color:var(--negative);background:var(--negative-bg);}
+.pill-flat{color:var(--text-secondary);background:var(--bg-subtle);}
+.pos{color:var(--positive);font-weight:var(--fw-medium);}
+.neg{color:var(--negative);font-weight:var(--fw-medium);}
+.fno-empty{padding:var(--space-5);color:var(--text-muted);text-align:center;}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;vertical-align:-2px;animation:fspin .7s linear infinite;}
+@keyframes fspin{to{transform:rotate(360deg);}}
 </style>
 
-<div class="fno-wrap">
-  <div class="fno-head">
+<div class="gap-page">
+  <header class="page-header">
     <div>
-      <h2><i class="fa-solid fa-arrows-up-down"></i>F&amp;O Gap Forecast</h2>
-      <p>Next-session gap-up / gap-down outlook for the most liquid NSE F&amp;O stocks,
-         scored by closing-window OI positioning &amp; momentum. Most reliable after 13:30 IST.
-         Click any stock for its option-chain breakdown and signal accuracy.</p>
+      <h1>F&amp;O Gap Forecast</h1>
+      <p>Next-session gap-up / gap-down outlook for liquid NSE F&amp;O stocks, scored from closing-window OI positioning and momentum.</p>
     </div>
-    <div class="fno-controls">
-      <span id="fnoPhase" class="pill pill-flat">—</span>
-      <a class="fno-btn" href="{{ url_for('fno_gap_api.fno_gap_summary_page') }}"><i class="fa-solid fa-chart-pie"></i>Summary</a>
-      <button class="fno-btn" id="fnoRefresh"><i class="fa-solid fa-rotate-right"></i>Refresh</button>
+    <div class="scans-actions">
+      <span id="fnoPhase" class="ds-badge">—</span>
+      <a class="ds-button ds-button-secondary ds-button-small" href="{{ url_for('fno_gap_api.fno_gap_summary_page') }}">{{ icon('bar-chart', 14) }} Summary</a>
+      <button type="button" class="ds-button ds-button-primary ds-button-small" id="fnoRefresh">{{ icon('rotate', 14) }} Refresh</button>
     </div>
-  </div>
-  <div class="fno-meta" id="fnoMeta"></div>
+  </header>
 
-  <div id="fnoLock" style="display:none"></div>
-
-  <div id="fnoBody">
-    <div class="fno-filters" id="fnoFilters" style="display:none">
-      <span class="fno-chip active" data-filter="all">All</span>
-      <span class="fno-chip" data-filter="GAP UP">Gap Up</span>
-      <span class="fno-chip" data-filter="GAP DOWN">Gap Down</span>
-      <span class="fno-chip" data-filter="FLAT">Flat</span>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="fno-table">
-        <thead>
-          <tr>
-            <th>Stock</th><th class="num">LTP</th><th class="num">Price%</th>
-            <th class="num">OI%</th><th>Buildup</th><th>Forecast</th>
-            <th>Probability</th><th class="num">Exp. Gap%</th>
-          </tr>
-        </thead>
-        <tbody id="fnoRows">
-          <tr><td colspan="8" class="fno-empty"><span class="spin"></span> Loading forecasts…</td></tr>
-        </tbody>
-      </table>
+  <div class="ds-info-banner-wrap">
+    <div class="info-banner">
+      Most reliable after 13:30 IST. Open any row for its option-chain breakdown and signal track record.
     </div>
   </div>
 
-  <p class="disclaimer">
-    <i class="fa-solid fa-circle-info"></i>
-    Forecasts are model estimates derived from public OI &amp; price data, not investment advice.
-    Each prediction is saved and graded against the next session's actual open — open a stock to see its track record.
-  </p>
+  <div id="fnoLock" hidden></div>
+
+  <div id="fnoBody" class="scans-section">
+    <section class="ds-card" aria-label="Gap forecasts">
+      <header class="ds-card-header">
+        <h2 class="ds-card-title">Forecast table</h2>
+        <span class="scans-asof" id="fnoMeta"></span>
+      </header>
+
+      <div class="table-toolbar-split" style="padding:var(--space-2) var(--space-3);border-bottom:var(--border-width) solid var(--border)">
+        <div class="table-chip-row" id="fnoFilters" hidden>
+          <span class="ds-chip is-active" data-filter="all">All</span>
+          <span class="ds-chip" data-filter="GAP UP">Gap up</span>
+          <span class="ds-chip" data-filter="GAP DOWN">Gap down</span>
+          <span class="ds-chip" data-filter="FLAT">Flat</span>
+        </div>
+        <span class="window-label">Ranked by confidence</span>
+      </div>
+
+      <div class="ds-table-scroll">
+        <table class="ds-table gap-table" aria-label="F&amp;O gap forecasts">
+          <thead>
+            <tr>
+              <th scope="col">Stock</th>
+              <th scope="col" class="is-numeric">LTP</th>
+              <th scope="col" class="is-numeric">Price %</th>
+              <th scope="col" class="is-numeric">OI %</th>
+              <th scope="col">Basis</th>
+              <th scope="col">Forecast</th>
+              <th scope="col">Confidence</th>
+              <th scope="col" class="is-numeric">Predicted gap %</th>
+            </tr>
+          </thead>
+          <tbody id="fnoRows">
+            <tr><td colspan="8" class="fno-empty"><span class="spin"></span> Loading forecasts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="ds-card" id="gapMethod" aria-label="Forecast methodology">
+      <header class="ds-card-header">
+        <h2 class="ds-card-title">Methodology</h2>
+      </header>
+      <div class="ds-card-body">
+        <div class="gap-method">
+          <div>
+            <h2>How the forecast is built</h2>
+            <ol>
+              <li>Capture the closing-window option chain for the nearest expiry, including OI, OI change and traded volume for every strike.</li>
+              <li>Infer writer positioning per strike (long build-up, short build-up, short covering, long unwinding) and weight it by distance from spot.</li>
+              <li>Combine the aggregate positioning score with price momentum and the India VIX regime to produce a gap-up / gap-down / flat label.</li>
+              <li>Translate the score into a confidence percentage and an expected gap in percent of spot. Each signal is stored and graded against the next session's actual open.</li>
+            </ol>
+          </div>
+          <div>
+            <h2>Reading the columns</h2>
+            <p><strong>Basis</strong> summarises today's positioning — the OI build-up type alongside the price and OI change that produced it.</p>
+            <p><strong>Confidence</strong> is the model's normalised score for the chosen side. A low-confidence directional call is closer to a coin flip; treat the flat bucket as the absence of an edge.</p>
+            <p><strong>Predicted gap %</strong> is an estimate of the next session's opening gap versus today's close, not a price target.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="gap-disclaimer">
+      Forecasts are model estimates derived from public OI and price data. They are not investment advice, not a recommendation to buy or sell, and past accuracy does not guarantee future results. Finance Candle is not a SEBI-registered adviser or research analyst. Each prediction is saved and graded against the next session's actual open; open a stock to inspect its track record.
+    </p>
+  </div>
 </div>
 
 <!-- Detail drawer -->
 <div class="fno-drawer-bg" id="fnoDrawerBg"></div>
 <aside class="fno-drawer" id="fnoDrawer" aria-hidden="true">
-  <button class="fno-close" id="fnoDrawerClose" aria-label="Close">&times;</button>
+  <button class="fno-close" id="fnoDrawerClose" aria-label="Close">{{ icon('x', 16) }}</button>
   <div id="fnoDrawerContent"></div>
 </aside>
 
@@ -127,18 +148,33 @@
 
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt = (n,d=2) => (n==null||isNaN(n))?'—':Number(n).toFixed(d);
+  const fmt = n => window.FCFormat.ratio(n,'Put-call ratio is unavailable');
+  const fmtPrice = n => window.FCFormat.currency(n,false,'Price is unavailable');
   const signCls = n => (n>0?'pos':(n<0?'neg':''));
-  const signTxt = (n,d=2) => (n==null||isNaN(n))?'—':((n>0?'+':'')+Number(n).toFixed(d));
+  const signPct = n => window.FCFormat.percent(n,true,'Percentage change is unavailable');
 
   function labelPill(label){
     const c = label==='GAP UP'?'pill-up':(label==='GAP DOWN'?'pill-dn':'pill-flat');
     return `<span class="pill ${c}">${esc(label)}</span>`;
   }
-  function probBar(p,label){
-    const pct = Math.max(0,Math.min(100,p||0));
-    const col = label==='GAP UP'?'rgba(22,163,74,.28)':(label==='GAP DOWN'?'rgba(220,38,38,.28)':'rgba(100,116,139,.25)');
-    return `<div class="prob-bar"><div class="prob-fill" style="width:${pct}%;background:${col}"></div><span class="prob-txt">${pct}%</span></div>`;
+  function confidenceCell(p){
+    const value = Number(p);
+    if (p == null || p === '' || !Number.isFinite(value)) {
+      return window.FCFormat.missing('Confidence score is unavailable');
+    }
+    const pct = Math.max(0, Math.min(100, value));
+    return `<div class="confidence">
+      <span class="confidence-track"><span class="confidence-fill" style="width:${pct}%"></span></span>
+      <span class="confidence-value">${pct}%</span>
+    </div>`;
+  }
+  function basisCell(i){
+    const parts = [];
+    if (i.buildup) parts.push(`<strong>${esc(i.buildup)}</strong>`);
+    const bits = [];
+    if (i.price_chg_pct != null) bits.push(`Price ${signPct(i.price_chg_pct)}`);
+    if (i.oi_chg_pct != null) bits.push(`OI ${signPct(i.oi_chg_pct)}`);
+    return `<div class="basis-cell">${parts.join('')}<span>${esc(bits.join(' · ')) || 'Positioning unavailable'}</span></div>`;
   }
 
   function renderRows(){
@@ -147,38 +183,47 @@
       rowsEl.innerHTML = `<tr><td colspan="8" class="fno-empty">No stocks match this filter.</td></tr>`;
       return;
     }
-    rowsEl.innerHTML = items.map(i=>`
-      <tr data-sym="${esc(i.symbol)}">
-        <td class="fno-sym">${esc(i.symbol)}<span class="nm">${esc(i.name)}</span></td>
-        <td class="num">${fmt(i.ltp)}</td>
-        <td class="num ${signCls(i.price_chg_pct)}">${signTxt(i.price_chg_pct)}</td>
-        <td class="num ${signCls(i.oi_chg_pct)}">${signTxt(i.oi_chg_pct)}</td>
-        <td>${esc(i.buildup)}</td>
+    rowsEl.innerHTML = items.map(i=>{
+      const gap = i.expected_gap_pct;
+      const gapCls = i.label==='GAP UP' ? 'is-up' : (i.label==='GAP DOWN' ? 'is-down' : 'is-flat');
+      return `
+      <tr data-sym="${esc(i.symbol)}" tabindex="0">
+        <td><span class="gap-symbol">${esc(i.symbol)}<small>${esc(i.name)}</small></span></td>
+        <td class="is-numeric">${fmtPrice(i.ltp)}</td>
+        <td class="is-numeric ${signCls(i.price_chg_pct)}">${signPct(i.price_chg_pct)}</td>
+        <td class="is-numeric ${signCls(i.oi_chg_pct)}">${signPct(i.oi_chg_pct)}</td>
+        <td>${basisCell(i)}</td>
         <td>${labelPill(i.label)}</td>
-        <td>${probBar(i.probability,i.label)}</td>
-        <td class="num">${signTxt(i.expected_gap_pct)}</td>
-      </tr>`).join('');
+        <td>${confidenceCell(i.probability)}</td>
+        <td class="is-numeric"><span class="gap-predicted ${gapCls}">${signPct(gap)}</span></td>
+      </tr>`;
+    }).join('');
     rowsEl.querySelectorAll('tr[data-sym]').forEach(tr=>{
       tr.addEventListener('click',()=>openDetail(tr.getAttribute('data-sym')));
+      tr.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openDetail(tr.getAttribute('data-sym'));
+        }
+      });
     });
   }
 
   function showUpgrade(msg){
     bodyEl.style.display='none';
-    filtersEl.style.display='none';
-    lockEl.style.display='block';
+    lockEl.hidden = false;
     lockEl.innerHTML = `<div class="upgrade-locked-card">
       <div class="upgrade-locked-icon"><i class="fa-solid fa-lock"></i></div>
       <h3 class="upgrade-locked-title">Elite feature</h3>
       <p class="upgrade-locked-msg">${esc(msg||'Upgrade to Elite to view the F&O gap forecast.')}</p>
-      <a href="/billing?plan=elite" class="btn btn-primary upgrade-locked-btn"><i class="fa-solid fa-rocket me-1"></i>Upgrade to Elite</a>
+      <a href="/billing?plan=elite" class="ds-button ds-button-primary upgrade-locked-btn">Upgrade to Elite</a>
     </div>`;
   }
 
   async function loadList(force){
     const btn = document.getElementById('fnoRefresh');
     const btnHtml = btn ? btn.innerHTML : '';
-    if(btn){ btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Refreshing…'; }
+    if(btn){ btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Refreshing…'; }
     if(force){
       rowsEl.innerHTML = `<tr><td colspan="8" class="fno-empty"><span class="spin"></span> Refreshing forecasts…</td></tr>`;
     }
@@ -191,9 +236,9 @@
       allItems = j.items||[];
       phaseEl.textContent = j.phase||'—';
       metaEl.innerHTML = `${allItems.length} stocks · as of ${esc(j.as_of||'')}`
-        + (j.stale?' · <span style="color:#b45309">stale feed</span>':'')
+        + (j.stale?' · <span style="color:var(--warning-ink)">stale feed</span>':'')
         + (j.cached?' · cached':'');
-      filtersEl.style.display = allItems.length?'flex':'none';
+      filtersEl.hidden = !allItems.length;
       renderRows();
     }catch(e){
       rowsEl.innerHTML=`<tr><td colspan="8" class="fno-empty">Network error loading forecasts.</td></tr>`;
@@ -212,13 +257,13 @@
   function histRow(h){
     const oc = (h.outcome||'PENDING').toUpperCase();
     const tag = oc==='HIT'?'tag-hit':(oc==='MISS'?'tag-miss':'tag-pend');
-    const prob = h.probability!=null ? h.probability+'%' : '—';
+    const prob = window.FCFormat.percent(h.probability,false,'Confidence score is unavailable');
     return `<tr>
       <td>${esc(h.date||'')}</td>
       <td>${labelPill(h.predicted||'')}</td>
       <td>${prob}</td>
       <td>${h.actual_direction?labelPill(h.actual_direction):'<span class="tag tag-pend">pending</span>'}</td>
-      <td class="${signCls(h.actual_gap_pct)}">${signTxt(h.actual_gap_pct)}</td>
+      <td class="${signCls(h.actual_gap_pct)}">${signPct(h.actual_gap_pct)}</td>
       <td><span class="tag ${tag}">${esc(oc)}</span></td>
     </tr>`;
   }
@@ -239,16 +284,16 @@
     let kpis = '';
     if(!chainOff){
       kpis = `<div class="kpi-row">
-        <div class="kpi"><div class="lbl">Spot</div><div class="val">${fmt(d.spot)}</div></div>
-        <div class="kpi"><div class="lbl">Probability</div><div class="val">${d.probability!=null?d.probability+'%':'—'}</div></div>
-        <div class="kpi"><div class="lbl">Exp. Gap</div><div class="val ${signCls(d.expected_gap_pct)}">${signTxt(d.expected_gap_pct)}%</div></div>
+        <div class="kpi"><div class="lbl">Spot</div><div class="val">${fmtPrice(d.spot)}</div></div>
+        <div class="kpi"><div class="lbl">Confidence</div><div class="val">${d.probability!=null?d.probability+'%':'—'}</div></div>
+        <div class="kpi"><div class="lbl">Predicted gap</div><div class="val ${signCls(d.expected_gap_pct)}">${signPct(d.expected_gap_pct)}</div></div>
         <div class="kpi"><div class="lbl">PCR</div><div class="val">${fmt(d.pcr)}</div></div>
-        <div class="kpi"><div class="lbl">Support</div><div class="val">${fmt(d.support,0)}</div></div>
-        <div class="kpi"><div class="lbl">Resistance</div><div class="val">${fmt(d.resistance,0)}</div></div>
+        <div class="kpi"><div class="lbl">Support</div><div class="val">${fmtPrice(d.support)}</div></div>
+        <div class="kpi"><div class="lbl">Resistance</div><div class="val">${fmtPrice(d.resistance)}</div></div>
       </div>
       <div class="fno-d-summary">${esc(d.summary||'')}</div>`;
     } else {
-      kpis = `<div class="fno-d-summary" style="color:#b45309">${esc(d.detail||'Option chain unavailable right now.')}</div>`;
+      kpis = `<div class="fno-d-summary" style="color:var(--warning-ink)">${esc(d.detail||'Option chain unavailable right now.')}</div>`;
     }
 
     let histHtml = `<div class="sec-title">Signal accuracy${hr!=null?(' · '+hr+'% hit-rate ('+(st.hits||0)+'/'+(st.directional_evaluated||0)+')'):''}</div>`;
@@ -276,10 +321,10 @@
   }
 
   // filter chips
-  filtersEl.querySelectorAll('.fno-chip').forEach(ch=>{
+  filtersEl.querySelectorAll('[data-filter]').forEach(ch=>{
     ch.addEventListener('click',()=>{
-      filtersEl.querySelectorAll('.fno-chip').forEach(c=>c.classList.remove('active'));
-      ch.classList.add('active');
+      filtersEl.querySelectorAll('[data-filter]').forEach(c=>c.classList.remove('is-active'));
+      ch.classList.add('is-active');
       activeFilter = ch.getAttribute('data-filter');
       renderRows();
     });

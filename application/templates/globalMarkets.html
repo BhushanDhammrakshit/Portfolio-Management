@@ -3,8 +3,8 @@
 <div class="gm-page">
   <header class="gm-header">
     <div class="gm-header-left">
-      <h1 class="gm-title"><i class="fa-solid fa-globe me-2"></i>Global Markets</h1>
-      <p class="gm-subtitle">Major world indices, regional sentiment, and our daily macro idea.</p>
+      <h1 class="gm-title">Global Markets</h1>
+      <p class="gm-subtitle">World indices with local market session status.</p>
     </div>
     <div class="gm-header-tools">
       <span id="gmUpdated" class="gm-updated"></span>
@@ -27,7 +27,7 @@
     <!-- Hero row: sentiment + advance/decline + movers -->
     <section class="gm-hero">
       <div class="gm-hero-card gm-banner" id="gmBanner">
-        <div class="gm-banner-emoji" id="gmSentEmoji">⚖️</div>
+        <div class="gm-banner-emoji" id="gmSentEmoji"></div>
         <div class="gm-banner-text">
           <div class="gm-banner-eyebrow">Global Sentiment</div>
           <div class="gm-banner-headline">
@@ -50,14 +50,14 @@
 
       <div class="gm-hero-card gm-mover-card up" id="gmTopGainer">
         <div class="gm-mover-eyebrow"><i class="fa-solid fa-arrow-trend-up"></i> Top Gainer</div>
-        <div class="gm-mover-flag">🌐</div>
+        <div class="gm-mover-flag"></div>
         <div class="gm-mover-name">—</div>
         <div class="gm-mover-sub">—</div>
         <div class="gm-mover-pct">—</div>
       </div>
       <div class="gm-hero-card gm-mover-card down" id="gmTopLoser">
         <div class="gm-mover-eyebrow"><i class="fa-solid fa-arrow-trend-down"></i> Top Laggard</div>
-        <div class="gm-mover-flag">🌐</div>
+        <div class="gm-mover-flag"></div>
         <div class="gm-mover-name">—</div>
         <div class="gm-mover-sub">—</div>
         <div class="gm-mover-pct">—</div>
@@ -74,153 +74,11 @@
     </section>
 
     <!-- Regions -->
+    <nav id="gmRegionTabs" class="global-region-tabs" role="tablist" aria-label="Global market regions"></nav>
     <section id="gmRegions" class="gm-regions"></section>
   </div>
 </div>
 
-<style>
-.gm-page{padding:14px 18px 28px;display:flex;flex-direction:column;gap:14px;color:var(--text)}
-.gm-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
-.gm-title{font-size:2.5rem;font-weight:800;margin:0;color:var(--text)}
-.gm-subtitle{font-size:.86rem;color:var(--text-muted);margin:.25rem 0 0}
-.gm-header-tools{display:flex;align-items:center;gap:14px}
-.gm-updated{font-size:.72rem;color:var(--text-muted);font-weight:500;white-space:nowrap}
-.gm-live-toggle{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:var(--text-muted);cursor:pointer;user-select:none;margin:0}
-.gm-live-toggle input{display:none}
-.gm-live-dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;transition:background .15s}
-.gm-live-toggle input:checked + .gm-live-dot{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
-.gm-refresh-btn{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);width:34px;height:34px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
-.gm-refresh-btn:hover{color:var(--text);border-color:var(--border-strong)}
-
-.gm-loading{display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 0;color:var(--text-muted)}
-
-/* ── Hero row: sentiment + 2 movers side by side ───────────── */
-.gm-hero{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px}
-.gm-hero-card{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
-
-.gm-banner{flex-direction:row;align-items:flex-start;gap:14px;background:linear-gradient(135deg, rgba(99,102,241,.06), rgba(14,165,233,.04))}
-.gm-banner.bull{background:linear-gradient(135deg, rgba(34,197,94,.10), rgba(16,185,129,.04));border-color:rgba(34,197,94,.35)}
-.gm-banner.bear{background:linear-gradient(135deg, rgba(239,68,68,.10), rgba(220,38,38,.04));border-color:rgba(239,68,68,.35)}
-.gm-banner-emoji{font-size:2.4rem;line-height:1;flex-shrink:0}
-.gm-banner-text{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
-.gm-banner-eyebrow{font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
-.gm-banner-headline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.gm-banner-label{font-size:1.35rem;font-weight:800;color:var(--text);line-height:1.1}
-.gm-banner-meta{font-size:.78rem;color:var(--text-muted)}
-
-/* Bull/Bear/Neutral state badge */
-.gm-state-badge{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;background:rgba(148,163,184,.18);color:#475569;border:1px solid rgba(148,163,184,.35);text-transform:uppercase}
-.gm-state-badge.bull{background:rgba(34,197,94,.18);color:#15803d;border-color:rgba(34,197,94,.45)}
-.gm-state-badge.bear{background:rgba(239,68,68,.18);color:#b91c1c;border-color:rgba(239,68,68,.45)}
-.gm-state-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-[data-theme="dark"] .gm-state-badge{background:rgba(148,163,184,.18);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
-[data-theme="dark"] .gm-state-badge.bull{background:rgba(34,197,94,.22);color:#86efac;border-color:rgba(34,197,94,.5)}
-[data-theme="dark"] .gm-state-badge.bear{background:rgba(239,68,68,.22);color:#fca5a5;border-color:rgba(239,68,68,.5)}
-
-/* Breadth stacked bar */
-.gm-breadth-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--surface-2);margin-top:6px}
-.gm-breadth-up{background:#22c55e;transition:flex .3s ease}
-.gm-breadth-flat{background:#94a3b8;transition:flex .3s ease}
-.gm-breadth-down{background:#ef4444;transition:flex .3s ease}
-.gm-breadth-legend{display:flex;justify-content:space-between;gap:10px;font-size:.74rem;color:var(--text-muted);font-weight:600;flex-wrap:wrap}
-.gm-breadth-legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
-.gm-breadth-legend .dot.up{background:#22c55e}
-.gm-breadth-legend .dot.flat{background:#94a3b8}
-.gm-breadth-legend .dot.down{background:#ef4444}
-.gm-breadth-legend b{color:var(--text);font-weight:800;margin-left:2px}
-
-/* ── Idea card ────────────────────────────────────────────── */
-.gm-idea-card{display:flex;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);align-items:flex-start}
-.gm-idea-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
-.gm-idea-title{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
-.gm-idea-text{font-size:.9rem;color:var(--text);margin-top:2px;line-height:1.55}
-.gm-idea-text strong{color:var(--text);font-weight:700}
-
-/* ── Movers cards ─────────────────────────────────────────── */
-.gm-mover-card{position:relative;overflow:hidden}
-.gm-mover-card.up{border-color:rgba(34,197,94,.45);background:linear-gradient(160deg, rgba(34,197,94,.06), var(--surface) 60%)}
-.gm-mover-card.down{border-color:rgba(239,68,68,.45);background:linear-gradient(160deg, rgba(239,68,68,.06), var(--surface) 60%)}
-.gm-mover-eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
-.gm-mover-card.up .gm-mover-eyebrow{color:#16a34a}
-.gm-mover-card.down .gm-mover-eyebrow{color:#dc2626}
-.gm-mover-flag{font-size:1.6rem;line-height:1;margin-top:4px}
-.gm-mover-name{font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gm-mover-sub{font-size:.74rem;color:var(--text-muted);font-weight:600;margin-top:-2px}
-.gm-mover-pct{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;margin-top:auto;line-height:1.1}
-.gm-mover-card.up .gm-mover-pct{color:#16a34a}
-.gm-mover-card.down .gm-mover-pct{color:#dc2626}
-
-/* ── Region blocks ────────────────────────────────────────── */
-.gm-regions{display:flex;flex-direction:column;gap:14px}
-.gm-region{border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden}
-.gm-region-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
-.gm-region-name{font-size:.95rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
-.gm-region-name i{color:var(--text-muted);font-size:.8rem}
-.gm-region-pill{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(148,163,184,.18);color:var(--text-muted);letter-spacing:.04em}
-.gm-region-pill.bull{background:rgba(34,197,94,.18);color:#15803d}
-.gm-region-pill.bear{background:rgba(239,68,68,.18);color:#b91c1c}
-.gm-region-meta{font-size:.74rem;color:var(--text-muted);font-weight:600}
-
-/* Cards: flex-wrap so the last row never has empty filler cells */
-.gm-region-grid{display:flex;flex-wrap:wrap;gap:1px;background:var(--border)}
-.gm-card{flex:1 1 240px;background:var(--surface);padding:11px 14px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:12px;row-gap:2px;transition:background .15s;position:relative;min-width:0}
-.gm-card::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:transparent}
-.gm-card.up::before{background:#22c55e}
-.gm-card.down::before{background:#ef4444}
-.gm-card.flat::before{background:#94a3b8}
-.gm-card:hover{background:var(--surface-2)}
-.gm-card-flag{font-size:1.5rem;line-height:1;grid-row:span 2}
-.gm-card-country{font-size:.88rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.gm-card-index{font-size:.72rem;color:var(--text-muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.gm-card-pct{font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.gm-card.up .gm-card-pct{color:#16a34a}
-.gm-card.down .gm-card-pct{color:#dc2626}
-.gm-card.flat .gm-card-pct{color:#64748b}
-.gm-card-price{font-size:.74rem;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-
-/* ── LIVE indicator ────────────────────────────────────────── */
-.gm-live-pill{display:inline-flex;align-items:center;gap:5px;font-size:.62rem;font-weight:800;letter-spacing:.08em;color:#15803d;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.4);padding:1px 7px;border-radius:999px;margin-left:6px;text-transform:uppercase;vertical-align:middle;line-height:1.4}
-.gm-live-pill.sm{font-size:.6rem;padding:1px 6px}
-.gm-live-pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.55);animation:gm-live-pulse 1.6s ease-out infinite}
-@keyframes gm-live-pulse{
-  0%  {box-shadow:0 0 0 0 rgba(34,197,94,.55)}
-  70% {box-shadow:0 0 0 7px rgba(34,197,94,0)}
-  100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
-}
-.gm-card.is-live{background:linear-gradient(180deg, rgba(34,197,94,.04), var(--surface) 60%)}
-.gm-card.is-live::after{content:"";position:absolute;top:7px;right:9px;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.55);animation:gm-live-pulse 1.6s ease-out infinite}
-.gm-region-live{display:inline-flex;align-items:center;gap:5px;font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#15803d;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.4);padding:2px 8px;border-radius:999px;margin-left:4px;text-transform:uppercase}
-[data-theme="dark"] .gm-live-pill,[data-theme="dark"] .gm-region-live{color:#86efac;background:rgba(34,197,94,.22);border-color:rgba(34,197,94,.5)}
-[data-theme="dark"] .gm-card.is-live{background:linear-gradient(180deg, rgba(34,197,94,.10), var(--surface) 65%)}
-
-/* ── Dark mode tweaks ─────────────────────────────────────── */
-[data-theme="dark"] .gm-banner{background:linear-gradient(135deg, rgba(99,102,241,.18), rgba(14,165,233,.10));border-color:var(--border-strong)}
-[data-theme="dark"] .gm-banner.bull{background:linear-gradient(135deg, rgba(34,197,94,.20), rgba(16,185,129,.08));border-color:rgba(34,197,94,.5)}
-[data-theme="dark"] .gm-banner.bear{background:linear-gradient(135deg, rgba(239,68,68,.20), rgba(220,38,38,.08));border-color:rgba(239,68,68,.5)}
-[data-theme="dark"] .gm-mover-card.up{background:linear-gradient(160deg, rgba(34,197,94,.18), var(--surface) 65%)}
-[data-theme="dark"] .gm-mover-card.down{background:linear-gradient(160deg, rgba(239,68,68,.18), var(--surface) 65%)}
-[data-theme="dark"] .gm-region-pill.bull{background:rgba(34,197,94,.22);color:#86efac}
-[data-theme="dark"] .gm-region-pill.bear{background:rgba(239,68,68,.22);color:#fca5a5}
-[data-theme="dark"] .gm-card.up .gm-card-pct{color:#4ade80}
-[data-theme="dark"] .gm-card.down .gm-card-pct{color:#f87171}
-[data-theme="dark"] .gm-mover-card.up .gm-mover-pct{color:#4ade80}
-[data-theme="dark"] .gm-mover-card.down .gm-mover-pct{color:#f87171}
-[data-theme="dark"] .gm-mover-card.up .gm-mover-eyebrow{color:#4ade80}
-[data-theme="dark"] .gm-mover-card.down .gm-mover-eyebrow{color:#f87171}
-[data-theme="dark"] .gm-breadth-bar{background:rgba(148,163,184,.15)}
-
-@media (max-width: 1024px){
-  .gm-hero{grid-template-columns:1fr 1fr}
-  .gm-banner{grid-column:1 / -1}
-}
-@media (max-width: 640px){
-  .gm-hero{grid-template-columns:1fr}
-  .gm-banner{grid-column:auto}
-  .gm-banner-emoji{font-size:2rem}
-  .gm-banner-label{font-size:1.15rem}
-  .gm-card{flex:1 1 100%}
-}
-</style>
 
 <script>
 (function(){
@@ -228,15 +86,13 @@
   let timer = null;
 
   function fmtPct(v){
-    if (v === null || v === undefined || isNaN(v)) return "—";
-    const s = v >= 0 ? "+" : "";
-    return `${s}${(+v).toFixed(2)}%`;
+    if (v === null || v === undefined || isNaN(v)) return "N/A";
+    return window.FCFormat.percent(+v, true);
   }
   function fmtPrice(v){
-    if (v === null || v === undefined || isNaN(v)) return "—";
+    if (v === null || v === undefined || isNaN(v)) return "N/A";
     const n = +v;
-    if (n >= 1000) return n.toLocaleString(undefined,{maximumFractionDigits:2});
-    return n.toFixed(2);
+    return n > 0 ? window.FCFormat.number(n, 2) : "N/A";
   }
   function classOf(pct){
     if (pct > 0.05) return "up";
@@ -256,19 +112,27 @@
   }
 
   function render(data){
-    if (!data || !data.regions) return;
+    if (!data || !Array.isArray(data.regions)) throw new Error("Invalid global markets payload");
+    if (!data.regions.length) {
+      $("gmLoading").innerHTML = "<p role=\"status\">No global market data is available.</p>";
+      return;
+    }
 
     const sent = data.sentiment || {};
     const banner = $("gmBanner");
     banner.classList.remove("bull","bear","neutral");
     banner.classList.add(sent.tone || "neutral");
-    $("gmSentEmoji").textContent = sent.emoji || "⚖️";
+    $("gmSentEmoji").textContent = "";
     $("gmSentLabel").textContent = sent.label || "—";
     const openCount = (data.stats || {}).open_count || 0;
     const openSuffix = openCount > 0
       ? ` · <span class="gm-live-pill sm" title="${openCount} ${openCount === 1 ? "market is" : "markets are"} currently open"><span class="gm-live-pulse"></span>${openCount} LIVE</span>`
       : "";
-    $("gmSentMeta").innerHTML = `Avg ${fmtPct(sent.avg_pct)} · Breadth ${(sent.breadth_pct ?? 0).toFixed(0)}% green${openSuffix}`;
+    const breadthValue = Number(sent.breadth_pct);
+    const breadth = sent.breadth_pct == null || !Number.isFinite(breadthValue)
+      ? window.FCFormat.missing('Market breadth is unavailable')
+      : `${window.FCFormat.percent(breadthValue,false)} green`;
+    $("gmSentMeta").innerHTML = `Avg ${fmtPct(sent.avg_pct)} · Breadth ${breadth}${openSuffix}`;
 
     const stateBadge = $("gmStateBadge");
     if (stateBadge){
@@ -295,7 +159,7 @@
     if (stats.top_gainer){
       const g = stats.top_gainer;
       const card = $("gmTopGainer");
-      card.querySelector(".gm-mover-flag").textContent = g.flag || "🌐";
+      card.querySelector(".gm-mover-flag").textContent = "";
       card.querySelector(".gm-mover-name").textContent = g.country || "";
       card.querySelector(".gm-mover-sub").textContent  = `${g.index || ""} · ${fmtPrice(g.price)}`;
       card.querySelector(".gm-mover-pct").textContent  = fmtPct(g.change_pct);
@@ -303,52 +167,63 @@
     if (stats.top_loser){
       const l = stats.top_loser;
       const card = $("gmTopLoser");
-      card.querySelector(".gm-mover-flag").textContent = l.flag || "🌐";
+      card.querySelector(".gm-mover-flag").textContent = "";
       card.querySelector(".gm-mover-name").textContent = l.country || "";
       card.querySelector(".gm-mover-sub").textContent  = `${l.index || ""} · ${fmtPrice(l.price)}`;
       card.querySelector(".gm-mover-pct").textContent  = fmtPct(l.change_pct);
     }
 
-    const regHTML = (data.regions || []).map((r) => {
-      const cards = (r.items || []).map((it) => {
-        const cls = classOf(it.change_pct);
-        const live = it.is_open
-          ? `<span class="gm-live-pill" title="Market open · ${escapeHTML(it.session || "")}"><span class="gm-live-pulse"></span>LIVE</span>`
-          : "";
-        const titleAttr = it.session ? ` title="${escapeHTML((it.is_open ? "Open" : "Closed") + " · " + it.session)}"` : "";
-        return `
-          <div class="gm-card ${cls} ${it.is_open ? "is-live" : ""}"${titleAttr}>
-            <span class="gm-card-flag">${it.flag}</span>
-            <span class="gm-card-country" title="${escapeHTML(it.country)}">${escapeHTML(it.country)}${live}</span>
-            <span class="gm-card-pct">${fmtPct(it.change_pct)}</span>
-            <span class="gm-card-index">${escapeHTML(it.index)}</span>
-            <span class="gm-card-price">${fmtPrice(it.price)}</span>
-          </div>`;
+    const regions = data.regions || [];
+    const labels = { "Asia-Pacific": "Asia" };
+    $("gmRegionTabs").innerHTML = regions.map((region, index) =>
+      `<button type="button" role="tab" id="gm-tab-${index}" aria-controls="gm-panel-${index}" aria-selected="${index === 0}" data-region-index="${index}">${escapeHTML(labels[region.name] || region.name)}</button>`
+    ).join("");
+    $("gmRegions").innerHTML = regions.map((region, index) => {
+      const rows = (region.items || []).map(item => {
+        const cls = classOf(item.change_pct);
+        const session = item.session ? ` title="${escapeHTML(item.session)}"` : "";
+        const status = item.is_open ? "Open" : "Closed";
+        return `<tr class="gm-card ${cls}">
+          <td class="gm-card-country">${escapeHTML(item.country || "N/A")}</td>
+          <td class="gm-card-index">${escapeHTML(item.index || "N/A")}</td>
+          <td class="gm-card-price">${fmtPrice(item.price)}</td>
+          <td class="gm-card-pct">${fmtPct(item.change_pct)}</td>
+          <td class="gm-card-status"${session}>${status}</td>
+          <td class="gm-card-spark"><span class="market-na" title="Historical series is not available from this quote feed">N/A</span></td>
+        </tr>`;
       }).join("");
-      const pillCls = r.tone === "bull" ? "bull" : (r.tone === "bear" ? "bear" : "");
-      const stateLbl = r.state || (r.tone === "bull" ? "BULLISH" : r.tone === "bear" ? "BEARISH" : "NEUTRAL");
-      const openTag = (r.open_count || 0) > 0
-        ? `<span class="gm-region-live"><span class="gm-live-pulse"></span>${r.open_count} LIVE</span>`
-        : "";
-      return `
-        <div class="gm-region">
-          <div class="gm-region-head">
-            <div class="gm-region-name">
-              <i class="fa-solid fa-location-dot"></i>${escapeHTML(r.name)}
-              <span class="gm-region-pill ${pillCls}">${stateLbl} · ${fmtPct(r.avg_pct)}</span>
-              ${openTag}
-            </div>
-            <div class="gm-region-meta">${(r.breadth_pct ?? 0).toFixed(0)}% green · ${r.items.length} indices</div>
-          </div>
-          <div class="gm-region-grid">${cards}</div>
-        </div>`;
+      return `<section class="gm-region" id="gm-panel-${index}" role="tabpanel" aria-labelledby="gm-tab-${index}" data-region-panel="${index}"${index ? " hidden" : ""}>
+        <div class="gm-region-grid"><table class="market-table gm-market-table">
+          <thead><tr><th>Market</th><th>Index</th><th>Value</th><th>Change</th><th>Status</th><th>Trend</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6">No index data available.</td></tr>'}</tbody>
+        </table></div>
+      </section>`;
     }).join("");
-
-    $("gmRegions").innerHTML = regHTML;
+    $("gmRegionTabs").querySelectorAll("[data-region-index]").forEach(tab => {
+      tab.addEventListener("click", () => {
+        const selected = tab.dataset.regionIndex;
+        $("gmRegionTabs").querySelectorAll("[data-region-index]").forEach(item => {
+          item.setAttribute("aria-selected", String(item === tab));
+          item.tabIndex = item === tab ? 0 : -1;
+        });
+        $("gmRegions").querySelectorAll("[data-region-panel]").forEach(panel => {
+          panel.hidden = panel.dataset.regionPanel !== selected;
+        });
+      });
+      tab.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        const tabs = Array.from($("gmRegionTabs").querySelectorAll("[data-region-index]"));
+        const index = tabs.indexOf(tab);
+        const next = tabs[(index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+        event.preventDefault();
+        next.focus();
+        next.click();
+      });
+    });
 
     if (data.ts){
       const d = new Date(data.ts * 1000);
-      $("gmUpdated").textContent = `Updated ${d.toLocaleTimeString()}`;
+      $("gmUpdated").textContent = `Updated ${window.FCFormat.time(d)}`;
     }
 
     $("gmLoading").hidden = true;
@@ -377,7 +252,7 @@
       if (!suppressErrors && $("gmContent").hidden) {
         console.error("global-markets load failed", e);
         $("gmLoading").innerHTML =
-          '<p style="color:var(--text-muted)">Couldn\u2019t load global markets right now. Please try again.</p>';
+          '<p role="alert">Global market data could not be loaded. Use Refresh to retry.</p>';
       }
       return false;
     }

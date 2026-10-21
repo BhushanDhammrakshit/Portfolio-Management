@@ -206,7 +206,9 @@ _BASELINE_TTL = 30 * 60  # 30 minutes
 def _build_baseline(symbol):
     """Heavy: 10-day avg volume + display name. Cached for 30 min."""
     try:
-        hist = market_data.get_history(symbol, days=15, interval="1d")
+        # 30 sessions gives the UI a 1-month sparkline window while the
+        # 10-day average below still uses the same trailing window as before.
+        hist = market_data.get_history(symbol, days=30, interval="1d")
         if hist is None or len(hist) < 2:
             return None
         hist = hist.dropna(subset=["Close", "Volume"])
@@ -215,6 +217,7 @@ def _build_baseline(symbol):
         prev_vols = hist["Volume"].iloc[-11:-1] if len(hist) >= 11 else hist["Volume"].iloc[:-1]
         avg_10d = int(prev_vols.mean()) if len(prev_vols) > 0 else 0
         prev_close = float(hist["Close"].iloc[-2])
+        spark = [round(float(value), 2) for value in hist["Close"].tail(22)]
 
         info = market_data.get_info(symbol) or {}
         short = symbol.replace(".NS", "")
@@ -222,6 +225,7 @@ def _build_baseline(symbol):
             "name": info.get("name") or short,
             "avg_10d_vol": avg_10d,
             "prev_close": prev_close,
+            "spark": spark,
         }
     except Exception as e:
         print(f"[volume baseline] {symbol}: {e}")
@@ -359,6 +363,10 @@ def _load(force=False):
             "signal": signal,
             "signal_reason": reason,
             "indices": SYMBOL_INDEX.get(sym, []),
+            "spark": base.get("spark") or [],
+            # Delivery percentage is not exposed by the live quote feed; the
+            # UI renders an explicit N/A instead of inventing a value.
+            "delivery_pct": None,
         })
 
     stocks.sort(key=lambda s: s["vol_ratio"], reverse=True)

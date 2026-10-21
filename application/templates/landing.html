@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Finance Candle — AI-powered portfolio &amp; trading platform for India</title>
+    <title>financeCandle — AI-powered portfolio &amp; trading platform for India</title>
     <meta name="description" content="Live multi-broker portfolio sync, options analytics, AI insights, RAG-powered filing search and pro-grade risk metrics — built for the Indian retail trader." />
     <meta name="keywords" content="portfolio tracker India, options analytics, AI stock analysis, Indian stock market, NSE, BSE, F&O analytics, mutual fund tracker, trading platform India, options chain, OI buildup" />
     <meta name="robots" content="index, follow" />
@@ -632,6 +632,10 @@
         .reveal { opacity: 0; transform: translateY(20px); transition: all .6s ease; }
         .reveal.in { opacity: 1; transform: translateY(0); }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/tokens.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/ui.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/landing.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/phase6.css') }}" />
 </head>
 <body>
 
@@ -640,7 +644,7 @@
     <div class="container-x pp-nav-inner">
         <a href="#" class="pp-brand">
             <span class="pp-brand-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
-            <span class="pp-brand-text">Finance<span class="pp-brand-accent">Candle</span></span>
+            <span class="pp-brand-text">finance<span class="pp-brand-accent">Candle</span></span>
         </a>
         <div class="pp-nav-links">
             <a href="#features">Features</a>
@@ -1212,7 +1216,7 @@
             <div>
                 <div class="pp-brand" style="margin-bottom:12px;">
                     <span class="pp-brand-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
-                    <span class="pp-brand-text">Finance<span class="pp-brand-accent">Candle</span></span>
+                    <span class="pp-brand-text">finance<span class="pp-brand-accent">Candle</span></span>
                 </div>
                 <p style="color:var(--muted); font-size:.88rem; max-width:340px; line-height:1.55;">
                     The AI-native portfolio &amp; trading platform built for Indian retail investors.

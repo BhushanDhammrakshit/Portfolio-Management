@@ -638,6 +638,17 @@ def reset_password_cancel():
 
 # ---------- Pages ----------
 
+@app.route("/design-system")
+@login_required
+def design_system_page():
+    return render_template(
+        "designSystem.html",
+        name=session.get("name", "User"),
+        email=session.get("email", ""),
+        title="Design System",
+    )
+
+
 @app.route("/home")
 @login_required
 def home():
@@ -764,7 +775,7 @@ def portfolioMaker():
     return render_template("portfolioMaker.html",
                            name=session["name"], email=session["email"],
                            stocks=stocks,
-                           title="Add Stock")
+                           title="Portfolio")
 
 
 @app.route("/profile")
@@ -1219,23 +1230,24 @@ def tv_chart():
 
     html = """<!doctype html><html><head><meta charset="utf-8">
 <title>__SYM__ · Chart</title>
+<link rel="stylesheet" href="/static/CSS/tokens.css">
 <style>
-  html,body{height:100%;width:100%;margin:0;padding:0;background:#f8fafc;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f2937}
-  .bar{display:flex;align-items:center;gap:6px;padding:6px 10px;
-    border-bottom:1px solid #e5e7eb;background:#fff}
-  .bar .sym{font-weight:700;font-size:14px;margin-right:8px}
-  .bar button{border:1px solid #d1d5db;background:#fff;color:#374151;
-    padding:3px 8px;border-radius:6px;font-size:12px;cursor:pointer}
-  .bar button.on{background:#4f46e5;color:#fff;border-color:#4f46e5}
-  .bar .sep{width:1px;height:18px;background:#e5e7eb;margin:0 4px}
-  .bar button.tg{border-color:#cbd5e1}
-  .bar button.tg.on{background:#0ea5e9;border-color:#0ea5e9}
-  .bar .status{margin-left:auto;font-size:12px;color:#6b7280}
-  #chart{position:absolute;left:0;right:0;bottom:0;top:38px}
-  .ohlc{font-size:12px;color:#6b7280;margin-left:10px}
-  .ohlc span{margin-right:8px}
-  .ohlc .up{color:#059669}.ohlc .dn{color:#dc2626}
+  html,body{height:100%;width:100%;margin:0;padding:0;background:var(--bg-app);
+    font-family:var(--font-sans);color:var(--text-primary)}
+  .bar{display:flex;align-items:center;gap:var(--space-2);min-height:var(--chart-toolbar-height);padding:var(--space-1) var(--space-3);
+    border-bottom:var(--border-width) solid var(--border);background:var(--bg-surface)}
+  .bar .sym{font-weight:600;font-size:var(--fs-card-title);margin-right:var(--space-2)}
+  .bar button{height:var(--chart-toolbar-button-height);border:var(--border-width) solid var(--border-strong);background:var(--bg-surface);color:var(--text-secondary);
+    padding:0 var(--space-2);border-radius:var(--radius-tag);font-size:var(--fs-caption);cursor:pointer}
+  .bar button.on{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+  .bar .sep{width:var(--border-width);height:var(--space-4);background:var(--border);margin:0 var(--space-1)}
+  .bar button.tg{border-color:var(--border-strong)}
+  .bar button.tg.on{background:var(--brand-soft);border-color:var(--brand-border);color:var(--brand)}
+  .bar .status{margin-left:auto;font-size:var(--fs-caption);color:var(--text-muted)}
+  #chart{position:absolute;left:0;right:0;bottom:0;top:var(--chart-toolbar-height)}
+  .ohlc{font-size:var(--fs-caption);color:var(--text-muted);margin-left:var(--space-3);font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .ohlc span{margin-right:var(--space-2)}
+  .ohlc .up{color:var(--positive)}.ohlc .dn{color:var(--negative)}
 </style></head><body>
 <div class="bar">
   <span class="sym">__SYM__</span>
@@ -1256,24 +1268,40 @@ def tv_chart():
 (function(){
   const SYM = "__SYM__";
   let curTf = "__TF__";
+  let theme = 'light';
+  try { theme = localStorage.getItem('fcTheme') || localStorage.getItem('ppTheme') || 'light'; } catch(e) {}
+  if (theme === 'auto') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  const css = getComputedStyle(document.documentElement);
+  const surface = css.getPropertyValue('--bg-surface').trim();
+  const text = css.getPropertyValue('--text-primary').trim();
+  const grid = css.getPropertyValue('--chart-grid').trim();
+  const border = css.getPropertyValue('--border-strong').trim();
+  const upColor = css.getPropertyValue('--positive').trim();
+  const downColor = css.getPropertyValue('--negative').trim();
+  const emaColor = css.getPropertyValue('--chart-accent').trim();
+  const rgba = (hex, alpha) => {
+    const value = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (value >> 16) + ',' + ((value >> 8) & 255) + ',' + (value & 255) + ',' + alpha + ')';
+  };
   const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-    layout:{background:{color:'#f8fafc'}, textColor:'#1f2937'},
-    grid:{vertLines:{color:'#e5e7eb'}, horzLines:{color:'#e5e7eb'}},
-    rightPriceScale:{borderColor:'#d1d5db'},
-    timeScale:{borderColor:'#d1d5db', timeVisible:true, secondsVisible:false},
+    layout:{background:{color:surface}, textColor:text},
+    grid:{vertLines:{color:grid}, horzLines:{color:grid}},
+    rightPriceScale:{borderColor:border},
+    timeScale:{borderColor:border, timeVisible:true, secondsVisible:false},
     crosshair:{mode:1}
   });
   const series = chart.addCandlestickSeries({
-    upColor:'#059669', downColor:'#dc2626',
-    borderUpColor:'#059669', borderDownColor:'#dc2626',
-    wickUpColor:'#059669', wickDownColor:'#dc2626'
+    upColor:upColor, downColor:downColor,
+    borderUpColor:upColor, borderDownColor:downColor,
+    wickUpColor:upColor, wickDownColor:downColor
   });
   const volSeries = chart.addHistogramSeries({
     priceFormat:{type:'volume'}, priceScaleId:'', color:'#94a3b8',
     scaleMargins:{top:0.8, bottom:0}
   });
   const emaSeries = chart.addLineSeries({
-    color:'#f59e0b', lineWidth:2, priceLineVisible:false, lastValueVisible:false,
+    color:emaColor, lineWidth:2, priceLineVisible:false, lastValueVisible:false,
     crosshairMarkerVisible:false
   });
   function computeEma(bars, period){
@@ -1313,7 +1341,7 @@ def tv_chart():
         if(!bars.length){ statusEl.textContent='No data'; series.setData([]); volSeries.setData([]); emaSeries.setData([]); return; }
         series.setData(bars.map(b=>({time:b.t, open:b.o, high:b.h, low:b.l, close:b.c})));
         volSeries.setData(bars.map(b=>({time:b.t, value:b.v||0,
-          color: b.c>=b.o ? 'rgba(5,150,105,0.4)' : 'rgba(220,38,38,0.4)'})));
+          color: b.c>=b.o ? rgba(upColor,0.4) : rgba(downColor,0.4)})));
         emaSeries.setData(computeEma(bars, 20));
         chart.timeScale().fitContent();
         statusEl.textContent = bars.length + ' bars · ' + (j.source || '');
@@ -1428,4 +1456,3 @@ def tv_ohlc():
         "source": market_data.provider_name(),
         "bars": bars,
     })
-

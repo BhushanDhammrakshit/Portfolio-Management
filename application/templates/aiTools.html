@@ -45,20 +45,78 @@
 .kpi-box .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
 .kpi-box .val{font-size:1.3rem;font-weight:700;margin-top:3px;color:var(--text)}
 .rule-row{display:grid;grid-template-columns:1fr 100px 130px 40px;gap:6px;margin-bottom:6px;align-items:center}
-.idea-card{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:2px solid #c4b5fd;border-radius:12px;padding:20px;margin-top:14px}
+.idea-card{background:var(--bg-subtle);border:2px solid #c4b5fd;border-radius:12px;padding:20px;margin-top:14px}
 [data-theme="dark"] .idea-card{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3)}
 .idea-card h3{margin:0 0 4px;font-size:1.4rem;font-weight:800}
 .idea-blurb{background:var(--surface);padding:14px;border-radius:8px;margin-top:12px;white-space:pre-wrap;line-height:1.6;font-size:.92rem}
 .style-pill-btn{padding:10px 16px;border:2px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:6px}
-.style-pill-btn.active{border-color:#8b5cf6;background:linear-gradient(135deg,#faf5ff,#f3e8ff);color:#7c3aed}
+.style-pill-btn.active{border-color:#8b5cf6;background:var(--bg-subtle);color:#7c3aed}
 [data-theme="dark"] .style-pill-btn.active{background:rgba(139,92,246,.18)}
 </style>
+<style>
+.fc-tools-page .page-header{margin-bottom:var(--space-4)}
+.fc-tools-page .page-header h1{font-size:var(--fs-page-title);line-height:var(--lh-page-title);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.fc-tools-page .page-header p{margin:.25rem 0 0;color:var(--text-secondary);font-size:var(--fs-body)}
+.tool-directory{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--card-gap);margin:0 0 var(--space-5)}
+.tool-directory-card{min-height:var(--analysis-summary-cell-min-height);padding:var(--space-4);display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);text-align:left;text-decoration:none;cursor:pointer;transition:background-color var(--transition),border-color var(--transition)}
+.tool-directory-card:hover{background:var(--bg-subtle);border-color:var(--border-strong);color:var(--text-primary)}
+.tool-directory-card:focus-visible{outline:0;box-shadow:var(--focus-ring)}
+.tool-directory-card.tools-tab.active{background:var(--brand-soft);border-color:var(--brand-border);color:var(--text-primary);box-shadow:none}
+.tool-directory-title{font-size:var(--fs-body);font-weight:var(--fw-semibold)}
+.tool-directory-description{font-size:var(--fs-caption);line-height:var(--lh-caption);color:var(--text-secondary)}
+.tool-directory-open{margin-top:auto;color:var(--brand);font-size:var(--fs-caption);font-weight:var(--fw-semibold)}
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+.tool-header{align-items:center;margin-bottom:var(--space-3)}
+.tool-header h2{font-size:var(--fs-section-title);line-height:var(--lh-section-title);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.tool-header p{font-size:var(--fs-caption);color:var(--text-secondary)}
+.tool-card,.kpi-box,.table-scroll{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:none}
+.tool-card{padding:var(--space-4)}
+.tool-table{font-size:var(--fs-body);color:var(--text-primary)}
+.tool-table th{height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);color:var(--text-secondary);font-size:var(--fs-label);font-weight:var(--fw-medium);text-transform:none;letter-spacing:0;border-bottom:1px solid var(--border)}
+.tool-table td{height:var(--table-row-height-compact);padding:var(--space-2) var(--space-3);border-color:var(--border)}
+.tool-table .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.gain-pos{color:var(--positive);font-weight:var(--fw-medium)}
+.gain-neg{color:var(--negative);font-weight:var(--fw-medium)}
+.pill{padding:var(--space-1) var(--space-2);border-radius:var(--radius-tag);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);letter-spacing:0}
+.pill-intraday,.pill-swing,.pill-investing,.pill-up,.pill-dn,.pill-warn,.pill-neutral,.pill-armed,.pill-triggered{background:transparent;color:var(--text-secondary)}
+.pill-triggered{animation:none}
+.tools-tabs{display:none}
+.idea-card{margin-top:var(--space-3);padding:var(--space-4);border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface)}
+.idea-card h3{font-size:var(--fs-section-title);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.idea-blurb{padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-subtle);color:var(--text-primary);font-size:var(--fs-body);line-height:var(--lh-body)}
+.style-pill-btn{min-height:var(--control-height-small);padding:var(--space-1) var(--space-2);border:1px solid var(--border);border-radius:var(--radius-tag);background:var(--bg-surface);color:var(--text-secondary);font-size:var(--fs-label);font-weight:var(--fw-medium)}
+.style-pill-btn.active{border-color:var(--brand-border);background:var(--brand-soft);color:var(--brand)}
+[data-theme="dark"] .fc-tools-page .idea-card{border-color:var(--border);background:var(--bg-surface)}
+[data-theme="dark"] .fc-tools-page .style-pill-btn.active{border-color:var(--brand-border);background:var(--brand-soft);color:var(--brand)}
+.watchlist-tabs{display:flex;gap:var(--space-2);border-bottom:1px solid var(--border);margin-bottom:var(--space-3);overflow:auto}
+.watchlist-tab{height:var(--tabs-height);padding:0 var(--space-3);border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font:var(--fw-medium) var(--fs-body)/var(--lh-body) var(--font-sans);white-space:nowrap}
+.watchlist-tab.active{border-bottom-color:var(--brand);color:var(--brand)}
+.watchlist-tab span{margin-left:var(--space-1);font:var(--fw-medium) var(--fs-label)/var(--lh-label) var(--font-mono);color:var(--text-muted)}
+.watchlist-table-card{padding:0}
+.watchlist-table-scroll{overflow:auto}
+.watchlist-table{min-width:var(--watchlist-table-min-width)}
+.watchlist-table td:first-child strong,.watchlist-table td:first-child small{display:block}
+.watchlist-table td:first-child strong{font-size:var(--fs-body);font-weight:var(--fw-medium)}
+.watchlist-table td:first-child small{margin-top:var(--space-1);color:var(--text-muted);font-size:var(--fs-caption)}
+.watchlist-row-menu{position:relative}
+.watchlist-row-menu summary{color:var(--text-secondary);font-size:var(--fs-label);cursor:pointer}
+.watchlist-row-menu[open] summary{color:var(--brand)}
+.watchlist-row-menu button{position:absolute;right:0;top:100%;z-index:var(--z-dropdown);min-width:var(--watchlist-menu-width);padding:var(--space-2);border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface);color:var(--negative);text-align:left;box-shadow:var(--shadow-dropdown)}
+.fc-tools-page .empty-state{padding:var(--space-5);font-size:var(--fs-body);color:var(--text-secondary)}
+.fc-tools-page .empty-state i{display:none}
+.fc-tools-page .modal-content{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface);color:var(--text-primary);box-shadow:var(--shadow-modal)}
+.fc-tools-page .modal-header,.fc-tools-page .modal-footer{border-color:var(--border)}
+@media(max-width:1100px){.tool-directory{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:767px){.tool-directory{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}.tool-directory-card{min-height:var(--analysis-summary-cell-min-height);padding:var(--space-3)}}
+@media(max-width:480px){.tool-directory{grid-template-columns:1fr}}
+</style>
 
-<div class="page-container">
+<div class="page-container fc-tools-page">
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
         <div>
-            <h1><i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI &amp; Tools</h1>
-            <p>Watchlist, smart alerts, no-code strategy builder, AI idea-of-the-day.</p>
+            <h1>{{ title }}</h1>
+            <p>{% if title == 'Watchlist' %}Monitor securities by trading horizon.{% else %}Research and portfolio tools for Indian markets.{% endif %}</p>
         </div>
     </header>
 
@@ -69,37 +127,48 @@
         a SEBI-registered adviser or research analyst. Always do your own research.
     </div>
 
-    <div class="tools-tabs">
-        <button class="tools-tab active" data-tab="watchlist"><i class="fa-solid fa-star"></i>Watchlist</button>
-        <button class="tools-tab" data-tab="alerts"><i class="fa-solid fa-bell"></i>Alert Center</button>
-        <button class="tools-tab" data-tab="strategy"><i class="fa-solid fa-sliders"></i>Strategy Builder</button>
-        <button class="tools-tab" data-tab="idea"><i class="fa-solid fa-lightbulb"></i>Idea of the Day</button>
+    <div class="tool-directory" aria-label="Available tools">
+        <button class="tool-directory-card tools-tab{% if active_tool_panel == 'watchlist' %} active{% endif %}" data-tab="watchlist" type="button">
+            <span class="tool-directory-title">Watchlist</span>
+            <span class="tool-directory-description">Track securities grouped by trading horizon.</span>
+            <span class="tool-directory-open">Open</span>
+        </button>
+        <button class="tool-directory-card tools-tab{% if active_tool_panel == 'alerts' %} active{% endif %}" data-tab="alerts" type="button">
+            <span class="tool-directory-title">Alert Center</span>
+            <span class="tool-directory-description">Review price, change, volume and RSI alerts.</span>
+            <span class="tool-directory-open">Open</span>
+        </button>
+        <button class="tool-directory-card tools-tab{% if active_tool_panel == 'strategy' %} active{% endif %}" data-tab="strategy" type="button">
+            <span class="tool-directory-title">Strategy Builder</span>
+            <span class="tool-directory-description">Create and evaluate rule-based market scans.</span>
+            <span class="tool-directory-open">Open</span>
+        </button>
+        <button class="tool-directory-card tools-tab{% if active_tool_panel == 'idea' %} active{% endif %}" data-tab="idea" type="button">
+            <span class="tool-directory-title">Idea of the Day</span>
+            <span class="tool-directory-description">Review the available daily market idea.</span>
+            <span class="tool-directory-open">Open</span>
+        </button>
+        <a class="tool-directory-card" href="{{ url_for('algoHelper') }}">
+            <span class="tool-directory-title">AI Assistant</span>
+            <span class="tool-directory-description">Ask questions using portfolio context.</span>
+            <span class="tool-directory-open">Open</span>
+        </a>
     </div>
 
     <!-- Watchlist -->
-    <section class="tool-panel active" id="panel-watchlist">
+    <section class="tool-panel{% if active_tool_panel == 'watchlist' %} active{% endif %}" id="panel-watchlist">
         <div class="tool-header">
-            <div><h2>Unified Watchlist</h2><p>Tag any stock as intraday / swing / investing with optional note.</p></div>
-        </div>
-        <div class="tool-card">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3"><label class="form-label" style="font-size:.78rem">Symbol</label><input class="form-control form-control-sm" id="wlSym" placeholder="RELIANCE" data-stock-suggest /></div>
-                <div class="col-md-2"><label class="form-label" style="font-size:.78rem">Style</label>
-                    <select class="form-select form-select-sm" id="wlStyle">
-                        <option value="intraday">Intraday</option>
-                        <option value="swing" selected>Swing</option>
-                        <option value="investing">Investing</option>
-                    </select>
-                </div>
-                <div class="col-md-5"><label class="form-label" style="font-size:.78rem">Note (optional)</label><input class="form-control form-control-sm" id="wlNote" placeholder="e.g. wait for 1500 break" /></div>
-                <div class="col-md-2"><button class="btn btn-primary btn-sm w-100" id="wlAdd">Add</button></div>
+            <div><h2>Watchlist</h2><p>Lists are grouped by trading horizon.</p></div>
+            <div class="tool-controls">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#watchlistAddModal">Add Stock</button>
             </div>
         </div>
+        <div class="watchlist-tabs" id="wlListTabs" role="tablist" aria-label="Watchlist lists"></div>
         <div id="wlContent"></div>
     </section>
 
     <!-- Alerts -->
-    <section class="tool-panel" id="panel-alerts">
+    <section class="tool-panel{% if active_tool_panel == 'alerts' %} active{% endif %}" id="panel-alerts">
         <div class="tool-header">
             <div><h2>Alert Center</h2><p>Price, %-change, volume-spike &amp; RSI alerts evaluated on every refresh.</p></div>
             <div class="tool-controls"><button class="btn btn-primary btn-sm" id="alRefresh"><i class="fa-solid fa-arrows-rotate me-1"></i>Re-evaluate</button></div>
@@ -128,7 +197,7 @@
     </section>
 
     <!-- Strategy Builder -->
-    <section class="tool-panel" id="panel-strategy">
+    <section class="tool-panel{% if active_tool_panel == 'strategy' %} active{% endif %}" id="panel-strategy">
         <div class="tool-header">
             <div><h2>No-Code Strategy Builder</h2><p>Compose rules (AND-joined) and scan the universe instantly.</p></div>
         </div>
@@ -142,7 +211,7 @@
     </section>
 
     <!-- Idea of the Day -->
-    <section class="tool-panel" id="panel-idea">
+    <section class="tool-panel{% if active_tool_panel == 'idea' %} active{% endif %}" id="panel-idea">
         {% if has_pro %}
         <div class="tool-header">
             <div><h2>AI Idea of the Day</h2><p>Daily curated pick per trading style — backed by live scans + AI commentary.</p></div>
@@ -163,6 +232,34 @@
 
 </div>
 
+<div class="modal fade" id="watchlistAddModal" tabindex="-1" aria-labelledby="watchlistAddTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="watchlistAddTitle">Add to Watchlist</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="wlSym">Stock symbol</label>
+                <input class="form-control mb-3" id="wlSym" placeholder="e.g. RELIANCE" data-stock-suggest required />
+                <label class="form-label" for="wlStyle">List</label>
+                <select class="form-select mb-3" id="wlStyle">
+                    <option value="intraday">Intraday</option>
+                    <option value="swing" selected>Swing</option>
+                    <option value="investing">Investing</option>
+                </select>
+                <label class="form-label" for="wlNote">Note <span class="text-muted">(optional)</span></label>
+                <input class="form-control" id="wlNote" maxlength="240" />
+                <div class="text-danger small mt-2" id="wlAddError" role="status" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="wlAdd">Add Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function(){
     document.querySelectorAll('.tools-tab').forEach(b=>b.addEventListener('click',()=>{
@@ -175,9 +272,9 @@
         if(b.dataset.tab==='idea')loadIdea();
     }));
 
-    const fmt=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-IN',{maximumFractionDigits:d});
-    const inr=(v)=>v==null||isNaN(v)?'—':'₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:2});
-    const pct=(v)=>v==null?'—':(v>=0?'+':'')+Number(v).toFixed(2)+'%';
+    const fmt=(v,d=2)=>v==null||isNaN(v)?window.FCFormat.missing():Number(v).toLocaleString('en-IN',{maximumFractionDigits:d});
+    const inr=(v)=>window.FCFormat.currency(v,false);
+    const pct=(v)=>window.FCFormat.percent(v,true);
     const cls=(v)=>v>0?'gain-pos':v<0?'gain-neg':'';
     const setLoading=(id)=>{document.getElementById(id).innerHTML='<div class="spinner-wrap"><div class="app-spinner lg text-primary"></div><p class="mt-2 text-muted">Working…</p></div>';};
     const setError=(id,m)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h4>Failed</h4><p>${m||''}</p></div>`;};
@@ -192,40 +289,88 @@
     }
 
     // ============ WATCHLIST ============
+    const watchlistNames = {intraday:'Intraday',swing:'Swing',investing:'Investing'};
+    let activeWatchlist = 'intraday';
+    let watchlistGroups = {};
+    const escapeText = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+    function renderWatchlistTabs(){
+        const host=document.getElementById('wlListTabs');
+        host.innerHTML=Object.keys(watchlistNames).map(style=>{
+            const count=(watchlistGroups[style]||[]).length;
+            return `<button type="button" class="watchlist-tab${style===activeWatchlist?' active':''}" role="tab" aria-selected="${style===activeWatchlist}" data-watchlist="${style}">${watchlistNames[style]} <span>${count}</span></button>`;
+        }).join('');
+        host.querySelectorAll('[data-watchlist]').forEach(button=>button.addEventListener('click',()=>{
+            activeWatchlist=button.dataset.watchlist;
+            renderWatchlistTabs();
+            renderWatchlistRows();
+        }));
+    }
+    function renderWatchlistRows(){
+        const items=watchlistGroups[activeWatchlist]||[];
+        if(!items.length){
+            empty('wlContent',`No securities in the ${watchlistNames[activeWatchlist]} list.`);
+            return;
+        }
+        const rows=items.map(it=>{
+            const change=it.change_pct==null?window.FCFormat.missing('Daily change is unavailable from the quote feed.'):pct(it.change_pct);
+            const range=window.FCFormat.missing('Day high and low are not provided by this feed.');
+            const spark=window.FCFormat.missing('Historical series is not included in the Watchlist response.');
+            return `<tr>
+                <td><strong>${escapeText(it.name)}</strong><small>${escapeText(it.symbol)}</small></td>
+                <td class="num">${inr(it.ltp)}</td>
+                <td class="num ${cls(it.change)}">${window.FCFormat.currency(it.change,true,'Absolute daily change is not included in the Watchlist response.')}</td>
+                <td class="num ${cls(it.change_pct)}">${change}</td>
+                <td class="num">${window.FCFormat.volume(it.volume,'Volume is not provided by this feed.')}</td>
+                <td class="watchlist-range-cell">${range}</td>
+                <td>${spark}</td>
+                <td>${escapeText(it.note)||'<span class="text-muted">N/A</span>'}</td>
+                <td><details class="watchlist-row-menu"><summary aria-label="Actions for ${escapeText(it.symbol)}">Actions</summary><button type="button" data-delete-watchlist="${escapeText(it.id)}">Remove</button></details></td>
+            </tr>`;
+        }).join('');
+        document.getElementById('wlContent').innerHTML=`<div class="tool-card watchlist-table-card"><div class="watchlist-table-scroll"><table class="tool-table watchlist-table"><thead><tr><th>Security</th><th class="num">LTP</th><th class="num">Change</th><th class="num">Change %</th><th class="num">Volume</th><th>Day Range</th><th>Mini Chart</th><th>Note</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        document.getElementById('wlContent').querySelectorAll('[data-delete-watchlist]').forEach(button=>button.addEventListener('click',()=>window.__delWL(button.dataset.deleteWatchlist)));
+    }
     async function loadWatchlist(){
         setLoading('wlContent');
         try{
             const r=await fetch('/api/ai-tools/watchlist');const d=await r.json();
+            if(!r.ok)throw new Error(d.detail||d.error||'Watchlist could not be loaded.');
             if(d.error){setError('wlContent',d.error);return;}
-            if(!d.items||!d.items.length){empty('wlContent','Add a stock above to start.');return;}
-            let html='';
-            ['intraday','swing','investing'].forEach(style=>{
-                const items=d.by_style[style]||[];
-                if(!items.length)return;
-                html+=`<div class="style-group"><div class="style-group-head"><span class="pill pill-${style}">${style.toUpperCase()}</span> · ${items.length} item${items.length>1?'s':''}</div>`;
-                html+='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th class="num">LTP</th><th class="num">Change %</th><th>Note</th><th>Added</th><th></th></tr></thead><tbody>';
-                items.forEach(it=>{
-                    html+=`<tr><td><strong>${it.name}</strong><br><small class="text-muted">${it.symbol}</small></td>`+
-                        `<td class="num">${inr(it.ltp)}</td>`+
-                        `<td class="num ${cls(it.change_pct)}">${pct(it.change_pct)}</td>`+
-                        `<td>${(it.note||'').replace(/</g,'&lt;')||'—'}</td>`+
-                        `<td><small class="text-muted">${(it.added_at||'').slice(0,10)}</small></td>`+
-                        `<td><button class="btn-danger-soft" onclick="window.__delWL('${it.id}')"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-                });
-                html+='</tbody></table></div></div>';
-            });
-            document.getElementById('wlContent').innerHTML=html||'<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>Empty</h4></div>';
+            watchlistGroups=d.by_style||{};
+            renderWatchlistTabs();
+            renderWatchlistRows();
         }catch(e){setError('wlContent',e.message);}
     }
-    window.__delWL=async(id)=>{await fetch('/api/ai-tools/watchlist/'+id,{method:'DELETE'});loadWatchlist();};
+    window.__delWL=async(id)=>{
+        try{
+            const response=await fetch('/api/ai-tools/watchlist/'+encodeURIComponent(id),{method:'DELETE'});
+            const result=await response.json();
+            if(!response.ok)throw new Error(result.detail||result.error||'Stock could not be removed.');
+            await loadWatchlist();
+        }catch(error){setError('wlContent',error.message);}
+    };
     document.getElementById('wlAdd').addEventListener('click',async()=>{
         const sym=document.getElementById('wlSym').value.trim();
-        if(!sym)return;
-        await fetch('/api/ai-tools/watchlist',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({symbol:sym,style:document.getElementById('wlStyle').value,
-                note:document.getElementById('wlNote').value})});
-        document.getElementById('wlSym').value='';document.getElementById('wlNote').value='';
-        loadWatchlist();
+        const error=document.getElementById('wlAddError');
+        if(!sym){
+            error.textContent='Enter a stock symbol.';
+            error.hidden=false;
+            document.getElementById('wlSym').focus();
+            return;
+        }
+        error.hidden=true;
+        try{
+            const response=await fetch('/api/ai-tools/watchlist',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({symbol:sym,style:document.getElementById('wlStyle').value,
+                    note:document.getElementById('wlNote').value})});
+            const result=await response.json();
+            if(!response.ok||result.error)throw new Error(result.detail||result.message||result.error||'Stock could not be added.');
+            document.getElementById('wlSym').value='';document.getElementById('wlNote').value='';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('watchlistAddModal')).hide();
+            await loadWatchlist();
+        }catch(addError){error.textContent=addError.message;error.hidden=false;}
     });
 
     // ============ ALERTS ============
@@ -373,8 +518,11 @@
         }catch(e){setError('ideaContent',e.message);}
     }
 
-    // Initial
-    loadWatchlist();
+    // Initial panel requested by the route.
+    const initialPanel=document.querySelector('.tool-panel.active');
+    if(initialPanel&&initialPanel.id==='panel-watchlist')loadWatchlist();
+    else if(initialPanel&&initialPanel.id==='panel-alerts')loadAlerts();
+    else if(initialPanel&&initialPanel.id==='panel-idea')loadIdea();
 })();
 </script>
 {% endblock %}

@@ -5,7 +5,7 @@
 .mf-tabs::-webkit-scrollbar{height:6px}
 .mf-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .mf-tab:hover{background:var(--surface-2);color:var(--text)}
-.mf-tab.active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+.mf-tab.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.25)}
 .mf-panel{display:none}
 .mf-panel.active{display:block}
 .mf-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
@@ -43,7 +43,7 @@
 .matrix-table{width:100%;border-collapse:collapse;font-size:.85rem}
 .matrix-table th{background:var(--surface-2);padding:8px;font-size:.72rem}
 .heat{padding:10px;text-align:center;border-radius:4px}
-.ai-block{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #d8b4fe;border-radius:12px;padding:16px}
+.ai-block{background:var(--bg-subtle);border:1px solid #d8b4fe;border-radius:12px;padding:16px}
 [data-theme="dark"] .ai-block{background:rgba(124,58,237,.1);border-color:rgba(168,85,247,.3)}
 .ai-issue{padding:10px 12px;border-left:4px solid #f59e0b;background:var(--surface);border-radius:6px;margin-bottom:8px}
 .ai-issue.high{border-color:#dc2626}
@@ -164,7 +164,7 @@
         .calc-legend .row .left{display:flex;align-items:center;gap:10px;font-size:.83rem;color:var(--text-muted);font-weight:600}
         .calc-legend .row .left .dot{width:10px;height:10px;border-radius:50%}
         .calc-legend .row .val{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;font-size:.95rem}
-        .calc-legend .row.total{background:linear-gradient(135deg,#7c3aed,#5b21b6);border:0;color:#fff}
+        .calc-legend .row.total{background:var(--brand);border:0;color:#fff}
         .calc-legend .row.total .left,.calc-legend .row.total .val{color:#fff}
         .calc-cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;width:100%;max-width:300px}
         .calc-cta button{flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:.78rem;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s}

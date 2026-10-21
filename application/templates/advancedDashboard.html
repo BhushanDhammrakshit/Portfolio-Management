@@ -4,7 +4,7 @@
 {% if not has_elite %}
 <div class="page-container">
     <header class="page-header mb-3">
-        <h1><i class="fa-solid fa-chart-pie me-2"></i>Advanced Metrics</h1>
+        <h1>Advanced Metrics</h1>
         <p>Sharpe, beta, max drawdown, sector exposure and other portfolio-level analytics.</p>
     </header>
     {{ upgrade_card('elite', title='Advanced Metrics — Elite feature', message='Sharpe, beta, max drawdown, sector exposure and rolling correlation for your portfolio. Upgrade to Elite to unlock.') }}
@@ -13,148 +13,175 @@
 <div class="advanced-dashboard">
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
         <div>
-            <h1><i class="fa-solid fa-chart-line me-2"></i>Advanced Metrics</h1>
-            <p>Bloomberg-style portfolio risk &amp; performance metrics.</p>
+            <h1>Advanced Metrics</h1>
+            <p>Portfolio risk and performance analysis</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span id="analyticsUpdated" class="text-muted" style="font-size:.78rem"></span>
+        <div class="d-flex align-items-center gap-2 analytics-actions">
+            <span id="analyticsUpdated" class="text-muted"></span>
+            <button id="exportAnalyticsCsv" type="button" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+            <button id="exportAnalyticsPdf" type="button" class="btn btn-outline-secondary btn-sm">Export PDF</button>
             <button id="loadAnalytics" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-bolt me-1"></i>Load analytics
+                Refresh
             </button>
         </div>
     </header>
 
-    <div id="analyticsLoading" class="text-center py-5" hidden>
-        <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
-        <p class="mt-2 text-muted">Crunching 1-year historical data&hellip; This may take a few seconds.</p>
+    <div id="analyticsLoading" class="analytics-skeleton" hidden role="status" aria-label="Loading portfolio metrics">
+        <div class="skeleton-summary"></div>
+        <div class="skeleton-kpis"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="skeleton-panels"><span></span><span></span><span></span></div>
+        <p>Loading portfolio analytics…</p>
     </div>
 
     <div id="analyticsError" hidden></div>
 
     <div id="analyticsContent" hidden>
+        <nav class="analytics-section-nav" aria-label="Advanced metrics sections">
+            <a href="#analyticsOverview" class="active">Overview</a>
+            <a href="#analyticsRisk">Risk</a>
+            <a href="#analyticsPerformance">Performance</a>
+            <a href="#analyticsAllocation">Allocation</a>
+            <a href="#analyticsHoldings">Holdings</a>
+        </nav>
         <!-- Shown when historical data was unavailable and only basic
              (value/P&L) metrics could be computed. -->
-        <div id="analyticsFallbackBanner" class="alert alert-warning d-flex align-items-start gap-2 mb-3" hidden>
-            <i class="fa-solid fa-triangle-exclamation mt-1"></i>
-            <div>
-                <strong>Historical data temporarily unavailable.</strong>
-                Risk metrics, charts and ratios need price history that couldn't be
-                loaded right now. Value and P&amp;L are still accurate. Please try
-                <a href="#" id="fallbackRetry">refreshing</a> in a little while.
-            </div>
+        <div id="analyticsFallbackBanner" class="analytics-notice mb-3" hidden role="status">
+            <span class="notice-icon" aria-hidden="true">i</span>
+            <span>Historical price data is currently unavailable. Value and P&amp;L are current; risk metrics may be incomplete.</span>
+            <a href="#" id="fallbackRetry">Retry</a>
+            <button type="button" class="notice-dismiss" aria-label="Dismiss notice">&times;</button>
         </div>
-        <!-- Health score hero (plain-English summary at a glance) -->
+        <section id="analyticsOverview" class="analytics-section">
         <div class="surface-card health-hero p-3 mb-3" id="healthHero"></div>
 
-        <!-- Performance Summary Strip -->
         <div class="metrics-strip" id="perfStrip"></div>
 
-        <!-- Verdict + next steps -->
         <div class="surface-card p-3 mt-3" id="verdictCard"></div>
+        </section>
 
-        <!-- Performance vs Benchmark chart -->
+        <section id="analyticsPerformance" class="analytics-section">
         <div class="row g-3 mt-2">
             <div class="col-lg-8">
-                <div class="surface-card p-3 h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0"><i class="fa-solid fa-chart-area me-1 text-primary"></i>Cumulative return vs NIFTY 50</h6>
-                        <span class="badge bg-light text-dark" id="periodBadge">1Y</span>
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header">
+                        <div class="analytics-card-title-wrap">
+                            <h2 class="analytics-card-title">Cumulative Return vs NIFTY 50</h2>
+                            <div class="chart-legend"><span class="legend-portfolio">Portfolio</span><span class="legend-benchmark">NIFTY 50</span></div>
+                        </div>
+                        <div class="period-control" role="group" aria-label="Chart period">
+                            <button type="button" data-period="1M">1M</button><button type="button" data-period="3M">3M</button><button type="button" data-period="6M">6M</button><button type="button" data-period="1Y">1Y</button><button type="button" data-period="ALL" class="active" aria-pressed="true">ALL</button>
+                        </div>
                     </div>
-                    <div class="adv-chart-wrap"><canvas id="cumReturnChart"></canvas></div>
+                    <div class="analytics-card-body"><div class="adv-chart-wrap"><canvas id="cumReturnChart" aria-label="Cumulative portfolio return compared with the NIFTY 50 benchmark" role="img"></canvas></div></div>
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-gauge-high me-1 text-warning"></i>Risk ratios</h6>
-                    <div id="riskRatiosPanel"></div>
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Risk &amp; Return Ratios</h2></div>
+                    <div class="analytics-card-body"><div id="riskRatiosPanel"></div></div>
                 </div>
             </div>
         </div>
+        </section>
 
-        <!-- Drawdown + VaR -->
+        <section id="analyticsRisk" class="analytics-section">
         <div class="row g-3 mt-2">
             <div class="col-lg-8">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-water me-1 text-danger"></i>Drawdown</h6>
-                    <div class="adv-chart-wrap-sm"><canvas id="drawdownChart"></canvas></div>
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Drawdown</h2></div>
+                    <div class="analytics-card-body"><div class="adv-chart-wrap-sm"><canvas id="drawdownChart" aria-label="Portfolio drawdown over time" role="img"></canvas></div></div>
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-shield-halved me-1 text-danger"></i>Value at Risk</h6>
-                    <div id="varPanel"></div>
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Value at Risk</h2></div>
+                    <div class="analytics-card-body"><div id="varPanel"></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- Monthly Returns Heatmap + Stats -->
-        <div class="surface-card p-3 mt-3">
-            <h6 class="fw-bold mb-2"><i class="fa-solid fa-calendar-days me-1 text-success"></i>Monthly returns heatmap</h6>
-            <div id="monthlyStats" class="monthly-stats mb-3"></div>
-            <div class="monthly-heatmap" id="monthlyHeatmap"></div>
+        <div class="surface-card analytics-card mt-3">
+            <div class="analytics-card-header"><h2 class="analytics-card-title">Monthly Returns</h2></div>
+            <div class="analytics-card-body">
+                <div id="monthlyStats" class="monthly-stats mb-3"></div>
+                <div class="monthly-heatmap-wrap"><div class="monthly-heatmap" id="monthlyHeatmap"></div></div>
+                <div class="heatmap-scale" aria-label="Return scale"><span>Negative</span><i></i><span>Positive</span></div>
+            </div>
         </div>
+        </section>
 
-        <!-- Diversification -->
+        <section id="analyticsAllocation" class="analytics-section">
         <div class="row g-3 mt-2">
-            <div class="col-lg-6">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-pie-chart me-1 text-info"></i>Sector allocation</h6>
-                    <div class="adv-chart-wrap"><canvas id="sectorChart"></canvas></div>
+            <div class="col-lg-5">
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Sector Allocation</h2></div>
+                    <div class="analytics-card-body"><div class="sector-layout"><div class="adv-chart-wrap"><canvas id="sectorChart" aria-label="Portfolio sector allocation" role="img"></canvas></div><div id="sectorLegend"></div></div></div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-layer-group me-1 text-purple"></i>Diversification</h6>
-                    <div id="diversificationPanel"></div>
+            <div class="col-lg-7">
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Concentration</h2></div>
+                    <div class="analytics-card-body"><div id="diversificationPanel"></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- Risk in everyday terms + Growth projection -->
         <div class="row g-3 mt-2">
-            <div class="col-lg-6">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-triangle-exclamation me-1 text-danger"></i>Risk in everyday terms</h6>
-                    <div id="riskWordsPanel"></div>
+            <div class="col-lg-6" id="stressScenarioColumn">
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Stress Scenarios</h2></div>
+                    <div class="analytics-card-body"><div id="riskWordsPanel"></div></div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="surface-card p-3 h-100">
-                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-seedling me-1 text-success"></i>Growth projection</h6>
-                    <div id="projectionPanel"></div>
+            <div class="col-lg-6" id="projectionColumn">
+                <div class="surface-card analytics-card h-100">
+                    <div class="analytics-card-header"><h2 class="analytics-card-title">Illustrative Projection</h2></div>
+                    <div class="analytics-card-body"><div id="projectionPanel"></div></div>
                 </div>
             </div>
         </div>
+        </section>
 
-        <!-- Stock-level metrics table -->
-        <div class="surface-card p-3 mt-3">
-            <h6 class="fw-bold mb-2"><i class="fa-solid fa-table me-1 text-primary"></i>Holdings breakdown</h6>
+        <section id="analyticsHoldings" class="analytics-section">
+        <div class="surface-card analytics-card mt-3">
+            <div class="analytics-card-header holdings-card-header">
+                <h2 class="analytics-card-title">Holdings</h2>
+                <div class="holdings-toolbar">
+                    <input id="holdingsSearch" type="search" aria-label="Search holdings" placeholder="Search holdings">
+                    <select id="holdingsColumns" aria-label="Choose visible columns">
+                        <option value="all">All columns</option><option value="core">Core columns</option>
+                    </select>
+                    <button id="holdingsDensity" type="button" aria-pressed="false">Compact</button>
+                    <button id="exportHoldingsCsv" type="button">Export CSV</button>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle adv-table" id="holdingsTable">
                     <thead>
                         <tr>
-                            <th>Stock</th>
-                            <th>Symbol</th>
-                            <th>Sector</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Percentage of your total portfolio value this stock represents. Higher weight means more impact on portfolio performance.">Weight</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Current market value of your holding (Quantity × Current Price).">Value</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Absolute profit or loss in rupees. Positive means you've gained, negative means you've lost.">P/L</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Percentage return on your investment. Shows how much your holding has grown or shrunk relative to what you paid.">P/L %</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Annualized volatility — measures how much the stock price fluctuates. Higher values mean more risk and unpredictable price swings.">Vol (ann)</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Beta measures sensitivity to market moves. Beta=1 moves with market, >1 is more volatile, <1 is less volatile, negative moves opposite.">Beta</th>
-                            <th class="text-end" data-bs-toggle="tooltip" title="Relative Strength Index (0-100). Above 70 = overbought (may fall), below 30 = oversold (may rise). Helps time entries/exits.">RSI</th>
-                            <th class="text-center" data-bs-toggle="tooltip" title="50-Day Moving Average. 'Above' suggests short-term uptrend (bullish momentum), 'Below' suggests short-term downtrend.">50 DMA</th>
-                            <th class="text-center" data-bs-toggle="tooltip" title="200-Day Moving Average. 'Above' suggests long-term uptrend (strong bullish signal), 'Below' suggests long-term downtrend.">200 DMA</th>
+                            <th data-sort="name" tabindex="0">Stock</th>
+                            <th data-sort="sector" tabindex="0">Sector</th>
+                            <th data-sort="weight" tabindex="0" aria-sort="descending" data-bs-toggle="tooltip" title="Share of current portfolio value.">Weight</th>
+                            <th data-sort="value" tabindex="0" data-bs-toggle="tooltip" title="Current market value.">Value</th>
+                            <th data-sort="gain" tabindex="0" data-bs-toggle="tooltip" title="Absolute profit or loss in rupees.">P&amp;L</th>
+                            <th data-sort="gain_pct" tabindex="0" data-bs-toggle="tooltip" title="Return relative to purchase cost.">P&amp;L %</th>
+                            <th data-sort="volatility" tabindex="0" data-bs-toggle="tooltip" title="Annualized variation in stock returns.">Vol (Ann.)</th>
+                            <th data-sort="beta" tabindex="0" data-bs-toggle="tooltip" title="Sensitivity to market returns.">Beta</th>
+                            <th data-sort="rsi" tabindex="0" data-bs-toggle="tooltip" title="Relative Strength Index (14-day).">RSI (14)</th>
+                            <th data-sort="above_50dma" tabindex="0" data-bs-toggle="tooltip" title="Price position relative to 50-day moving average.">50 DMA</th>
+                            <th data-sort="above_200dma" tabindex="0" data-bs-toggle="tooltip" title="Price position relative to 200-day moving average.">200 DMA</th>
                         </tr>
                     </thead>
                     <tbody id="holdingsBody"></tbody>
                 </table>
             </div>
+            <div class="holdings-pagination" id="holdingsPagination"></div>
         </div>
+        </section>
 
         <!-- Tax summary (only shown when purchase dates are available) -->
         <div class="surface-card p-3 mt-3" id="taxCard" hidden>
-            <h6 class="fw-bold mb-2"><i class="fa-solid fa-file-invoice-dollar me-1 text-warning"></i>Tax summary (if sold today)</h6>
+            <h6 class="fw-bold mb-2">Tax Summary (if Sold Today)</h6>
             <p class="text-muted small mb-3">India FY 2025-26 estimates: STCG 20% (held &lt;1 yr), LTCG 12.5% above ₹1.25L exemption (held ≥1 yr).</p>
             <div id="taxBody"></div>
         </div>
@@ -237,7 +264,7 @@
     font-size: 0.72rem;
     font-weight: 700;
 }
-.month-cell .month-label { display: block; font-size: 0.62rem; color: rgba(0,0,0,0.5); font-weight: 600; text-transform: uppercase; }
+.month-cell .month-label { display: block; font-size: 0.62rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
 
 .diversification-stat {
     display: flex;
@@ -264,14 +291,9 @@
 .dma-above { background: var(--success-light); color: var(--success); }
 .dma-below { background: var(--danger-light); color: var(--danger); }
 
-.text-purple { color: #8b5cf6; }
-
-/* Dark mode for monthly heatmap labels */
-[data-theme="dark"] .month-cell .month-label { color: rgba(255,255,255,.5); }
-
 /* ── Health hero & verdict ────────────────────────────────────────── */
 .health-hero {
-    background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(14,165,233,0.05));
+    background: var(--bg-surface);
     border: 1px solid var(--border);
 }
 .health-hero .hero-row {
@@ -280,10 +302,17 @@
 .health-hero .score-dial {
     width: 110px; height: 110px; border-radius: 50%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: #fff; flex-shrink: 0;
-    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    color: var(--text-primary); flex-shrink: 0;
+    box-shadow: var(--shadow-none);
 }
 .health-hero .score-dial .score-num { font-size: 2.1rem; font-weight: 900; line-height: 1; }
+.score-status { margin-top: 6px; color: var(--text-secondary); font-size: 12px; }
+.score-dial[data-band="poor"] .score-num { color: var(--negative); }
+.score-dial[data-band="fair"] .score-num { color: var(--warning-ink); }
+.score-dial[data-band="good"] .score-num, .score-dial[data-band="strong"] .score-num { color: var(--positive); }
+.score-dial[data-band="poor"] .score-progress span { background: var(--negative); }
+.score-dial[data-band="fair"] .score-progress span { background: var(--warning); }
+.score-dial[data-band="good"] .score-progress span, .score-dial[data-band="strong"] .score-progress span { background: var(--positive); }
 .health-hero .score-dial .score-of { font-size: .65rem; opacity: .9; margin-top: 2px; }
 .health-hero .hero-text { flex: 1 1 240px; min-width: 0; }
 .health-hero .hero-label { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 6px; }
@@ -294,13 +323,10 @@
     padding: 4px 10px; border-radius: 999px; font-size: .76rem; font-weight: 700;
 }
 .health-chip .chip-key { color: var(--text-muted); font-weight: 600; }
-.health-chip.tone-good    { background: rgba(22,163,74,0.12);  color: #15803d; }
-.health-chip.tone-warn    { background: rgba(245,158,11,0.14); color: #b45309; }
-.health-chip.tone-bad     { background: rgba(220,38,38,0.12);  color: #b91c1c; }
+.health-chip.tone-good    { background: var(--positive-bg); color: var(--positive); }
+.health-chip.tone-warn    { background: var(--warning-bg); color: var(--warning-ink); }
+.health-chip.tone-bad     { background: var(--negative-bg); color: var(--negative); }
 .health-chip.tone-neutral { background: var(--surface-2);      color: var(--text); }
-[data-theme="dark"] .health-chip.tone-good { color: #4ade80; }
-[data-theme="dark"] .health-chip.tone-warn { color: #fbbf24; }
-[data-theme="dark"] .health-chip.tone-bad  { color: #f87171; }
 
 .verdict-line { font-size: .98rem; font-weight: 700; color: var(--text); margin-bottom: 10px; }
 .action-list { list-style: none; padding: 0; margin: 0; }
@@ -312,7 +338,7 @@
 .action-list li:last-child { border-bottom: 0; }
 .action-list li .action-num {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-    background: var(--primary); color: #fff;
+    background: var(--brand); color: var(--on-brand);
     display: flex; align-items: center; justify-content: center;
     font-size: .72rem; font-weight: 800;
 }
@@ -395,25 +421,285 @@
 .tax-soon-row .ts-meta { font-size: .72rem; color: var(--text-muted); }
 
 /* Money-comparison metric cards */
-.metric-card.compare-fd    { border-left: 3px solid #f59e0b; }
-.metric-card.compare-nifty { border-left: 3px solid #4f46e5; }
+.metric-card.compare-fd, .metric-card.compare-nifty { border-left: 0; }
+
+.advanced-dashboard {
+    max-width: var(--content-max, 1440px);
+    margin-inline: auto;
+    padding-inline: var(--page-pad, 24px);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+}
+.advanced-dashboard .page-header { margin-bottom: 16px; align-items: center !important; }
+.advanced-dashboard .page-header h1 { font-size: var(--fs-page-title); font-weight: 600; margin: 0 0 2px; }
+.advanced-dashboard .page-header p { color: var(--text-secondary); font-size: 13px; margin: 0; }
+.analytics-actions { flex-wrap: wrap; }
+.analytics-actions #analyticsUpdated { font-size: 12px; }
+.analytics-info { display: inline-grid; width: 14px; height: 14px; place-items: center; margin-left: 4px; border: 1px solid var(--text-muted); border-radius: 50%; color: var(--text-muted); font-size: 9px; font-weight: 600; cursor: help; }
+.analytics-na, .chart-empty { color: var(--text-muted) !important; }
+.metric-value .analytics-na, .metric-sub .analytics-na,
+.risk-ratio-item .ratio-value.analytics-na, .var-card .var-value.analytics-na,
+.adv-table .analytics-na, .scenario-impact .analytics-na { color: var(--text-muted) !important; }
+.chart-empty { display: grid; min-height: 240px; place-items: center; margin: 0; font-size: 13px; }
+.analytics-section { scroll-margin-top: 112px; }
+.analytics-section-nav {
+    position: sticky; top: var(--header-height, 56px); z-index: 10;
+    display: flex; gap: 24px; overflow-x: auto; margin: 8px 0 16px;
+    padding: 0 12px; background: var(--bg-app); border-bottom: 1px solid var(--border);
+}
+.analytics-section-nav a {
+    flex: 0 0 auto; padding: 11px 0 9px; border-bottom: 2px solid transparent;
+    color: var(--text-secondary); font-size: 13px; font-weight: 500; text-decoration: none;
+}
+.analytics-section-nav a:hover, .analytics-section-nav a:focus { color: var(--brand); }
+.analytics-section-nav a.active { border-bottom-color: var(--brand); color: var(--brand); }
+.analytics-notice {
+    min-height: 36px; display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px; border: 1px solid var(--warning-border);
+    border-radius: var(--radius); background: var(--warning-bg);
+    color: var(--text-primary); font-size: 13px;
+}
+.notice-icon { width: 16px; height: 16px; border-radius: 50%; text-align: center; line-height: 16px; font-size: 11px; font-weight: 700; color: var(--warning-ink); border: 1px solid var(--warning-ink); }
+.analytics-notice a { color: var(--brand); font-weight: 600; text-decoration: none; }
+.notice-dismiss { margin-left: auto; border: 0; background: transparent; color: var(--text-secondary); font-size: 19px; line-height: 1; }
+.advanced-dashboard .surface-card {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-none); padding: 0 !important; overflow: hidden;
+}
+.analytics-card-header {
+    min-height: 44px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--border);
+}
+.analytics-card-title { margin: 0; color: var(--text-primary); font-size: 14px; font-weight: 600; }
+.analytics-card-body { padding: 16px; }
+.analytics-skeleton { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.analytics-skeleton > p { grid-column: 1 / -1; color: var(--text-muted); font-size: 12px; }
+.analytics-skeleton > div { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-surface); }
+.skeleton-summary { grid-column: span 12; min-height: 110px; }
+.skeleton-kpis { grid-column: span 12; min-height: 170px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border) !important; }
+.skeleton-kpis span { background: var(--bg-subtle); }
+.skeleton-panels { grid-column: span 12; min-height: 280px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; border: 0 !important; background: transparent !important; }
+.skeleton-panels span { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-surface); }
+.chart-empty { display: grid; min-height: 240px; place-items: center; margin: 0; font-size: 13px; }
+.analytics-card-title-wrap { display: flex; align-items: center; gap: 20px; }
+.chart-legend { display: flex; gap: 12px; color: var(--text-secondary); font-size: 11px; }
+.chart-legend span::before { display: inline-block; width: 16px; margin-right: 5px; vertical-align: middle; content: ""; border-top: 2px solid var(--brand); }
+.chart-legend .legend-benchmark::before { border-top: 1.5px dashed var(--text-muted); }
+.period-control { display: flex; border: 1px solid var(--border); border-radius: var(--radius-tag); overflow: hidden; }
+.period-control button { height: 28px; border: 0; border-right: 1px solid var(--border); padding: 0 8px; background: var(--bg-surface); color: var(--text-secondary); font-size: 11px; }
+.period-control button:last-child { border-right: 0; }
+.period-control button.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.adv-chart-wrap { height: 300px; }
+.adv-chart-wrap-sm { height: 260px; }
+.metrics-strip {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+    overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-surface);
+}
+.metric-card {
+    min-width: 0; padding: 14px 16px; border: 0; border-radius: 0; background: transparent;
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.metric-card:nth-child(4n) { border-right: 0; }
+.metric-card:nth-last-child(-n+4) { border-bottom: 0; }
+.metric-card .metric-label { font-size: 11px; font-weight: 500; letter-spacing: .04em; color: var(--text-muted); }
+.metric-card .metric-value { margin-top: 4px; font-family: var(--font-mono); font-size: 20px; font-weight: 600; line-height: 1.3; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.metric-card.positive .metric-value { color: var(--positive); }
+.metric-card.negative .metric-value { color: var(--negative); }
+.metric-card .metric-sub { font-size: 12px; color: var(--text-secondary); }
+.metric-card .metric-plain { display: none; }
+.health-hero { background: var(--bg-surface); }
+.health-hero .hero-row { gap: 24px; }
+.health-hero .score-dial { width: 25%; height: auto; min-height: 110px; align-items: flex-start; justify-content: center; padding: 8px 16px; border-radius: 0; color: var(--text-primary); box-shadow: none; }
+.health-hero .score-dial::before { content: "Portfolio Health Score"; color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.health-hero .score-dial .score-num { font-size: 28px; font-weight: 600; }
+.health-hero .score-dial .score-of { margin: 0 0 0 4px; color: var(--text-secondary); font-size: 13px; }
+.score-progress { height: 6px; margin: 8px 0 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
+.score-progress span { display: block; height: 100%; background: var(--negative); }
+.score-bands { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 10px; }
+.health-hero .hero-text { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+.health-hero .hero-label, .health-hero .hero-verdict { display: none; }
+.health-hero .hero-chips { display: contents; }
+.health-chip { border: 0; border-radius: 0; padding: 8px 0; background: transparent !important; color: var(--text-primary) !important; font-size: 12px; font-weight: 500; }
+.health-chip::before { content: ""; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--text-muted); }
+.health-chip.tone-good::before { background: var(--positive); }
+.health-chip.tone-warn::before, .health-chip.tone-bad::before { background: var(--negative); }
+.health-chip .chip-key { color: var(--text-secondary); }
+.verdict-line { font-size: 13px; font-weight: 500; }
+.action-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 16px; }
+.action-list li { font-size: 13px; border-bottom: 0; }
+.action-list li .action-num { display: none; }
+.observation-list { display: flex; gap: 20px; margin: 0; padding: 0 0 0 16px; }
+.observation-list li { flex: 1 1 0; font-size: 13px; }
+.risk-ratio-item { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; gap: 8px; align-items: center; min-height: 36px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.risk-ratio-item:first-child { font-weight: 600; }
+.risk-ratio-item .ratio-name { color: var(--text-primary); font-weight: 500; }
+.risk-ratio-item .ratio-value { text-align: right; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.risk-ratio-item .ratio-value.good { color: var(--positive); }
+.risk-ratio-item .ratio-value.bad { color: var(--negative); }
+.ratio-benchmark { text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+.ratio-table-head { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; padding: 0 0 8px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.ratio-table-head span:nth-child(n+2) { text-align: right; }
+.risk-ratio-item .ratio-plain { display: none; }
+.var-card { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; margin: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: transparent; }
+.var-card .var-label { text-transform: none; font-size: 13px; color: var(--text-primary); font-weight: 500; }
+.var-card .var-value { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--text-primary); font-family: var(--font-mono); font-size: 16px; font-weight: 600; }
+.var-card .var-desc { font-size: 11px; }
+.var-method { margin: 10px 0 0; color: var(--text-muted); font-size: 11px; }
+.monthly-stats { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+.monthly-stats .ms-tile { flex: 1 1 0; padding: 2px 12px 12px; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; }
+.monthly-stats .ms-tile:first-child { padding-left: 0; }
+.monthly-stats .ms-tile:last-child { border-right: 0; }
+.monthly-stats .ms-label { font-size: 10px; font-weight: 500; }
+.monthly-stats .ms-value { margin-top: 4px; font-size: 14px; font-weight: 600; font-family: var(--font-mono); }
+.monthly-stats .ms-sub { display: none; }
+.monthly-heatmap-wrap { overflow-x: auto; }
+.monthly-heatmap { min-width: 760px; display: block; }
+.monthly-heatmap table { width: 100%; border-collapse: separate; border-spacing: 2px; }
+.monthly-heatmap th { padding: 4px; color: var(--text-muted); text-align: right; font-size: 10px; font-weight: 500; }
+.monthly-heatmap td { height: 36px; min-width: 48px; padding: 4px; color: var(--text-primary); text-align: right; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.monthly-heatmap td:first-child { font-family: var(--font-sans); font-weight: 600; }
+.heatmap-scale { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; color: var(--text-muted); font-size: 10px; }
+.heatmap-scale i { width: 100px; height: 8px; background: linear-gradient(90deg, var(--negative-bg), var(--bg-surface), var(--positive-bg)); border: 1px solid var(--border); }
+.diversification-stat { min-height: 36px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.diversification-stat .ds-label { color: var(--text-secondary); font-weight: 400; }
+.diversification-stat .ds-value { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-primary) !important; }
+.diversification-stat.status-row .ds-value::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--positive); }
+.diversification-stat.status-row.status-moderate .ds-value::before { background: var(--warning); }
+.diversification-stat.status-row.status-high .ds-value::before { background: var(--negative); }
+.scenario-table, .projection-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.scenario-table th, .projection-table th { padding: 8px 6px; color: var(--text-muted); text-align: left; font-size: 10px; font-weight: 500; }
+.scenario-table td, .projection-table td { padding: 10px 6px; border-top: 1px solid var(--border); }
+.scenario-table td:last-child, .scenario-table td:nth-last-child(2), .projection-table td:not(:first-child) { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.scenario-impact { color: var(--negative); }
+.scenario-footnote, .projection-footnote { margin: 10px 0 0; color: var(--text-muted); font-size: 11px; }
+.sector-layout { display: grid; grid-template-columns: minmax(130px, 1fr) 1.3fr; align-items: center; gap: 16px; }
+.sector-layout .adv-chart-wrap { height: 220px; }
+.sector-legend-table { width: 100%; font-size: 12px; }
+.sector-legend-table td { padding: 5px 2px; border-bottom: 1px solid var(--border); }
+.sector-legend-table td:nth-last-child(-n+2) { text-align: right; font-family: var(--font-mono); }
+.sector-swatch { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 1px; }
+.holdings-card-header { flex-wrap: wrap; }
+.holdings-toolbar { display: flex; align-items: center; gap: 8px; }
+.holdings-toolbar input, .holdings-toolbar select, .holdings-toolbar button {
+    height: 32px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-tag);
+    background: var(--bg-surface); color: var(--text-secondary); font-size: 12px;
+}
+.holdings-toolbar input { width: 180px; }
+.adv-table { min-width: 1050px; margin: 0; border-collapse: separate; border-spacing: 0; }
+.adv-table thead th { position: sticky; top: 0; z-index: 2; height: 40px; background: var(--bg-subtle); font-size: 11px; font-weight: 500; }
+.adv-table thead th[data-sort] { cursor: pointer; }
+.adv-table thead th[data-sort]::after { content: "↕"; margin-left: 4px; color: var(--text-muted); }
+.adv-table th, .adv-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.adv-table td { height: 44px; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.adv-table td:nth-child(-n+2) { font-family: var(--font-sans); text-align: left; }
+.adv-table th:nth-child(-n+2) { text-align: left; }
+.adv-table .stock-name { font-weight: 500; }
+.adv-table .stock-name small { display: block; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.weight-cell { display: inline-block; min-width: 64px; padding: 2px 4px; background: linear-gradient(to right, var(--brand-soft) var(--weight), transparent var(--weight)); text-align: right; }
+.adv-table tbody tr:hover td { background: var(--bg-subtle); }
+.adv-table .symbol-pill { padding: 0; border-radius: 0; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.dma-badge { padding: 0; border-radius: 0; background: transparent; font-size: 11px; font-weight: 500; }
+.dma-badge::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: currentColor; }
+.dma-above { color: var(--positive); }
+.dma-below { color: var(--negative); }
+.gain-positive { color: var(--positive) !important; }
+.gain-negative { color: var(--negative) !important; }
+.adv-table tfoot td { position: sticky; bottom: 0; height: 40px; background: var(--bg-subtle); font-weight: 600; }
+.adv-table tbody tr[hidden] { display: none; }
+.adv-table.compact td { height: 36px; padding-block: 4px; }
+.holdings-pagination { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 8px 16px; color: var(--text-secondary); font-size: 12px; }
+.holdings-pagination button { border: 1px solid var(--border); border-radius: var(--radius-tag); background: var(--bg-surface); color: var(--text-secondary); }
+.analytics-dashboard [hidden], .advanced-dashboard [hidden] { display: none !important; }
+@media (max-width: 1279px) {
+    .advanced-dashboard .row > [class*="col-lg-"] { width: 100%; }
+}
+@media (max-width: 767px) {
+    .advanced-dashboard { padding-inline: 12px; }
+    .metrics-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric-card:nth-child(2n) { border-right: 0; }
+    .metric-card:nth-child(4n) { border-right: 0; }
+    .metric-card:nth-last-child(-n+4) { border-bottom: 1px solid var(--border); }
+    .metric-card:nth-last-child(-n+2) { border-bottom: 0; }
+    .health-hero .score-dial { width: 100%; min-height: 0; }
+    .health-hero .hero-text { grid-template-columns: 1fr; }
+    .action-list { grid-template-columns: 1fr; }
+    .observation-list { flex-direction: column; gap: 8px; }
+    .monthly-stats { overflow-x: auto; }
+    .monthly-stats .ms-tile { min-width: 130px; }
+    .adv-chart-wrap, .adv-chart-wrap-sm { min-height: 240px; height: 240px; }
+    .skeleton-panels { grid-template-columns: 1fr; }
+    .skeleton-panels span { min-height: 220px; }
+    .sector-layout { grid-template-columns: 1fr; }
+    .holdings-card-header { align-items: flex-start; }
+    .holdings-toolbar { flex-wrap: wrap; }
+    .holdings-toolbar input { width: 140px; }
+    .adv-table th:first-child, .adv-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg-surface); }
+}
+@media print {
+    .analytics-section-nav, .analytics-actions, .period-control, .holdings-toolbar,
+    .holdings-pagination, .notice-dismiss, #fallbackRetry { display: none !important; }
+    .advanced-dashboard { max-width: none; padding: 0; }
+    .advanced-dashboard .surface-card { break-inside: avoid; background: var(--bg-surface); }
+    body { background: var(--bg-surface) !important; }
+}
 </style>
 
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const fmt = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
-const pct = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+const formatNumber = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const isFiniteMetric = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+const fmt = v => isFiniteMetric(v) ? `${Number(v) < 0 ? '-' : ''}\u20B9${formatNumber.format(Math.abs(Number(v)))}` : naLabel();
+const signedCurrency = v => isFiniteMetric(v) ? `${Number(v) > 0 ? '+' : Number(v) < 0 ? '-' : ''}\u20B9${formatNumber.format(Math.abs(Number(v)))}` : 'N/A';
+const pct = v => isFiniteMetric(v) ? `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(2)}%` : 'N/A';
+const metric = (v, fallback, formatter = value => Number(value).toFixed(2)) =>
+    fallback || !isFiniteMetric(v) ? naLabel() : formatter(Number(v));
+const naLabel = () => '<span class="analytics-na" title="Insufficient price history">N/A</span>';
+const InfoTooltip = text => `<span class="analytics-info" tabindex="0" data-bs-toggle="tooltip" title="${text}" aria-label="${text}">i</span>`;
 const _advCs = getComputedStyle(document.documentElement);
-const _advSurface = _advCs.getPropertyValue('--surface').trim() || '#fff';
-const _advGrid = _advCs.getPropertyValue('--border').trim() || 'rgba(0,0,0,0.04)';
-const _advText = _advCs.getPropertyValue('--text').trim() || '#0f172a';
-const _advMuted = _advCs.getPropertyValue('--text-muted').trim() || '#64748b';
+const _advSurface = _advCs.getPropertyValue('--surface').trim();
+const _advGrid = _advCs.getPropertyValue('--chart-grid').trim();
+const _advText = _advCs.getPropertyValue('--text-primary').trim();
+const _advMuted = _advCs.getPropertyValue('--chart-axis').trim();
+const _advBrand = _advCs.getPropertyValue('--brand').trim();
+const _advNegative = _advCs.getPropertyValue('--negative').trim();
+const _advPalette = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5', '--chart-6']
+    .map(token => _advCs.getPropertyValue(token).trim());
+const colorWithAlpha = (color, alpha) => {
+    const match = color.match(/^#([0-9a-f]{6})$/i);
+    if (!match) return color;
+    const [r, g, b] = match[1].match(/.{2}/g).map(part => parseInt(part, 16));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+let analyticsData = null;
+let cumulativeChart = null;
+let drawdownChart = null;
+let holdingsCurrentPage = 1;
+let holdingsSort = { key: 'weight', direction: -1 };
+let currentChartPeriod = 'ALL';
+const holdingsPageSize = 15;
 
 function initTooltips() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         if (!bootstrap.Tooltip.getInstance(el)) {
-            new bootstrap.Tooltip(el, { trigger: 'hover', delay: { show: 200, hide: 100 } });
+            new bootstrap.Tooltip(el, { trigger: 'hover focus', delay: { show: 200, hide: 100 } });
         }
+    });
+    document.querySelectorAll('#holdingsTable thead [data-sort]').forEach(header => {
+        header.addEventListener('click', () => {
+            const direction = holdingsSort.key === header.dataset.sort ? -holdingsSort.direction : -1;
+            holdingsSort = { key: header.dataset.sort, direction };
+            document.querySelectorAll('#holdingsTable thead [data-sort]').forEach(item => {
+                item.setAttribute('aria-sort', item === header ? (direction < 0 ? 'descending' : 'ascending') : 'none');
+            });
+            holdingsCurrentPage = 1;
+            if (analyticsData) renderHoldings(analyticsData);
+        });
+        header.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                header.click();
+            }
+        });
     });
 }
 // Init tooltips for static elements (table headers)
@@ -428,7 +714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('analyticsContent').hidden = false;
             setUpdatedLabel(entry.t);
             const btn = document.getElementById('loadAnalytics');
-            if (btn) btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+            if (btn) btn.textContent = 'Refresh';
             hasCached = true;
         }
     } catch (e) { /* ignore */ }
@@ -444,7 +730,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('analyticsContent').hidden = false;
                 setUpdatedLabel(Date.now());
                 const btn = document.getElementById('loadAnalytics');
-                if (btn) btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+                if (btn) btn.textContent = 'Refresh';
                 hasCached = true;
             }
         } catch (e) { /* ignore */ }
@@ -456,14 +742,55 @@ function setUpdatedLabel(ts) {
     if (!el) return;
     if (!ts) { el.textContent = ''; return; }
     const when = new Date(ts);
-    el.textContent = 'Updated ' + when.toLocaleTimeString('en-IN') + ' · ' + ppCache.ago(Date.now() - ts);
+    const formatted = new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit',
+        minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Kolkata'
+    }).format(when);
+    el.textContent = 'As of ' + formatted + ' IST';
 }
 
 document.getElementById('loadAnalytics').addEventListener('click', loadData);
+document.getElementById('exportAnalyticsCsv').addEventListener('click', () => exportHoldingsCsv());
+document.getElementById('exportHoldingsCsv').addEventListener('click', () => exportHoldingsCsv());
+document.getElementById('exportAnalyticsPdf').addEventListener('click', () => window.print());
+document.getElementById('holdingsSearch').addEventListener('input', () => {
+    holdingsCurrentPage = 1;
+    if (analyticsData) renderHoldings(analyticsData);
+});
+document.getElementById('holdingsDensity').addEventListener('click', event => {
+    const table = document.getElementById('holdingsTable');
+    const compact = table.classList.toggle('compact');
+    event.currentTarget.textContent = compact ? 'Comfortable' : 'Compact';
+    event.currentTarget.setAttribute('aria-pressed', String(compact));
+});
+document.getElementById('holdingsColumns').addEventListener('change', event => {
+    applyHoldingsColumnVisibility(event.currentTarget.value);
+});
+document.getElementById('analyticsFallbackBanner').querySelector('.notice-dismiss')
+    .addEventListener('click', () => {
+        sessionStorage.setItem('analyticsNoticeDismissed', '1');
+        document.getElementById('analyticsFallbackBanner').hidden = true;
+    });
+document.querySelectorAll('.period-control button').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.period-control button').forEach(item => {
+            item.classList.toggle('active', item === button);
+            item.setAttribute('aria-pressed', String(item === button));
+        });
+        document.querySelectorAll('.analytics-section-nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.querySelectorAll('.analytics-section-nav a').forEach(item => item.classList.toggle('active', item === link));
+            });
+        });
+        currentChartPeriod = button.dataset.period;
+        if (analyticsData) renderCumChart(analyticsData, button.dataset.period);
+    });
+});
 
 document.addEventListener('click', (e) => {
     const retry = e.target.closest('#fallbackRetry');
     if (retry) { e.preventDefault(); try { ppCache.del('adv:analytics'); } catch (err) {} loadData(); }
+    if (e.target.closest('#analyticsErrorRetry')) loadData();
 });
 
 async function loadData() {
@@ -473,7 +800,7 @@ async function loadData() {
     const errorDiv = document.getElementById('analyticsError');
 
     btn.disabled = true;
-    btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading\u2026';
+    btn.textContent = 'Loading…';
     loading.hidden = false;
     content.hidden = true;
     errorDiv.hidden = true;
@@ -486,7 +813,6 @@ async function loadData() {
             const planNice = plan.charAt(0).toUpperCase() + plan.slice(1);
             errorDiv.innerHTML =
                 `<div class="surface-card p-4 text-center">
-                   <div class="empty-icon"><i class="fa-solid fa-lock" style="color:#f59e0b"></i></div>
                    <h5>${planNice} feature</h5>
                    <p>${(data && data.message) || 'Advanced metrics (Sharpe, beta, drawdown) are part of the Elite plan.'}</p>
                    <a href="${(data && data.upgrade_url) || '/billing'}" class="btn btn-primary mt-2">
@@ -496,7 +822,7 @@ async function loadData() {
             errorDiv.hidden = false;
             loading.hidden = true;
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Load analytics';
+            btn.textContent = 'Refresh';
             return;
         }
         if (data.error === 'no_stocks') {
@@ -504,7 +830,7 @@ async function loadData() {
             errorDiv.hidden = false;
             loading.hidden = true;
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Load analytics';
+            btn.textContent = 'Refresh';
             try { ppCache.del('adv:analytics'); } catch (e) {}
             return;
         }
@@ -514,17 +840,18 @@ async function loadData() {
         loading.hidden = true;
         content.hidden = false;
     } catch (e) {
-        errorDiv.innerHTML = '<div class="alert alert-danger">Failed to load analytics. Please try again.</div>';
+        errorDiv.innerHTML = '<div class="surface-card analytics-card"><div class="analytics-card-header"><h2 class="analytics-card-title">Analytics Unavailable</h2></div><div class="analytics-card-body"><p class="mb-2">Failed to load analytics.</p><button type="button" id="analyticsErrorRetry" class="btn btn-outline-primary btn-sm">Retry</button></div></div>';
         errorDiv.hidden = false;
         loading.hidden = true;
     }
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Refresh analytics';
+    btn.textContent = 'Refresh';
 }
 
 function render(d) {
+    analyticsData = d;
     const fb = document.getElementById('analyticsFallbackBanner');
-    if (fb) fb.hidden = !d.fallback;
+    if (fb) fb.hidden = !d.fallback || sessionStorage.getItem('analyticsNoticeDismissed') === '1';
     renderHealthHero(d);
     renderPerfStrip(d);
     renderVerdict(d);
@@ -546,25 +873,23 @@ function renderHealthHero(d) {
     const el = document.getElementById('healthHero');
     if (!el || !i) { if (el) el.hidden = true; return; }
     el.hidden = false;
-    // Colour the score dial by band.
-    const s = i.health_score || 0;
-    let bg = '#dc2626';
-    if (s >= 85) bg = '#16a34a';
-    else if (s >= 70) bg = '#22c55e';
-    else if (s >= 55) bg = '#f59e0b';
-    else if (s >= 40) bg = '#f97316';
+    const hasScore = !d.fallback && isFiniteMetric(i.health_score);
+    const s = hasScore ? Number(i.health_score) : null;
+    const band = !hasScore ? 'unavailable' : s >= 85 ? 'strong' : s >= 70 ? 'good' : s >= 40 ? 'fair' : 'poor';
     const chips = (i.chips || []).map(c =>
-        `<span class="health-chip tone-${c.tone}"><span class="chip-key">${c.label}:</span> ${c.text}</span>`
+        `<span class="health-chip tone-${d.fallback && c.label !== 'Diversification' ? 'neutral' : c.tone}"><span class="chip-key">${c.label}:</span> ${d.fallback && c.label !== 'Diversification' ? naLabel() : c.text}</span>`
     ).join('');
     el.innerHTML = `
         <div class="hero-row">
-            <div class="score-dial" style="background:linear-gradient(135deg, ${bg}, ${bg}cc)">
-                <span class="score-num">${s}</span>
-                <span class="score-of">/ 100</span>
+            <div class="score-dial" data-band="${band}">
+                <div><span class="score-num">${hasScore ? s : naLabel()}</span>
+                <span class="score-of">${hasScore ? '/ 100' : ''}</span>
+                </div>
+                <div class="score-progress" aria-label="${hasScore ? `Health score ${s} out of 100` : 'Health score unavailable'}"><span style="width:${hasScore ? Math.min(100, Math.max(0, s)) : 0}%"></span></div>
+                <div class="score-bands"><span>Poor</span><span>Fair</span><span>Good</span><span>Strong</span></div>
+                <div class="score-status">${!hasScore ? 'Insufficient price history' : d.performance.annualized_return < d.performance.benchmark_return ? 'Below benchmark' : 'At or above benchmark'}</div>
             </div>
             <div class="hero-text">
-                <div class="hero-label">${i.health_label} · Portfolio Health</div>
-                <div class="hero-verdict">${i.verdict || ''}</div>
                 <div class="hero-chips">${chips}</div>
             </div>
         </div>
@@ -575,15 +900,14 @@ function renderVerdict(d) {
     const i = d.insights;
     const el = document.getElementById('verdictCard');
     if (!el || !i) { if (el) el.hidden = true; return; }
-    const actions = (i.actions && i.actions.length)
-        ? `<ul class="action-list">${i.actions.map((a, idx) =>
-              `<li><span class="action-num">${idx + 1}</span><span>${a}</span></li>`
-            ).join('')}</ul>`
-        : '<p class="text-muted small mb-0">No urgent actions — your portfolio looks balanced.</p>';
+    const observations = [...(d.stocks || [])]
+        .sort((a, b) => a.gain_pct - b.gain_pct)
+        .slice(0, 3)
+        .map(stock => `<li>${stock.name}: ${pct(stock.gain_pct)} since purchase, ${Number(stock.weight || 0).toFixed(1)}% of portfolio</li>`)
+        .join('');
     el.innerHTML = `
-        <h6 class="fw-bold mb-2"><i class="fa-solid fa-lightbulb me-1 text-warning"></i>What this means &amp; next steps</h6>
-        <div class="verdict-line">${i.verdict || ''}</div>
-        ${actions}
+        <div class="analytics-card-header"><h2 class="analytics-card-title">Observations</h2></div>
+        <div class="analytics-card-body"><ul class="observation-list">${observations}</ul></div>
     `;
     el.hidden = false;
 }
@@ -593,108 +917,199 @@ function renderPerfStrip(d) {
     const s = d.summary;
     const i = d.insights || {};
     const money = i.money || {};
-    const plain = i.plain || {};
     const strip = document.getElementById('perfStrip');
-    const niftyV = Number(money.vs_nifty_rupees || 0);
-    const fdV = Number(money.vs_fd_rupees || 0);
+    const niftyV = money.vs_nifty_rupees;
+    const fdV = money.vs_fd_rupees;
+    const unavailable = Boolean(d.fallback);
     const cards = [
-        { label: 'Portfolio value', value: fmt(s.total_value), cls: '', plain: 'Current market value of all your holdings.', tip: 'The total current market value of all your holdings combined.' },
-        { label: 'Total P/L', value: fmt(s.total_gain), cls: s.total_gain >= 0 ? 'positive' : 'negative', sub: pct(p.total_return), plain: s.total_gain >= 0 ? 'You are in profit overall.' : 'You are in loss overall.', tip: 'Your overall profit or loss across all holdings since purchase.' },
-        { label: 'Ann. return', value: pct(p.annualized_return), cls: p.annualized_return >= 0 ? 'positive' : 'negative', sub: 'vs NIFTY ' + pct(p.benchmark_return), plain: (plain.alpha || ''), tip: 'Your portfolio return scaled to a yearly rate.' },
-        { label: 'vs NIFTY (1Y est.)', value: (niftyV >= 0 ? '+' : '−') + fmt(Math.abs(niftyV)), cls: niftyV >= 0 ? 'positive compare-nifty' : 'negative compare-nifty', sub: niftyV >= 0 ? 'Better than the index' : 'Worse than the index', plain: 'Estimated rupee gain or loss vs putting the same money in NIFTY 50.', tip: 'Approximate one-year rupee difference vs investing in NIFTY 50 instead.' },
-        { label: 'vs FD @ ' + (money.fd_rate_pct || 7) + '%', value: (fdV >= 0 ? '+' : '−') + fmt(Math.abs(fdV)), cls: fdV >= 0 ? 'positive compare-fd' : 'negative compare-fd', sub: fdV >= 0 ? 'Beating a Fixed Deposit' : 'A Fixed Deposit would have done better', plain: 'Estimated rupee gain vs a 7% bank fixed deposit for a year.', tip: 'Approximate one-year rupee difference vs a 7% Fixed Deposit.' },
-        { label: 'Volatility', value: p.volatility.toFixed(2) + '%', cls: '', sub: 'Annualized', plain: plain.vol || '', tip: 'How much your portfolio value swings up and down.' },
-        { label: 'Max drawdown', value: p.max_drawdown.toFixed(2) + '%', cls: 'negative', sub: 'Worst peak-to-trough', plain: plain.max_dd || '', tip: 'The largest percentage drop from a peak to a trough.' },
-        { label: 'Sharpe ratio', value: d.risk_ratios.sharpe.toFixed(2), cls: d.risk_ratios.sharpe >= 1 ? 'positive' : (d.risk_ratios.sharpe < 0 ? 'negative' : ''), sub: '>1 good, >2 great', plain: plain.sharpe || '', tip: 'Risk-adjusted return.' },
+        { label: 'Portfolio Value', value: fmt(s.total_value), cls: '', sub: 'Current market value', tip: 'Current market value of all holdings.' },
+        { label: 'Total P&L', value: signedCurrency(s.total_gain), cls: s.total_gain > 0 ? 'positive' : s.total_gain < 0 ? 'negative' : '', sub: unavailable ? naLabel() : pct(p.total_return), tip: 'Profit or loss across holdings since purchase.' },
+        { label: 'Annualized Return', value: metric(p.annualized_return, unavailable, pct), cls: p.annualized_return > 0 ? 'positive' : p.annualized_return < 0 ? 'negative' : '', sub: unavailable ? naLabel() : 'Portfolio return per year', tip: 'Portfolio return scaled to an annual rate.' },
+        { label: 'Excess vs NIFTY 50 (1Y est.)', value: unavailable ? naLabel() : signedCurrency(niftyV), cls: unavailable ? '' : niftyV > 0 ? 'positive' : niftyV < 0 ? 'negative' : '', sub: 'Estimated rupee difference', tip: 'Approximate one-year rupee difference versus NIFTY 50.' },
+        { label: 'Excess vs 7% FD', value: unavailable ? naLabel() : signedCurrency(fdV), cls: unavailable ? '' : fdV > 0 ? 'positive' : fdV < 0 ? 'negative' : '', sub: 'Estimated rupee difference', tip: 'Approximate one-year rupee difference versus a 7% fixed deposit.' },
+        { label: 'Volatility (Ann.)', value: metric(p.volatility, unavailable, v => `${v.toFixed(2)}%`), cls: '', sub: 'Annualized standard deviation', tip: 'Annualized variation in portfolio returns.' },
+        { label: 'Max Drawdown', value: metric(p.max_drawdown, unavailable, pct), cls: p.max_drawdown < 0 ? 'negative' : '', sub: 'Peak-to-trough decline', tip: 'Largest percentage decline from a peak to a trough.' },
+        { label: 'Sharpe Ratio', value: metric(d.risk_ratios.sharpe, unavailable), cls: d.risk_ratios.sharpe < 0 ? 'negative' : '', sub: 'Risk-adjusted return', tip: 'Risk-adjusted return.' },
     ];
     strip.innerHTML = cards.map(c => `
-        <div class="metric-card ${c.cls}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="${c.tip}">
-            <span class="metric-label">${c.label}</span>
+        <div class="metric-card ${c.cls}">
+            <span class="metric-label">${c.label}${InfoTooltip(c.tip)}</span>
             <span class="metric-value">${c.value}</span>
-            ${c.sub ? `<span class="metric-sub">${c.sub}</span>` : ''}
-            ${c.plain ? `<span class="metric-plain">${c.plain}</span>` : ''}
+            <span class="metric-sub">${c.sub}</span>
         </div>
     `).join('');
     initTooltips();
 }
 
-function renderCumChart(d) {
+function renderCumChart(d, period = currentChartPeriod) {
     const ctx = document.getElementById('cumReturnChart');
-    if (!d.charts.dates.length) { ctx.parentElement.innerHTML = '<p class="text-muted text-center">Insufficient data for chart.</p>'; return; }
-    new Chart(ctx, {
+    const charts = d.charts || {};
+    if (ctx._chart) ctx._chart.destroy();
+    if (d.fallback || !charts.dates || !charts.dates.length) {
+        setChartEmpty(ctx, 'Insufficient price history');
+        return;
+    }
+    setChartEmpty(ctx, '');
+    const monthRanges = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 };
+    const latestDate = new Date(charts.dates[charts.dates.length - 1]);
+    const startDate = monthRanges[period] ? new Date(latestDate) : null;
+    if (startDate) startDate.setMonth(startDate.getMonth() - monthRanges[period]);
+    const start = startDate ? Math.max(0, charts.dates.findIndex(date => new Date(date) >= startDate)) : 0;
+    const labels = charts.dates.slice(start);
+    const portfolio = charts.portfolio_cum.slice(start);
+    const benchmark = charts.benchmark_cum.slice(start);
+    ctx._chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: d.charts.dates,
+            labels,
             datasets: [
-                { label: 'Portfolio', data: d.charts.portfolio_cum, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.08)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
-                { label: 'NIFTY 50', data: d.charts.benchmark_cum, borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,3], tension: 0.3, pointRadius: 0, borderWidth: 1.5 },
+                { label: 'Portfolio', data: portfolio, borderColor: _advBrand, backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0, borderWidth: 2 },
+                { label: 'NIFTY 50', data: benchmark, borderColor: _advMuted, backgroundColor: 'transparent', borderDash: [5, 3], tension: 0.2, pointRadius: 0, borderWidth: 1.5 },
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             interaction: { intersect: false, mode: 'index' },
-            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 11 }, color: _advText } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%' } } },
-            scales: { x: { display: true, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: _advMuted } }, y: { ticks: { callback: v => v + '%', font: { size: 10 }, color: _advMuted }, grid: { color: _advGrid } } }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: items => formatChartDate(items[0].label),
+                        label: c => `${c.dataset.label}: ${pct(c.parsed.y)}`,
+                        afterBody: items => {
+                            const index = items[0].dataIndex;
+                            return `Difference: ${pct(portfolio[index] - benchmark[index])}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: 8, callback: value => formatChartDate(labels[value]), font: { size: 10 }, color: _advMuted }, grid: { display: false } },
+                y: { ticks: { callback: v => `${v > 0 ? '+' : ''}${v}%`, font: { size: 10 }, color: _advMuted }, grid: { color: _advGrid } }
+            }
         }
     });
 }
 
 function renderDrawdown(d) {
     const ctx = document.getElementById('drawdownChart');
-    if (!d.charts.drawdown.length) { ctx.parentElement.innerHTML = '<p class="text-muted text-center">No drawdown data.</p>'; return; }
-    new Chart(ctx, {
+    if (ctx._chart) ctx._chart.destroy();
+    const values = d.charts.drawdown || [];
+    if (d.fallback || !values.length) {
+        setChartEmpty(ctx, 'Insufficient price history');
+        return;
+    }
+    setChartEmpty(ctx, '');
+    const maxIndex = values.indexOf(Math.min(...values));
+    ctx._chart = new Chart(ctx, {
         type: 'line',
+        plugins: [{
+            id: 'maximumDrawdownLabel',
+            afterDatasetsDraw(chart) {
+                const point = chart.getDatasetMeta(0).data[maxIndex];
+                if (!point) return;
+                const context = chart.ctx;
+                context.save();
+                context.fillStyle = _advNegative;
+                context.font = '11px Inter, sans-serif';
+                context.textAlign = 'left';
+                context.fillText(`${pct(values[maxIndex])} · ${formatChartDate(d.charts.dates[maxIndex])}`, point.x + 8, point.y - 8);
+                context.restore();
+            }
+        }],
         data: {
             labels: d.charts.dates,
             datasets: [{
                 label: 'Drawdown', data: d.charts.drawdown,
-                borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.5
+                borderColor: _advNegative, backgroundColor: colorWithAlpha(_advNegative, 0.08),
+                fill: true, tension: 0.2, pointRadius: values.map((_, index) => index === maxIndex ? 3 : 0),
+                pointBackgroundColor: _advNegative, borderWidth: 1.5
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: _advMuted } }, y: { ticks: { callback: v => v + '%', font: { size: 10 }, color: _advMuted }, grid: { color: _advGrid } } }
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: {
+                    title: items => formatChartDate(items[0].label),
+                    label: c => `Drawdown: ${pct(c.parsed.y)}`
+                } }
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: 8, callback: value => formatChartDate(d.charts.dates[value]), font: { size: 10 }, color: _advMuted }, grid: { display: false } },
+                y: { min: Math.min(...values), max: 0, ticks: { callback: v => `${v}%`, font: { size: 10 }, color: _advMuted }, grid: { color: _advGrid } }
+            }
         }
     });
 }
 
+function setChartEmpty(canvas, message) {
+    canvas.hidden = Boolean(message);
+    const container = canvas.parentElement;
+    let empty = container.querySelector('.chart-empty');
+    if (!message) {
+        if (empty) empty.remove();
+        return;
+    }
+    if (!empty) {
+        empty = document.createElement('p');
+        empty.className = 'chart-empty';
+        container.appendChild(empty);
+    }
+    empty.textContent = message;
+}
+
+function formatChartDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-GB', {
+        month: 'short', year: '2-digit', timeZone: 'UTC'
+    }).format(date);
+}
+
 function renderRiskRatios(d) {
     const r = d.risk_ratios;
-    const plain = (d.insights && d.insights.plain) || {};
+    const unavailable = Boolean(d.fallback);
     const items = [
-        { name: 'Sharpe', value: r.sharpe, good: v => v >= 1, bad: v => v < 0, plain: plain.sharpe, tip: 'Return earned per unit of total risk. >1 = good, >2 = great, <0 = losing money after accounting for risk.' },
-        { name: 'Sortino', value: r.sortino, good: v => v >= 1.5, bad: v => v < 0, plain: plain.sortino, tip: 'Like Sharpe but only penalizes downside volatility. Higher is better.' },
-        { name: 'Treynor', value: r.treynor, good: v => v > 0, bad: v => v < 0, tip: 'Return earned per unit of market risk (beta). Higher = better.' },
-        { name: 'Calmar', value: r.calmar, good: v => v >= 1, bad: v => v < 0.5, tip: 'Annual return divided by max drawdown. >1 means your returns exceed your worst loss.' },
-        { name: 'Info ratio', value: r.information_ratio, good: v => v > 0.5, bad: v => v < 0, tip: 'Excess return over benchmark per unit of tracking error.' },
-        { name: 'Beta', value: r.beta, good: v => v >= 0.8 && v <= 1.2, bad: v => v > 1.5, plain: plain.beta, tip: 'Portfolio sensitivity to market. 1 = moves with market, >1 amplifies market moves.' },
-        { name: 'Alpha', value: r.alpha + '%', good: v => parseFloat(v) > 0, bad: v => parseFloat(v) < 0, plain: plain.alpha, tip: 'Excess return above what the market gave.' },
-        { name: 'Correlation', value: r.correlation, good: () => false, bad: () => false, tip: 'How closely your portfolio moves with the market (0 to 1).' },
+        { name: 'Sharpe', key: 'sharpe', tip: 'Return per unit of total risk.' },
+        { name: 'Sortino', key: 'sortino', tip: 'Return per unit of downside risk.' },
+        { name: 'Treynor', key: 'treynor', tip: 'Return per unit of market risk.' },
+        { name: 'Calmar', key: 'calmar', tip: 'Annual return divided by maximum drawdown.' },
+        { name: 'Information Ratio', key: 'information_ratio', tip: 'Excess return over benchmark per unit of tracking error.' },
+        { name: 'Beta', key: 'beta', tip: 'Portfolio sensitivity to market movements.' },
+        { name: 'Alpha', key: 'alpha', percent: true, tip: 'Excess return above the benchmark.' },
+        { name: 'Correlation', key: 'correlation', tip: 'How closely portfolio returns move with the market.' },
     ];
     const panel = document.getElementById('riskRatiosPanel');
-    panel.innerHTML = items.map(i => {
-        const val = typeof i.value === 'number' ? i.value.toFixed(2) : i.value;
-        const cls = i.good(i.value) ? 'good' : (i.bad(i.value) ? 'bad' : 'neutral');
-        return `<div class="risk-ratio-item" data-bs-toggle="tooltip" data-bs-placement="left" title="${i.tip}">
-            <span class="ratio-name">${i.name}</span>
-            <span class="ratio-value ${cls}">${val}</span>
-            ${i.plain ? `<span class="ratio-plain">${i.plain}</span>` : ''}
-        </div>`;
-    }).join('');
+    panel.innerHTML = `<div class="ratio-table-head"><span>Metric</span><span>Value</span><span>Benchmark</span></div>` +
+        items.map(i => {
+            const raw = r[i.key];
+            const val = metric(raw, unavailable, value => `${value.toFixed(2)}${i.percent ? '%' : ''}`);
+            const cls = unavailable || !isFiniteMetric(raw) ? 'analytics-na' : raw < 0 ? 'bad' : raw > 0 && ['alpha', 'sharpe', 'sortino', 'treynor', 'calmar', 'information_ratio'].includes(i.key) ? 'good' : 'neutral';
+            return `<div class="risk-ratio-item">
+                <span class="ratio-name">${i.name}${InfoTooltip(i.tip)}</span>
+                <span class="ratio-value ${cls}">${val}</span>
+                <span class="ratio-benchmark analytics-na" title="Benchmark ratio unavailable">N/A</span>
+            </div>`;
+        }).join('');
     initTooltips();
 }
 
 function renderVaR(d) {
     const v = d.risk_metrics;
     const panel = document.getElementById('varPanel');
-    panel.innerHTML = `
-        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="With 95% confidence, your portfolio won't lose more than this amount in a single day. 1 in 20 days may exceed this loss."><span class="var-label">VaR (95%)</span><div class="var-value">${fmt(Math.abs(v.var_95))}</div><span class="var-desc">Max daily loss with 95% confidence</span></div>
-        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="With 99% confidence, your portfolio won't lose more than this amount in a single day. Only 1 in 100 days may exceed this. Used for stress-testing."><span class="var-label">VaR (99%)</span><div class="var-value">${fmt(Math.abs(v.var_99))}</div><span class="var-desc">Max daily loss with 99% confidence</span></div>
-        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="Conditional VaR — the average loss on the worst 5% of days. Shows how bad it gets when things go really wrong. Higher than VaR."><span class="var-label">CVaR / ES (95%)</span><div class="var-value">${fmt(Math.abs(v.cvar_95))}</div><span class="var-desc">Expected loss beyond VaR</span></div>
-        <div class="var-card" data-bs-toggle="tooltip" data-bs-placement="left" title="How much your portfolio value swings annually. Below 15% = low risk, 15-25% = moderate, above 25% = high risk."><span class="var-label">Ann. volatility</span><div class="var-value">${v.ann_volatility.toFixed(2)}%</div><span class="var-desc">Portfolio standard deviation</span></div>
-    `;
+    const items = [
+        ['VaR (95%, 1-day)', v.var_95, 'Maximum loss at 95% confidence', true],
+        ['VaR (99%, 1-day)', v.var_99, 'Maximum loss at 99% confidence', true],
+        ['CVaR / Expected Shortfall (95%)', v.cvar_95, 'Average loss beyond 95% VaR', true],
+        ['Annualized Volatility', v.ann_volatility, 'Annualized portfolio standard deviation', false],
+    ];
+    panel.innerHTML = items.map(([label, value, description, currency]) => {
+        const missing = d.fallback || !isFiniteMetric(value);
+        const formatted = missing
+            ? naLabel()
+            : currency ? fmt(Math.abs(Number(value))) : `${Number(value).toFixed(2)}%`;
+        return `<div class="var-card"><span class="var-label">${label}</span><div class="var-value ${missing ? 'analytics-na' : ''}">${formatted}</div><span class="var-desc">${description}</span></div>`;
+    }).join('') + '<p class="var-method">Historical simulation, 1Y lookback</p>';
     initTooltips();
 }
 
@@ -705,74 +1120,97 @@ function renderMonthly(d) {
     const ms = d.insights && d.insights.monthly_stats;
     if (statsEl) {
         if (ms) {
-            const fmtMonth = (m) => {
-                if (!m) return '—';
-                const dt = new Date(m + '-01');
-                return isNaN(dt) ? m : dt.toLocaleString('en-IN', { month: 'short', year: '2-digit' });
+            const fmtMonth = m => {
+                if (!m) return 'N/A';
+                const dt = new Date(`${m}-01T00:00:00Z`);
+                return Number.isNaN(dt.getTime()) ? m : new Intl.DateTimeFormat('en-GB', {
+                    month: 'short', year: 'numeric', timeZone: 'UTC'
+                }).format(dt);
             };
             statsEl.innerHTML = `
-                <div class="ms-tile"><span class="ms-label">Best month</span><span class="ms-value good">+${ms.best.return.toFixed(2)}%</span><span class="ms-sub">${fmtMonth(ms.best.month)}</span></div>
-                <div class="ms-tile"><span class="ms-label">Worst month</span><span class="ms-value bad">${ms.worst.return.toFixed(2)}%</span><span class="ms-sub">${fmtMonth(ms.worst.month)}</span></div>
-                <div class="ms-tile"><span class="ms-label">Months in green</span><span class="ms-value">${ms.months_green} / ${ms.months_total}</span><span class="ms-sub">${ms.win_rate.toFixed(0)}% win rate</span></div>
-                <div class="ms-tile"><span class="ms-label">Longest winning streak</span><span class="ms-value">${ms.longest_streak} mo</span><span class="ms-sub">consecutive green</span></div>
-                <div class="ms-tile"><span class="ms-label">Avg monthly return</span><span class="ms-value ${ms.avg_monthly >= 0 ? 'good' : 'bad'}">${ms.avg_monthly >= 0 ? '+' : ''}${ms.avg_monthly.toFixed(2)}%</span><span class="ms-sub">per month</span></div>
+                <div class="ms-tile"><span class="ms-label">Best Month</span><span class="ms-value good">${pct(ms.best.return)}</span><span class="ms-sub">${fmtMonth(ms.best.month)}</span></div>
+                <div class="ms-tile"><span class="ms-label">Worst Month</span><span class="ms-value bad">${pct(ms.worst.return)}</span><span class="ms-sub">${fmtMonth(ms.worst.month)}</span></div>
+                <div class="ms-tile"><span class="ms-label">Months Positive</span><span class="ms-value">${ms.months_green} / ${ms.months_total}</span><span class="ms-sub">${ms.win_rate.toFixed(0)}% win rate</span></div>
+                <div class="ms-tile"><span class="ms-label">Longest Winning Streak</span><span class="ms-value">${ms.longest_streak} mo</span><span class="ms-sub">consecutive months</span></div>
+                <div class="ms-tile"><span class="ms-label">Avg Monthly Return</span><span class="ms-value ${ms.avg_monthly > 0 ? 'good' : ms.avg_monthly < 0 ? 'bad' : ''}">${pct(ms.avg_monthly)}</span><span class="ms-sub">per month</span></div>
             `;
         } else {
             statsEl.innerHTML = '';
         }
     }
-    if (!Object.keys(monthly || {}).length) { heatmap.innerHTML = '<p class="text-muted">No monthly data.</p>'; return; }
-    heatmap.innerHTML = Object.entries(monthly).map(([month, ret]) => {
-        const bg = ret >= 0 ? `rgba(22,163,74,${Math.min(Math.abs(ret)/8, 0.8)})` : `rgba(220,38,38,${Math.min(Math.abs(ret)/8, 0.8)})`;
-        const color = Math.abs(ret) > 4 ? '#fff' : (ret >= 0 ? '#166534' : '#991b1b');
-        return `<div class="month-cell" style="background:${bg};color:${color}"><span class="month-label">${month}</span>${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%</div>`;
+    if (!Object.keys(monthly || {}).length) {
+        heatmap.innerHTML = '<p class="chart-empty">Monthly return history is unavailable.</p>';
+        return;
+    }
+    const years = {};
+    Object.entries(monthly).sort(([a], [b]) => a.localeCompare(b)).forEach(([month, value]) => {
+        const match = String(month).match(/^(\d{4})-(\d{2})$/);
+        if (!match) return;
+        const [, year, monthNumber] = match;
+        years[year] = years[year] || Array(12).fill(null);
+        years[year][Number(monthNumber) - 1] = Number(value);
+    });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthCells = (values, isTotal = false) => values.map(value => {
+        if (value === null || !Number.isFinite(value)) return '<td class="analytics-na" title="Monthly return is unavailable">N/A</td>';
+        const opacity = Math.min(Math.abs(value) / 8, 0.7);
+        const fill = colorWithAlpha(value > 0 ? _advCs.getPropertyValue('--positive').trim() : _advNegative, opacity);
+        return `<td style="background:${fill}"${isTotal ? ' class="year-total"' : ''}>${pct(value)}</td>`;
     }).join('');
+    heatmap.innerHTML = `<table aria-label="Monthly portfolio returns by year">
+        <thead><tr><th>Year</th>${months.map(month => `<th>${month}</th>`).join('')}<th>Year Total</th></tr></thead>
+        <tbody>${Object.entries(years).map(([year, values]) => {
+            const completed = values.filter(value => value !== null && Number.isFinite(value));
+            const total = completed.reduce((result, value) => (1 + result / 100) * (1 + value / 100) * 100 - 100, 0);
+            return `<tr><td>${year}</td>${monthCells(values)}${completed.length ? monthCells([total], true) : '<td class="analytics-na" title="Annual return is unavailable">N/A</td>'}</tr>`;
+        }).join('')}</tbody>
+    </table>`;
 }
 
 function renderRiskWords(d) {
     const panel = document.getElementById('riskWordsPanel');
     if (!panel) return;
-    const i = d.insights || {};
-    const rw = i.risk_words || {};
-    const plain = i.plain || {};
-    const stressLossAbs = Math.abs(rw.stress_market_crash_value || 0);
-    const topName = rw.top_holding_name || 'top stock';
+    const rw = (d.insights && d.insights.risk_words) || {};
+    const topName = rw.top_holding_name || 'Largest holding';
+    const varImpact = d.fallback || !isFiniteMetric(d.risk_metrics.var_95)
+        ? naLabel() : signedCurrency(-Math.abs(Number(d.risk_metrics.var_95)));
     panel.innerHTML = `
-        <div class="rw-tile">
-            <span class="rw-label">If market crashes 20%</span>
-            <div class="rw-value">${fmt(stressLossAbs)}</div>
-            <span class="rw-desc">Your portfolio would likely fall about ${Math.abs(rw.stress_market_crash_pct || 0).toFixed(1)}% (≈ ${fmt(stressLossAbs)}).</span>
-        </div>
-        <div class="rw-tile">
-            <span class="rw-label">If ${topName} goes to zero</span>
-            <div class="rw-value">${fmt(rw.top_holding_to_zero_value || 0)}</div>
-            <span class="rw-desc">You would lose roughly ${(rw.top_holding_to_zero_pct || 0).toFixed(1)}% of your portfolio. ${plain.hhi || ''}</span>
-        </div>
-        <div class="rw-tile">
-            <span class="rw-label">On a bad day (1 in 20)</span>
-            <div class="rw-value">${plain.var95 ? plain.var95.replace(/^On a bad day \(1 in 20\), you could lose around /, '').replace(/ or more\.$/, '') : '—'}</div>
-            <span class="rw-desc">Worst typical single-day loss based on past behaviour.</span>
-        </div>
+        <table class="scenario-table">
+            <thead><tr><th>Scenario</th><th>Assumption</th><th>Estimated Impact (₹)</th><th>Impact (%)</th></tr></thead>
+            <tbody>
+                <tr><td>Market Decline -20%</td><td>Beta-adjusted</td><td class="scenario-impact">${d.fallback ? naLabel() : signedCurrency(rw.stress_market_crash_value)}</td><td class="scenario-impact">${d.fallback ? naLabel() : pct(rw.stress_market_crash_pct)}</td></tr>
+                <tr><td>Largest Holding -100%</td><td>${topName}</td><td class="scenario-impact">${d.fallback ? naLabel() : signedCurrency(-Math.abs(Number(rw.top_holding_to_zero_value)))}</td><td class="scenario-impact">${d.fallback ? naLabel() : pct(-Math.abs(Number(rw.top_holding_to_zero_pct)))}</td></tr>
+                <tr><td>Worst 1-in-20-Day Loss</td><td>VaR 95%</td><td class="scenario-impact">${varImpact}</td><td class="scenario-impact">${d.fallback ? naLabel() : pct(-Math.abs(Number(d.risk_metrics.var_95)) / Math.max(Number(d.summary.total_value), 1) * 100)}</td></tr>
+            </tbody>
+        </table>
+        <p class="scenario-footnote">Estimates based on historical data; not a forecast.</p>
     `;
 }
 
 function renderProjection(d) {
     const panel = document.getElementById('projectionPanel');
     if (!panel) return;
+    const column = document.getElementById('projectionColumn');
+    const stressColumn = document.getElementById('stressScenarioColumn');
     const p = (d.insights && d.insights.projection) || {};
-    const cur = (d.summary && d.summary.total_value) || 0;
+    const usable = !d.fallback && isFiniteMetric(d.performance.annualized_return) &&
+        d.performance.annualized_return > 0 && isFiniteMetric(p.rate_pct) && p.rate_pct > 0 &&
+        isFiniteMetric(p.years_5) && isFiniteMetric(p.years_10) && p.years_5 !== p.years_10;
+    if (!usable) {
+        panel.innerHTML = '';
+        if (column) column.hidden = true;
+        if (stressColumn) stressColumn.classList.replace('col-lg-6', 'col-lg-12');
+        return;
+    }
+    if (column) column.hidden = false;
+    if (stressColumn) stressColumn.classList.replace('col-lg-12', 'col-lg-6');
     panel.innerHTML = `
-        <p class="text-muted small mb-3">Compounding at your current annualized return of <strong>${(p.rate_pct || 0).toFixed(1)}%</strong>, your portfolio could grow to:</p>
-        <div class="proj-tile">
-            <span class="proj-label">In 5 years</span>
-            <div class="proj-value">${fmt(p.years_5 || cur)}</div>
-            <span class="proj-desc">From today's value of ${fmt(cur)}.</span>
-        </div>
-        <div class="proj-tile">
-            <span class="proj-label">In 10 years</span>
-            <div class="proj-value">${fmt(p.years_10 || cur)}</div>
-            <span class="proj-desc">Past returns don't guarantee future ones — this is an estimate.</span>
-        </div>
+        <table class="projection-table">
+            <thead><tr><th>Horizon</th><th>Projected Value</th><th>Assumed Annual Return</th></tr></thead>
+            <tbody><tr><td>5 Years</td><td>${fmt(p.years_5)}</td><td>${pct(p.rate_pct)}</td></tr>
+                <tr><td>10 Years</td><td>${fmt(p.years_10)}</td><td>${pct(p.rate_pct)}</td></tr></tbody>
+        </table>
+        <p class="projection-footnote">Illustrative only. Assumes constant return; past performance does not guarantee future results.</p>
     `;
 }
 
@@ -795,13 +1233,13 @@ function renderTax(d) {
         <div class="tax-grid">
             <div class="tax-tile">
                 <span class="tax-label">Short-term gains</span>
-                <div class="tax-value ${stcg < 0 ? '' : 'bad'}">${fmt(stcg)}</div>
+                <div class="tax-value ${stcg > 0 ? 'good' : stcg < 0 ? 'bad' : ''}">${signedCurrency(stcg)}</div>
                 <span class="tax-sub">Holdings under 1 year · taxed @ 20%</span>
             </div>
             <div class="tax-tile">
                 <span class="tax-label">Long-term gains</span>
-                <div class="tax-value">${fmt(ltcg)}</div>
-                <span class="tax-sub">Holdings ≥1 year · 12.5% above ₹${tax.ltcg_exempt.toLocaleString('en-IN')}</span>
+                <div class="tax-value ${ltcg > 0 ? 'good' : ltcg < 0 ? 'bad' : ''}">${signedCurrency(ltcg)}</div>
+                <span class="tax-sub">Holdings ≥1 year · 12.5% above ${fmt(tax.ltcg_exempt)}</span>
             </div>
             <div class="tax-tile">
                 <span class="tax-label">Estimated tax if sold today</span>
@@ -809,20 +1247,41 @@ function renderTax(d) {
                 <span class="tax-sub">Approximate — consult a tax advisor.</span>
             </div>
         </div>
-        ${soonRows ? `<p class="fw-bold mb-2" style="font-size:.85rem"><i class="fa-solid fa-hourglass-half me-1 text-warning"></i>Holdings turning long-term soon</p>${soonRows}` : ''}
+        ${soonRows ? `<p class="fw-bold mb-2" style="font-size:.85rem">Holdings Turning Long-Term Soon</p>${soonRows}` : ''}
     `;
 }
 
 function renderSector(d) {
     const ctx = document.getElementById('sectorChart');
-    const sw = d.diversification.sector_weights;
-    const labels = Object.keys(sw);
-    const values = Object.values(sw);
-    const colors = ['#4f46e5','#0ea5e9','#16a34a','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#84cc16','#f97316','#ef4444'];
-    new Chart(ctx, {
+    const entries = Object.entries(d.diversification.sector_weights || {}).sort(([, a], [, b]) => b - a);
+    const labels = entries.map(([label]) => label);
+    const values = entries.map(([, value]) => value);
+    const legend = document.getElementById('sectorLegend');
+    legend.innerHTML = `<table class="sector-legend-table"><tbody>${entries.map(([sector, weight], index) => `
+        <tr><td><span class="sector-swatch" style="background:${_advPalette[index % _advPalette.length]}"></span>${sector}</td>
+        <td>${weight.toFixed(2)}%</td><td>${fmt(Number(d.summary.total_value) * Number(weight) / 100)}</td></tr>
+    `).join('')}</tbody></table>`;
+    if (ctx._chart) ctx._chart.destroy();
+    const totalValue = Number(d.summary.total_value);
+    ctx._chart = new Chart(ctx, {
         type: 'doughnut',
-        data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_,i) => colors[i % colors.length]), borderWidth: 2, borderColor: _advSurface }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, font: { size: 11 }, padding: 8, color: _advText } } }, cutout: '55%' }
+        plugins: [{
+            id: 'sectorTotal',
+            afterDraw(chart) {
+                const context = chart.ctx;
+                const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                context.save();
+                context.fillStyle = _advText;
+                context.font = '600 12px Inter, sans-serif';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(fmt(totalValue), centerX, centerY);
+                context.restore();
+            }
+        }],
+        data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => _advPalette[i % _advPalette.length]), borderWidth: 1, borderColor: _advSurface }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: item => `${item.label}: ${Number(item.raw).toFixed(2)}%` } } }, cutout: '62%' }
     });
 }
 
@@ -830,44 +1289,101 @@ function renderDiversification(d) {
     const div = d.diversification;
     const panel = document.getElementById('diversificationPanel');
     const hhi_status = div.hhi < 0.15 ? 'Well diversified' : (div.hhi < 0.25 ? 'Moderately concentrated' : 'Highly concentrated');
-    const hhi_cls = div.hhi < 0.15 ? 'color:var(--success)' : (div.hhi < 0.25 ? 'color:var(--warning)' : 'color:var(--danger)');
+    const sortedWeights = [...(d.stocks || [])].sort((a, b) => b.weight - a.weight);
+    const topWeight = count => sortedWeights.slice(0, count).reduce((sum, stock) => sum + Number(stock.weight || 0), 0);
+    const largestSector = Math.max(0, ...Object.values(div.sector_weights || {}).map(Number));
     panel.innerHTML = `
-        <div class="diversification-stat" data-bs-toggle="tooltip" title="Herfindahl-Hirschman Index measures concentration. Below 0.15 = well diversified, 0.15-0.25 = moderate, above 0.25 = too concentrated in few stocks."><span class="ds-label">HHI (concentration)</span><span class="ds-value" style="${hhi_cls}">${div.hhi.toFixed(4)}</span></div>
-        <div class="diversification-stat"><span class="ds-label">Status</span><span class="ds-value" style="${hhi_cls}">${hhi_status}</span></div>
-        <div class="diversification-stat" data-bs-toggle="tooltip" title="If your money were spread equally, this is how many stocks it would feel like. Higher = better diversified. Low number means a few stocks dominate."><span class="ds-label">Effective # of stocks</span><span class="ds-value">${div.effective_n.toFixed(1)}</span></div>
-        <div class="diversification-stat" data-bs-toggle="tooltip" title="How much of your portfolio is in just the top 3 holdings. Above 60% means high concentration risk — if those 3 stocks fall, your portfolio takes a big hit."><span class="ds-label">Top 3 concentration</span><span class="ds-value">${div.concentration_top3.toFixed(1)}%</span></div>
-        <hr class="my-2">
-        <p class="mb-1 fw-bold" style="font-size:0.75rem; color:var(--text-muted)">SECTOR WEIGHTS</p>
-        ${Object.entries(div.sector_weights).map(([s, w]) => `
-            <div class="diversification-stat"><span class="ds-label">${s}</span><span class="ds-value">${w.toFixed(1)}%</span></div>
-        `).join('')}
+        <div class="diversification-stat"><span class="ds-label">HHI</span><span class="ds-value">${metric(div.hhi, false, v => v.toFixed(4))}</span></div>
+        <div class="diversification-stat status-row ${div.hhi < 0.15 ? '' : div.hhi < 0.25 ? 'status-moderate' : 'status-high'}"><span class="ds-label">Status</span><span class="ds-value">${hhi_status}</span></div>
+        <div class="diversification-stat"><span class="ds-label">Effective Number of Holdings</span><span class="ds-value">${metric(div.effective_n, false, v => v.toFixed(1))}</span></div>
+        <div class="diversification-stat"><span class="ds-label">Top 1 Weight</span><span class="ds-value">${topWeight(1).toFixed(2)}%</span></div>
+        <div class="diversification-stat"><span class="ds-label">Top 3 Weight</span><span class="ds-value">${topWeight(3).toFixed(2)}%</span></div>
+        <div class="diversification-stat"><span class="ds-label">Top 5 Weight</span><span class="ds-value">${topWeight(5).toFixed(2)}%</span></div>
+        <div class="diversification-stat"><span class="ds-label">Largest Sector Weight</span><span class="ds-value">${largestSector.toFixed(2)}%</span></div>
     `;
     initTooltips();
 }
 
 function renderHoldings(d) {
     const tbody = document.getElementById('holdingsBody');
-    tbody.innerHTML = d.stocks.map(s => {
-        const plCls = s.gain >= 0 ? 'gain-positive' : 'gain-negative';
-        const rsi = s.rsi != null ? s.rsi : '—';
-        const rsiCls = s.rsi > 70 ? 'color:var(--danger)' : (s.rsi < 30 ? 'color:var(--success)' : '');
-        const dma50 = s.above_50dma != null ? (s.above_50dma ? '<span class="dma-badge dma-above">Above</span>' : '<span class="dma-badge dma-below">Below</span>') : '—';
-        const dma200 = s.above_200dma != null ? (s.above_200dma ? '<span class="dma-badge dma-above">Above</span>' : '<span class="dma-badge dma-below">Below</span>') : '—';
+    const search = document.getElementById('holdingsSearch').value.trim().toLowerCase();
+    const rows = [...(d.stocks || [])]
+        .sort((a, b) => {
+            const aValue = a[holdingsSort.key];
+            const bValue = b[holdingsSort.key];
+            if (aValue == null) return 1;
+            if (bValue == null) return -1;
+            if (typeof aValue === 'string') return aValue.localeCompare(bValue) * holdingsSort.direction;
+            return (Number(aValue) - Number(bValue)) * holdingsSort.direction;
+        })
+        .filter(stock => `${stock.name} ${stock.symbol} ${stock.sector}`.toLowerCase().includes(search));
+    const pages = Math.max(1, Math.ceil(rows.length / holdingsPageSize));
+    holdingsCurrentPage = Math.min(holdingsCurrentPage, pages);
+    const first = (holdingsCurrentPage - 1) * holdingsPageSize;
+    const visible = rows.slice(first, first + holdingsPageSize);
+    const na = value => `<span class="analytics-na" title="Insufficient price history">${value}</span>`;
+    const dma = value => value == null ? na('N/A') : `<span class="dma-badge ${value ? 'dma-above' : 'dma-below'}">${value ? 'Above' : 'Below'}</span>`;
+    tbody.innerHTML = visible.map(stock => {
+        const plClass = stock.gain > 0 ? 'gain-positive' : stock.gain < 0 ? 'gain-negative' : '';
+        const weight = Number(stock.weight || 0);
+        const unavailable = Boolean(d.fallback);
+        const volatility = unavailable || !isFiniteMetric(stock.volatility) || stock.volatility === 0 ? na('N/A') : `${stock.volatility.toFixed(2)}%`;
+        const beta = unavailable || !isFiniteMetric(stock.beta) || stock.beta === 0 ? na('N/A') : stock.beta.toFixed(2);
+        const rsi = unavailable || !isFiniteMetric(stock.rsi) ? na('N/A') : Number(stock.rsi).toFixed(2);
         return `<tr>
-            <td class="stock-name">${s.name}</td>
-            <td>${s.symbol ? `<span class="symbol-pill">${s.symbol}</span>` : '—'}</td>
-            <td>${s.sector || '—'}</td>
-            <td class="text-end">${s.weight.toFixed(1)}%</td>
-            <td class="text-end">${fmt(s.value)}</td>
-            <td class="text-end ${plCls}">${s.gain >= 0 ? '+' : ''}${fmt(s.gain)}</td>
-            <td class="text-end ${plCls}">${pct(s.gain_pct)}</td>
-            <td class="text-end">${s.volatility ? s.volatility.toFixed(1) + '%' : '—'}</td>
-            <td class="text-end">${s.beta != null ? s.beta.toFixed(2) : '—'}</td>
-            <td class="text-end" style="${rsiCls}">${rsi}</td>
-            <td class="text-center">${dma50}</td>
-            <td class="text-center">${dma200}</td>
+            <td class="stock-name"><span>${stock.name}</span><small>${stock.symbol || 'N/A'}</small></td>
+            <td>${stock.sector || 'N/A'}</td>
+            <td><span class="weight-cell" style="--weight:${Math.min(100, Math.max(0, weight))}%">${weight.toFixed(2)}%</span></td>
+            <td>${fmt(stock.value)}</td>
+            <td class="${plClass}">${signedCurrency(stock.gain)}</td>
+            <td class="${plClass}">${pct(stock.gain_pct)}</td>
+            <td>${volatility}</td>
+            <td>${beta}</td>
+            <td>${rsi}</td>
+            <td>${dma(stock.above_50dma)}</td>
+            <td>${dma(stock.above_200dma)}</td>
         </tr>`;
     }).join('');
+    const footer = document.querySelector('#holdingsTable tfoot') || document.createElement('tfoot');
+    footer.innerHTML = `<tr><td>Totals</td><td></td><td>${(d.stocks || []).reduce((sum, stock) => sum + Number(stock.weight || 0), 0).toFixed(2)}%</td><td>${fmt(d.summary.total_value)}</td><td class="${d.summary.total_gain > 0 ? 'gain-positive' : d.summary.total_gain < 0 ? 'gain-negative' : ''}">${signedCurrency(d.summary.total_gain)}</td><td colspan="6"></td></tr>`;
+    if (!footer.parentElement) document.getElementById('holdingsTable').appendChild(footer);
+    const pagination = document.getElementById('holdingsPagination');
+    pagination.innerHTML = `${rows.length > holdingsPageSize ? `<span>${rows.length ? first + 1 : 0}–${Math.min(first + holdingsPageSize, rows.length)} of ${rows.length}</span>
+        <button type="button" data-page="${holdingsCurrentPage - 1}" ${holdingsCurrentPage <= 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>
+        <button type="button" data-page="${holdingsCurrentPage + 1}" ${holdingsCurrentPage >= pages ? 'disabled' : ''} aria-label="Next page">›</button>` : ''}`;
+    pagination.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        holdingsCurrentPage = Number(button.dataset.page);
+        renderHoldings(d);
+    }));
+    applyHoldingsColumnVisibility(document.getElementById('holdingsColumns').value);
+}
+
+function applyHoldingsColumnVisibility(mode) {
+    const core = mode === 'core';
+    document.querySelectorAll('#holdingsTable tr').forEach(row => {
+        row.querySelectorAll('th,td').forEach((cell, index) => {
+            cell.hidden = core && [6, 7, 8, 9, 10].includes(index);
+        });
+    });
+}
+
+function exportHoldingsCsv() {
+    if (!analyticsData || !analyticsData.stocks) return;
+    const columns = [
+        ['Stock', 'name'], ['Ticker', 'symbol'], ['Sector', 'sector'], ['Weight (%)', 'weight'],
+        ['Value (INR)', 'value'], ['P&L (INR)', 'gain'], ['P&L (%)', 'gain_pct'],
+        ['Volatility (ann.)', 'volatility'], ['Beta', 'beta'], ['RSI (14)', 'rsi'],
+        ['Above 50 DMA', 'above_50dma'], ['Above 200 DMA', 'above_200dma']
+    ];
+    const csvCell = value => `"${String(value == null ? '' : value).replace(/"/g, '""')}"`;
+    const content = [columns.map(([label]) => csvCell(label)).join(',')]
+        .concat(analyticsData.stocks.map(stock => columns.map(([, key]) => csvCell(stock[key])).join(',')))
+        .join('\r\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }));
+    link.download = 'portfolio-holdings.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
 }
 </script>
 {% endif %}

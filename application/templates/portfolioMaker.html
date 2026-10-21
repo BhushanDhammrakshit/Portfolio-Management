@@ -1,67 +1,74 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="portfolio-maker-page">
-    <header class="page-header">
-        <h1><i class="fa-solid fa-plus me-2"></i>Add stocks to your portfolio</h1>
-        <p>Add manually, upload a CSV from your broker, or connect your broker account.</p>
+<div class="portfolio-maker-page fc-portfolio-page">
+    <header class="page-header portfolio-page-header">
+        <div>
+            <h1>Portfolio</h1>
+            <p>Holdings, performance and imports.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">Add Stock</button>
     </header>
 
     {% if error %}<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}</div>{% endif %}
 
-    <!-- ── Method selector tabs ──────────────────────────────── -->
-    <div class="import-method-tabs" id="methodTabs">
-        <button class="import-tab active" data-tab="manual">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <span class="import-tab-title">Manual entry</span>
-            <span class="import-tab-desc">Search &amp; add one stock at a time</span>
-        </button>
-        <button class="import-tab" data-tab="csv">
-            <i class="fa-solid fa-file-csv"></i>
-            <span class="import-tab-title">Upload CSV</span>
-            <span class="import-tab-desc">Bulk import from any broker export</span>
-        </button>
-        <button class="import-tab" data-tab="broker">
-            <i class="fa-solid fa-link"></i>
-            <span class="import-tab-title">Connect broker</span>
-            <span class="import-tab-desc">Auto-sync via broker API</span>
-        </button>
-    </div>
+    <section class="portfolio-summary" aria-label="Portfolio summary">
+        <div class="portfolio-summary-cell"><span>Invested</span><strong id="portfolioInvested">N/A</strong></div>
+        <div class="portfolio-summary-cell"><span>Current Value</span><strong id="portfolioCurrent">N/A</strong></div>
+        <div class="portfolio-summary-cell"><span>Day P&amp;L</span><strong title="Prior-close prices are not available in the portfolio holdings data.">N/A</strong></div>
+        <div class="portfolio-summary-cell"><span>Total P&amp;L</span><strong id="portfolioPnl">N/A</strong></div>
+        <div class="portfolio-summary-cell"><span>XIRR</span><strong title="Dated cash flows are not available for this portfolio.">N/A</strong></div>
+    </section>
 
-    <!-- ── Tab 1: Manual entry (existing) ────────────────────── -->
-    <div class="import-panel" id="panel-manual">
-        <form method="POST" action="{{ url_for('add_to_portfolio') }}" class="portfolio-form" id="addStockForm">
-            <div class="row g-3">
-                <div class="col-12 position-relative">
-                    <label class="form-label" for="stock_name"><i class="fa-solid fa-magnifying-glass"></i> Search stock</label>
-                    <input type="text" class="form-control" id="stock_name" name="stock_name" placeholder="e.g. Reliance, TCS, Infosys…" autocomplete="off" required>
-                    <div class="autocomplete-list" id="autocompleteList" hidden></div>
-                    <input type="hidden" id="symbol" name="symbol">
-                    <input type="hidden" id="sector" name="sector">
-                    <div id="resolvedInfo" class="resolved-info" hidden>
-                        <div class="resolved-row"><span class="resolved-label">Symbol</span><strong id="rSymbol">—</strong></div>
-                        <div class="resolved-row"><span class="resolved-label">Sector</span><strong id="rSector">—</strong></div>
-                        <div class="resolved-row"><span class="resolved-label">Live price</span><strong id="rPrice">—</strong></div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="quantity"><i class="fa-solid fa-hashtag"></i> Quantity</label>
-                    <input type="number" class="form-control" id="quantity" name="quantity" min="1" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="purchase_price"><i class="fa-solid fa-indian-rupee-sign"></i> Buy price</label>
-                    <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" required>
-                </div>
-                <div class="col-12 mt-3">
-                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">
-                        <i class="fa-solid fa-plus me-1"></i>Add to portfolio
-                    </button>
-                </div>
-            </div>
-        </form>
+    <div class="portfolio-view-tabs" role="tablist" aria-label="Portfolio views">
+        <button type="button" class="portfolio-view-tab active" data-view="holdings" role="tab" aria-selected="true">Holdings</button>
+        <button type="button" class="portfolio-view-tab" data-view="transactions" role="tab" aria-selected="false">Transactions</button>
     </div>
+    <section class="portfolio-view" id="portfolioHoldingsView" role="tabpanel">
+        <div class="surface-card portfolio-holdings-card">
+            <div class="portfolio-section-heading">
+                <div><h2>Holdings</h2><span>{{ stocks|length }} securities</span></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle existing-stocks-table portfolio-table">
+                    <thead><tr>
+                        <th>Security</th><th>Sector</th>
+                        <th class="text-end">Quantity</th><th class="text-end">Avg. Cost</th>
+                        <th class="text-end">Market Price</th><th class="text-end">Invested</th>
+                        <th class="text-end">Market Value</th><th class="text-end">Total P&amp;L</th>
+                        <th class="text-end">Actions</th>
+                    </tr></thead>
+                    <tbody id="existingStocksBody"></tbody>
+                    <tfoot id="existingStocksFoot"></tfoot>
+                </table>
+                {% if not stocks %}
+                <div class="portfolio-empty-state">No holdings are available. Add a stock or import a portfolio.</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    <section class="portfolio-view" id="portfolioTransactionsView" role="tabpanel" hidden>
+        <div class="surface-card portfolio-empty-state">
+            Transaction history is not available for the current portfolio data.
+        </div>
+    </section>
+
+    <section class="portfolio-import-section" id="portfolioImport">
+        <div class="portfolio-section-heading">
+            <div><h2>Import Holdings</h2><span>Upload a broker CSV or connect a supported account.</span></div>
+        </div>
+        <div class="import-method-tabs" id="methodTabs">
+            <button class="import-tab active" data-tab="csv">
+                <span class="import-tab-title">Upload CSV</span>
+                <span class="import-tab-desc">Import holdings from a broker export</span>
+            </button>
+            <button class="import-tab" data-tab="broker">
+                <span class="import-tab-title">Connect Broker</span>
+                <span class="import-tab-desc">Sync holdings from a supported broker</span>
+            </button>
+        </div>
 
     <!-- ── Tab 2: CSV Upload ─────────────────────────────────── -->
-    <div class="import-panel" id="panel-csv" hidden>
+    <div class="import-panel" id="panel-csv">
         <div class="csv-upload-zone" id="csvDropZone">
             <input type="file" id="csvFileInput" accept=".csv" hidden>
             <div class="csv-upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
@@ -209,7 +216,7 @@
         <div class="surface-card p-4 mb-3" id="fyersSection">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2962ff,#448aff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;font-weight:800;">F</div>
+                    <div class="broker-provider-mark" aria-hidden="true">F</div>
                     <div>
                         <h5 class="mb-0 fw-bold">Fyers</h5>
                         <span class="badge-soft badge-soft-success">Free API</span>
@@ -262,7 +269,7 @@
         <div class="surface-card p-4 mb-3" id="dhanSection">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00bfa5,#1de9b6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;font-weight:800;">D</div>
+                    <div class="broker-provider-mark" aria-hidden="true">D</div>
                     <div>
                         <h5 class="mb-0 fw-bold">Dhan</h5>
                         <span class="badge-soft badge-soft-success">Free API</span>
@@ -363,31 +370,41 @@
             <span class="text-muted small">Broker connections use secure OAuth2. We never see or store your broker password.</span>
         </div>
     </div>
+</div>
 
-    <!-- ── Existing portfolio table ──────────────────────────── -->
-    {% if stocks %}
-    <div class="surface-card mt-4 p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="section-title mb-0"><i class="fa-solid fa-list"></i>Your portfolio <span class="badge-soft badge-soft-info ms-2">{{ stocks|length }}</span></h5>
+<div class="modal fade" id="addStockModal" tabindex="-1" aria-labelledby="addStockModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="addStockModalTitle">Add Holding</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('add_to_portfolio') }}" class="portfolio-form" id="addStockForm">
+        <div class="modal-body">
+          <div class="mb-3 position-relative">
+            <label class="form-label" for="stock_name">Search stock</label>
+            <input type="text" class="form-control" id="stock_name" name="stock_name" placeholder="Search by company name or symbol" autocomplete="off" required>
+            <div class="autocomplete-list" id="autocompleteList" hidden></div>
+            <input type="hidden" id="symbol" name="symbol">
+            <input type="hidden" id="sector" name="sector">
+            <div id="resolvedInfo" class="resolved-info" hidden>
+              <div class="resolved-row"><span class="resolved-label">Symbol</span><strong id="rSymbol">N/A</strong></div>
+              <div class="resolved-row"><span class="resolved-label">Sector</span><strong id="rSector">N/A</strong></div>
+              <div class="resolved-row"><span class="resolved-label">Live Price</span><strong id="rPrice">N/A</strong></div>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label" for="quantity">Quantity</label><input type="number" class="form-control" id="quantity" name="quantity" min="1" step="1" required></div>
+            <div class="col-6"><label class="form-label" for="purchase_price">Buy Price</label><input type="number" step="0.01" min="0.01" class="form-control" id="purchase_price" name="purchase_price" required></div>
+          </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle existing-stocks-table">
-                <thead>
-                    <tr>
-                        <th>Stock</th>
-                        <th>Symbol</th>
-                        <th>Sector</th>
-                        <th class="text-end">Qty</th>
-                        <th class="text-end">Buy price</th>
-                        <th class="text-end">Current</th>
-                        <th class="text-center" style="width: 120px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="existingStocksBody"></tbody>
-            </table>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Add Holding</button>
         </div>
+      </form>
     </div>
-    {% endif %}
+  </div>
 </div>
 
 <!-- Edit modal -->
@@ -403,10 +420,10 @@
         <div class="modal-body">
           <div class="mb-2"><label class="form-label">Stock</label><input type="text" id="editStockName" class="form-control" disabled /></div>
           <div class="row g-2">
-            <div class="col-6"><label class="form-label">Quantity</label><input type="number" id="editQuantity" class="form-control" min="0" /></div>
+            <div class="col-6"><label class="form-label" for="editQuantity">Quantity</label><input type="number" id="editQuantity" class="form-control" min="1" step="1" required /></div>
             <div class="col-6"><label class="form-label">Symbol</label><input type="text" id="editSymbol" class="form-control" placeholder="e.g. RELIANCE.NS" data-stock-suggest /></div>
-            <div class="col-6"><label class="form-label">Purchase price</label><input type="number" step="0.01" id="editPurchasePrice" class="form-control" /></div>
-            <div class="col-6"><label class="form-label">Current price</label><input type="number" step="0.01" id="editCurrentPrice" class="form-control" /></div>
+            <div class="col-6"><label class="form-label" for="editPurchasePrice">Purchase price</label><input type="number" min="0.01" step="0.01" id="editPurchasePrice" class="form-control" required /></div>
+            <div class="col-6"><label class="form-label" for="editCurrentPrice">Current price</label><input type="number" min="0.01" step="0.01" id="editCurrentPrice" class="form-control" required /></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -532,6 +549,76 @@
 .existing-stocks-table td { font-size: 0.88rem; vertical-align: middle; }
 .existing-stocks-table .stock-cell-name { font-weight: 600; color: var(--text); }
 .existing-stocks-table .symbol-pill { background: var(--surface-2); padding: 1px 8px; border-radius: 999px; font-weight: 600; color: var(--primary); font-size: 0.75rem; }
+</style>
+<style>
+.fc-portfolio-page{max-width:var(--content-max);margin-inline:auto}
+.fc-portfolio-page .portfolio-page-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4)}
+.fc-portfolio-page .portfolio-page-header h1{margin:0;color:var(--text-primary);font-size:var(--fs-page-title);line-height:var(--lh-page-title);font-weight:var(--fw-semibold)}
+.fc-portfolio-page .portfolio-page-header p{margin:var(--space-1) 0 0;color:var(--text-secondary);font-size:var(--fs-body)}
+.portfolio-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:var(--space-4)}
+.portfolio-summary-cell{min-height:var(--analysis-summary-cell-min-height);padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;justify-content:center;gap:var(--space-1)}
+.portfolio-summary-cell+ .portfolio-summary-cell{border-left:1px solid var(--border)}
+.portfolio-summary-cell span{color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:var(--fw-medium);text-transform:uppercase}
+.portfolio-summary-cell strong{color:var(--text-primary);font:var(--fw-semibold) var(--fs-kpi-value)/var(--lh-kpi-value) var(--font-mono);font-variant-numeric:tabular-nums}
+.portfolio-summary-cell strong.positive{color:var(--positive)}
+.portfolio-summary-cell strong.negative{color:var(--negative)}
+.portfolio-view-tabs{display:flex;gap:var(--space-4);height:var(--tabs-height);border-bottom:1px solid var(--border);margin-bottom:var(--space-4)}
+.portfolio-view-tab{height:100%;padding:0 var(--space-2);border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font:var(--fw-medium) var(--fs-body)/var(--lh-body) var(--font-sans)}
+.portfolio-view-tab.active{border-bottom-color:var(--brand);color:var(--brand)}
+.portfolio-view-tab:focus-visible{outline:0;box-shadow:var(--focus-ring)}
+.portfolio-holdings-card{padding:0;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.portfolio-section-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-4)}
+.portfolio-section-heading h2{margin:0;color:var(--text-primary);font-size:var(--fs-card-title);line-height:var(--lh-section-title);font-weight:var(--fw-semibold)}
+.portfolio-section-heading span{color:var(--text-secondary);font-size:var(--fs-caption)}
+.portfolio-table{min-width:var(--portfolio-holdings-table-min-width);margin:0}
+.portfolio-table thead th{height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);border-color:var(--border);color:var(--text-secondary);font-size:var(--fs-label);font-weight:var(--fw-medium);white-space:nowrap}
+.portfolio-table tbody td,.portfolio-table tfoot td,.portfolio-table tfoot th{height:var(--table-row-height);padding:var(--space-2) var(--space-3);border-color:var(--border);color:var(--text-primary);font-size:var(--fs-table-cell);vertical-align:middle}
+.portfolio-table tbody tr:hover td{background:var(--bg-subtle)}
+.portfolio-table th:first-child,.portfolio-table td:first-child{position:sticky;left:0;z-index:1;background:var(--bg-surface)}
+.portfolio-table thead th:first-child,.portfolio-table tfoot th:first-child{z-index:2;background:var(--bg-subtle)}
+.portfolio-table td.text-end,.portfolio-table tfoot td.text-end{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.portfolio-table td:first-child .stock-cell-name{display:block;color:var(--text-primary);font-size:var(--fs-body);font-weight:var(--fw-medium)}
+.portfolio-table td:first-child small{display:block;margin-top:var(--space-1);color:var(--text-muted);font-size:var(--fs-caption)}
+.portfolio-table .positive{color:var(--positive)}
+.portfolio-table .negative{color:var(--negative)}
+.portfolio-total-row th,.portfolio-total-row td{background:var(--bg-subtle);font-weight:var(--fw-semibold)}
+.portfolio-action{padding:var(--space-1) var(--space-2);border:1px solid var(--border);border-radius:var(--radius-tag);background:var(--bg-surface);color:var(--text-secondary);font-size:var(--fs-label);font-weight:var(--fw-medium)}
+.portfolio-action+.portfolio-action{margin-left:var(--space-1)}
+.portfolio-action:hover{border-color:var(--brand);color:var(--brand)}
+.portfolio-action.danger:hover{border-color:var(--negative);color:var(--negative)}
+.portfolio-action:focus-visible{outline:0;box-shadow:var(--focus-ring)}
+.portfolio-empty-state{padding:var(--space-5);color:var(--text-secondary);font-size:var(--fs-body);text-align:center}
+.portfolio-import-section{margin-top:var(--space-6)}
+.import-method-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin-bottom:var(--space-3)}
+.import-tab{align-items:flex-start;min-height:var(--import-method-row-min-height);padding:var(--space-3) var(--space-4);border-width:1px;border-radius:var(--radius);text-align:left}
+.import-tab:hover,.import-tab.active{border-color:var(--brand-border);background:var(--brand-soft);box-shadow:none}
+.import-tab-title{font-size:var(--fs-body);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.import-tab-desc{font-size:var(--fs-caption);color:var(--text-secondary)}
+.import-panel{animation:none}
+.csv-upload-zone{padding:var(--space-6) var(--space-4);border-color:var(--border-strong);border-radius:var(--radius);background:var(--bg-surface)}
+.csv-upload-zone:hover,.csv-upload-zone.dragover{border-color:var(--brand);background:var(--brand-soft)}
+.broker-card{padding:var(--space-4);border-color:var(--border);border-radius:var(--radius);background:var(--bg-surface);box-shadow:none}
+.broker-card:hover{border-color:var(--border-strong)}
+.broker-logo{width:var(--control-height-large);height:var(--control-height-large);border-radius:var(--radius);background:var(--bg-subtle);color:var(--text-secondary)}
+.broker-provider-mark{width:var(--broker-provider-mark-size);height:var(--broker-provider-mark-size);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-subtle);color:var(--text-secondary);font-size:var(--fs-section-title);font-weight:var(--fw-semibold);flex-shrink:0}
+.portfolio-maker-page .surface-card,#addStockModal .modal-content,#editStockModal .modal-content{background:var(--bg-surface);border-color:var(--border);border-radius:var(--radius);box-shadow:none}
+#addStockModal .modal-header,#addStockModal .modal-footer,#editStockModal .modal-header,#editStockModal .modal-footer{border-color:var(--border)}
+.portfolio-maker-page .form-control,.portfolio-maker-page .form-select,#addStockModal .form-control,#addStockModal .form-select,#editStockModal .form-control,#editStockModal .form-select{min-height:var(--control-height);border-color:var(--border);border-radius:var(--radius);background:var(--bg-surface);color:var(--text-primary)}
+.portfolio-maker-page .form-control:focus,.portfolio-maker-page .form-select:focus,#addStockModal .form-control:focus,#addStockModal .form-select:focus,#editStockModal .form-control:focus,#editStockModal .form-select:focus{border-color:var(--brand);box-shadow:var(--focus-ring)}
+#addStockModal .resolved-info{background:var(--brand-soft);border-color:var(--brand-border);border-radius:var(--radius)}
+#addStockModal .autocomplete-list{border-color:var(--border);border-radius:var(--radius);box-shadow:var(--shadow-dropdown)}
+#addStockModal .autocomplete-item:hover,#addStockModal .autocomplete-item.active{background:var(--bg-subtle)}
+@media(max-width:767px){
+    .portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .portfolio-summary-cell{min-height:var(--analysis-summary-cell-min-height);padding:var(--space-3)}
+    .portfolio-summary-cell+ .portfolio-summary-cell{border-left:0}
+    .portfolio-summary-cell:nth-child(even){border-left:1px solid var(--border)}
+    .portfolio-summary-cell:nth-child(n+3){border-top:1px solid var(--border)}
+    .portfolio-summary-cell:last-child{grid-column:1/-1}
+    .fc-portfolio-page .portfolio-page-header{align-items:flex-start}
+    .import-method-tabs{grid-template-columns:1fr}
+    .portfolio-table{min-width:var(--portfolio-holdings-table-min-width)}
+}
 </style>
 
 <script>
@@ -749,17 +836,16 @@ async function pick(item) {
         const info = await r.json();
         const sector = info.sector || '';
         sectorInput.value = sector;
-        rSector.textContent = sector || '—';
+        rSector.textContent = sector || 'N/A';
         if (info.price != null) {
-            const formatted = '\u20B9' + Number(info.price).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-            rPrice.textContent = formatted;
+            rPrice.innerHTML = window.FCFormat.currency(info.price, false);
             if (!priceInput.value) priceInput.value = Number(info.price).toFixed(2);
         } else {
-            rPrice.textContent = 'Unavailable';
+            rPrice.textContent = 'N/A';
         }
     } catch (e) {
-        rSector.textContent = '—';
-        rPrice.textContent = 'Unavailable';
+        rSector.textContent = 'N/A';
+        rPrice.textContent = 'N/A';
     }
 }
 
@@ -774,29 +860,79 @@ function escapeHtml(s) {
 // ===== Existing portfolio table =====
 const existingStocks = {{ stocks|tojson if stocks is defined else '[]' }};
 const existingBody = document.getElementById('existingStocksBody');
-const fmtINR = v => '\u20B9' + Number(v||0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const existingFoot = document.getElementById('existingStocksFoot');
+const fmtINR = v => window.FCFormat.currency(v, false);
+const finiteNumber = value => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
 
 function renderExisting() {
     if (!existingBody) return;
     existingBody.innerHTML = '';
+    let investedTotal = 0;
+    let currentTotal = 0;
+    let quantityTotal = 0;
+    let hasCompleteQuantity = existingStocks.length > 0;
+    let hasCompleteInvested = existingStocks.length > 0;
+    let hasCompleteCurrent = existingStocks.length > 0;
     existingStocks.forEach(s => {
+        const quantity = finiteNumber(s.Quantity);
+        const purchasePrice = finiteNumber(s.PurchasePrice);
+        const currentPrice = finiteNumber(s.CurrentPrice);
+        const invested = quantity === null || purchasePrice === null ? null : quantity * purchasePrice;
+        const currentValue = quantity === null || currentPrice === null ? null : quantity * currentPrice;
+        const totalPnl = invested === null || currentValue === null ? null : currentValue - invested;
+        if (quantity === null) hasCompleteQuantity = false;
+        else quantityTotal += quantity;
+        if (invested === null) hasCompleteInvested = false;
+        else investedTotal += invested;
+        if (currentValue === null) hasCompleteCurrent = false;
+        else currentTotal += currentValue;
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><span class="stock-cell-name">${escapeHtml(s.StockName || '')}</span></td>
-            <td>${s.Symbol ? `<span class="symbol-pill">${escapeHtml(s.Symbol)}</span>` : '<span class="text-muted">—</span>'}</td>
-            <td>${escapeHtml(s.Sector || '—')}</td>
-            <td class="text-end">${s.Quantity || 0}</td>
-            <td class="text-end">${fmtINR(s.PurchasePrice)}</td>
-            <td class="text-end">${fmtINR(s.CurrentPrice || s.PurchasePrice)}</td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-primary me-1" data-action="edit" data-key="${s.RowKey || ''}" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" data-key="${s.RowKey || ''}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            <td><span class="stock-cell-name">${escapeHtml(s.StockName || 'N/A')}</span><small>${escapeHtml(s.Symbol || '')}</small></td>
+            <td>${escapeHtml(s.Sector || 'N/A')}</td>
+            <td class="text-end">${window.FCFormat.number(quantity, 0)}</td>
+            <td class="text-end">${fmtINR(purchasePrice)}</td>
+            <td class="text-end">${fmtINR(currentPrice)}</td>
+            <td class="text-end">${fmtINR(invested)}</td>
+            <td class="text-end">${fmtINR(currentValue)}</td>
+            <td class="text-end ${totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : ''}">${window.FCFormat.currency(totalPnl,true)}</td>
+            <td class="text-end">
+                <button type="button" class="portfolio-action" data-action="edit" data-key="${escapeHtml(s.RowKey || '')}" aria-label="Edit ${escapeHtml(s.StockName || 'holding')}" title="Edit">Edit</button>
+                <button type="button" class="portfolio-action danger" data-action="delete" data-key="${escapeHtml(s.RowKey || '')}" aria-label="Delete ${escapeHtml(s.StockName || 'holding')}" title="Delete">Delete</button>
             </td>
         `;
         existingBody.appendChild(tr);
     });
+    if (existingFoot) {
+        existingFoot.innerHTML = existingStocks.length ? `<tr class="portfolio-total-row">
+            <th scope="row">Total</th><td></td>
+            <td class="text-end">${window.FCFormat.number(hasCompleteQuantity ? quantityTotal : null, 0)}</td>
+            <td></td><td></td>
+            <td class="text-end">${fmtINR(hasCompleteInvested ? investedTotal : null)}</td>
+            <td class="text-end">${fmtINR(hasCompleteCurrent ? currentTotal : null)}</td>
+            <td class="text-end">${window.FCFormat.currency(hasCompleteCurrent && hasCompleteInvested ? currentTotal - investedTotal : null,true)}</td><td></td>
+        </tr>` : '';
+    }
+    document.getElementById('portfolioInvested').innerHTML=fmtINR(hasCompleteInvested?investedTotal:null);
+    document.getElementById('portfolioCurrent').innerHTML=fmtINR(hasCompleteCurrent?currentTotal:null);
+    const totalPnl=hasCompleteCurrent&&hasCompleteInvested?currentTotal-investedTotal:null;
+    const pnl=document.getElementById('portfolioPnl');
+    pnl.innerHTML=totalPnl===null?window.FCFormat.missing('One or more holdings are missing quantity or price data.'):window.FCFormat.currency(totalPnl,true);
+    pnl.classList.toggle('positive',totalPnl!==null&&totalPnl>0);
+    pnl.classList.toggle('negative',totalPnl!==null&&totalPnl<0);
 }
 renderExisting();
+
+document.querySelectorAll('.portfolio-view-tab').forEach(tab=>tab.addEventListener('click',()=>{
+    const showHoldings=tab.dataset.view==='holdings';
+    document.getElementById('portfolioHoldingsView').hidden=!showHoldings;
+    document.getElementById('portfolioTransactionsView').hidden=showHoldings;
+    document.querySelectorAll('.portfolio-view-tab').forEach(item=>{
+        const active=item===tab;
+        item.classList.toggle('active',active);
+        item.setAttribute('aria-selected',String(active));
+    });
+}));
 
 if (existingBody) {
     existingBody.addEventListener('click', async (e) => {
@@ -814,9 +950,9 @@ if (existingBody) {
         } else if (btn.dataset.action === 'edit') {
             document.getElementById('editRowKey').value = key;
             document.getElementById('editStockName').value = stock.StockName || '';
-            document.getElementById('editQuantity').value = stock.Quantity || 0;
-            document.getElementById('editPurchasePrice').value = stock.PurchasePrice || 0;
-            document.getElementById('editCurrentPrice').value = stock.CurrentPrice || 0;
+            document.getElementById('editQuantity').value = stock.Quantity ?? '';
+            document.getElementById('editPurchasePrice').value = stock.PurchasePrice ?? '';
+            document.getElementById('editCurrentPrice').value = stock.CurrentPrice ?? '';
             document.getElementById('editSymbol').value = stock.Symbol || '';
             new bootstrap.Modal(document.getElementById('editStockModal')).show();
         }
@@ -824,6 +960,7 @@ if (existingBody) {
 
     document.getElementById('editStockForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!e.currentTarget.reportValidity()) return;
         const key = document.getElementById('editRowKey').value;
         const payload = {
             quantity: document.getElementById('editQuantity').value,

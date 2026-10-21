@@ -1,10 +1,10 @@
 {% extends "guest_layout.html" %}
 {% block meta_robots %}noindex, nofollow{% endblock %}
 {% block content %}
-<div class="auth-card text-center">
+<div class="auth-card text-center error-page">
     <div class="error-code">{{ code or 404 }}</div>
-    <h2>{% if code == 404 %}Page not found{% elif code == 500 %}Something broke{% else %}Oops{% endif %}</h2>
+    <h2>{% if code == 404 %}Page not found{% elif code == 500 %}Service unavailable{% else %}Request unavailable{% endif %}</h2>
     <p class="text-muted">{{ message or 'An unexpected error occurred.' }}</p>
-    <a href="/" class="btn btn-primary mt-3"><i class="fa-solid fa-house me-1"></i> Back to home</a>
+    <a href="/home" class="btn btn-primary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_icons.html" import icon %}
 {% from "_upgrade_lock.html" import upgrade_card %}
 {% block content %}
 <style>
@@ -6,7 +7,7 @@
 .tools-tabs::-webkit-scrollbar{height:6px}
 .tools-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .tools-tab:hover{background:var(--surface-2);color:var(--text)}
-.tools-tab.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.25)}
+.tools-tab.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.25)}
 .tool-panel{display:none}
 .tool-panel.active{display:block}
 .tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
@@ -37,9 +38,9 @@
 .rvol-cell .rv-name{font-weight:700;font-size:.85rem}
 .rvol-cell .rv-sub{font-size:.7rem;color:var(--text-muted)}
 .rvol-cell .rv-val{font-size:1.4rem;font-weight:800;margin-top:6px;font-family:Consolas,monospace}
-.rvol-cell.tier-extreme{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-color:#fca5a5}
-.rvol-cell.tier-high{background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:#fdba74}
-.rvol-cell.tier-elevated{background:linear-gradient(135deg,#fefce8,#fef9c3);border-color:#fde68a}
+.rvol-cell.tier-extreme{background:var(--negative-bg);border-color:#fca5a5}
+.rvol-cell.tier-high{background:var(--warning-bg);border-color:#fdba74}
+.rvol-cell.tier-elevated{background:var(--warning-bg);border-color:#fde68a}
 [data-theme="dark"] .rvol-cell.tier-extreme{background:rgba(127,29,29,.3);border-color:#7f1d1d}
 [data-theme="dark"] .rvol-cell.tier-high{background:rgba(124,45,18,.3);border-color:#7c2d12}
 [data-theme="dark"] .rvol-cell.tier-elevated{background:rgba(113,63,18,.3);border-color:#713f12}
@@ -48,7 +49,7 @@
 .pivot-col h4{font-size:.9rem;font-weight:700;margin:0 0 8px;display:flex;justify-content:space-between}
 .pivot-row{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.82rem;font-family:Consolas,monospace}
 .pivot-row.current{background:rgba(79,70,229,.1);font-weight:700;border-radius:4px}
-.confluence-card{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:8px}
+.confluence-card{background:var(--brand-soft);border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:8px}
 [data-theme="dark"] .confluence-card{background:rgba(79,70,229,.15);border-color:rgba(99,102,241,.4)}
 .empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
 .empty-state i{font-size:2.5rem;margin-bottom:12px;opacity:.4}
@@ -56,8 +57,8 @@
 .table-scroll{max-height:580px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
 .sym-pill{display:inline-block;font-weight:700;color:var(--primary)}
 .score-bar{display:inline-block;width:80px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
-.score-bar .fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
-.score-bar.neg .fill{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.score-bar .fill{height:100%;background:var(--positive)}
+.score-bar.neg .fill{background:var(--negative)}
 .oi-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:1024px){.oi-grid{grid-template-columns:1fr}}
 .oi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:0}
@@ -89,7 +90,7 @@
 .arrg-toolbar .arrg-spacer{flex:1}
 .arrg-toolbar button.arrg-btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:5px 10px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .arrg-toolbar button.arrg-btn:hover{background:var(--surface)}
-.arrg-toolbar button.arrg-btn.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-color:transparent}
+.arrg-toolbar button.arrg-btn.active{background:var(--brand);color:#fff;border-color:transparent}
 .arrg-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}
 @media(max-width:1100px){.arrg-layout{grid-template-columns:1fr}}
 .arrg-chart-wrap{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;min-height:520px}
@@ -164,38 +165,206 @@
 .arrg-playbar .form-range{flex:1;margin:0}
 .arrg-playbar .arrg-period{flex:0 0 auto;font-size:.74rem;font-weight:700;color:var(--text);min-width:130px;text-align:right;font-variant-numeric:tabular-nums}
 .arrg-playbar .arrg-period .lbl{color:var(--text-muted);font-weight:500;font-size:.7rem;margin-right:4px}
+.tools-tabs{gap:var(--space-5);padding:0;border:0;border-bottom:var(--border-width) solid var(--border);border-radius:0;background:transparent}
+.tools-tab{padding:var(--space-2) 0;border-radius:0;color:var(--text-secondary);font-size:var(--fs-card-title);font-weight:500}
+.tools-tab:hover{background:transparent;color:var(--brand)}
+.tools-tab.active{border-bottom:2px solid var(--brand);background:transparent;color:var(--brand);box-shadow:none}
+.tool-header h2{font-size:var(--fs-section-title);font-weight:600}
+.tool-header p{font-size:var(--fs-table-cell)}
+.tool-card,.oi-card,.table-scroll,.arrg-toolbar{border-radius:var(--radius);box-shadow:none}
+.tool-card{padding:var(--space-4)}
+.tool-table{font-size:var(--fs-table-cell)}
+.tool-table th{background:var(--bg-subtle);font-size:var(--fs-kpi-label);font-weight:500}
+.tool-table td{padding:var(--space-2) var(--space-3)}
+.pill{border-radius:var(--radius-tag);font-size:var(--fs-kpi-label)}
+.rvol-cell{border-radius:var(--radius);box-shadow:none!important}
+.rvol-cell:hover{transform:none}
+.ta-workspace{margin-bottom:var(--space-5);overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.ta-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border-bottom:var(--border-width) solid var(--border)}
+.ta-workspace-title h2{margin:0;color:var(--text-primary);font-size:var(--fs-section-title);font-weight:600}
+.ta-workspace-title p{margin:var(--space-1) 0 0;color:var(--text-secondary);font-size:var(--fs-table-cell)}
+.ta-stock-controls{display:flex;align-items:center;gap:var(--space-2)}
+.ta-stock-controls input{width:var(--analysis-control-width);height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
+.ta-stock-quote{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) var(--space-4);border-bottom:var(--border-width) solid var(--border)}
+.ta-stock-quote strong{color:var(--text-primary);font-size:var(--fs-card-title);font-weight:600}
+.ta-stock-quote span{color:var(--text-muted);font-size:var(--fs-caption)}
+.ta-na{color:var(--text-muted)}
+.ta-tech-content{padding:var(--space-4)}
+.ta-tech-table{width:100%;border-collapse:collapse;font-size:var(--fs-table-cell)}
+.ta-tech-table th{height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-align:left}
+.ta-tech-table th:nth-child(2),.ta-tech-table td:nth-child(2){text-align:right}
+.ta-tech-table td{height:var(--table-row-height);padding:var(--space-2) var(--space-3);border-top:var(--border-width) solid var(--border);color:var(--text-primary)}
+.ta-tech-table .ta-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:right}
+.ta-tech-signal{display:inline-flex;align-items:center;gap:var(--space-2);color:var(--text-secondary)}
+.ta-tech-signal::before{width:var(--status-dot-size);height:var(--status-dot-size);border-radius:50%;background:var(--text-muted);content:""}
+.ta-tech-signal.positive::before{background:var(--positive)}.ta-tech-signal.negative::before{background:var(--negative)}
+.ta-score-gauge{display:flex;align-items:center;gap:var(--space-3);max-width:520px;margin-top:var(--space-4);color:var(--text-secondary);font-size:var(--fs-caption)}
+.ta-score-track{position:relative;flex:1;height:var(--space-2);border-radius:var(--radius-tag);background:linear-gradient(90deg,var(--negative-bg),var(--bg-subtle) 50%,var(--positive-bg))}
+.ta-score-track span{position:absolute;top:50%;width:var(--status-dot-size);height:var(--status-dot-size);border:var(--border-width) solid var(--surface);border-radius:50%;background:var(--brand);transform:translate(-50%,-50%)}
+.ta-score-note{margin-top:var(--space-2);color:var(--text-muted);font-size:var(--fs-caption)}
+.ta-snapshot-status{padding:var(--space-2) var(--space-4);border-bottom:var(--border-width) solid var(--border);color:var(--text-muted);font-size:var(--fs-caption)}
+.ta-view-tabs{display:flex;gap:var(--space-4);overflow:auto;padding:0 var(--space-4);border-bottom:var(--border-width) solid var(--border)}
+.ta-view-tabs button{flex:0 0 auto;padding:var(--space-3) 0;border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font-size:var(--fs-table-cell);font-weight:500}
+.ta-view-tabs button[aria-selected="true"]{border-bottom-color:var(--brand);color:var(--brand)}
+.ta-view-panel[hidden]{display:none}
+.ta-chart-frame{display:block;width:100%;height:var(--analysis-chart-height);border:0;background:var(--surface)}
+.ta-unavailable{display:grid;min-height:var(--analysis-empty-min-height);place-items:center;padding:var(--space-5);color:var(--text-muted);font-size:var(--fs-table-cell);text-align:center}
+@media(max-width:767px){.ta-workspace-head{align-items:flex-start;flex-direction:column}.ta-stock-controls{width:100%}.ta-stock-controls input{flex:1}.ta-chart-frame{height:var(--analysis-chart-height-mobile)}}
 </style>
 
-<div class="page-container">
+<div class="page-container scans-page">
+    {% set standalone_tool = {
+        'orb': 'ORB Scanner',
+        'momentum': 'Momentum Burst',
+        'arrg': 'Advanced Sector Rotation',
+        'oi': 'OI Buildup'
+    }.get(request.args.get('tool')) %}
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
         <div>
-            <h1><i class="fa-solid fa-bolt me-2"></i>Intraday Tools</h1>
-            <p>Real-time scanners for day-trading. Pick a tab below.</p>
+            <h1>{{ standalone_tool or 'Technical Analysis' }}</h1>
+            <p>{% if standalone_tool %}Focused technical analysis tool.{% else %}Stock chart and intraday market analysis tools.{% endif %}</p>
         </div>
     </header>
 
-    <div class="alert alert-warning small py-2 px-3 mb-3" role="alert" style="border-radius:8px">
-        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-        These scanners provide <strong>technical analysis for educational purposes only</strong>.
-        They are <strong>not trading tips or buy/sell recommendations</strong>. Finance Candle is
-        not a SEBI-registered adviser or research analyst. Do your own research before trading.
+    <div class="ds-info-banner-wrap">
+        {% if not has_pro %}
+        <div class="info-banner">ORB, RVOL, Momentum Burst, OI Build-up and Sector Rotation are Pro scans. <a href="{{ url_for('billing.billing_page') }}">View plans</a></div>
+        {% else %}
+        <div class="info-banner">Scanners provide technical analysis for educational purposes only — not trading tips or buy/sell recommendations.</div>
+        {% endif %}
     </div>
 
+    {% if not standalone_tool %}
+    <section class="ta-workspace" aria-label="Technical analysis chart">
+        <div class="ta-workspace-head">
+            <div class="ta-workspace-title">
+                <h2>Technical Analysis</h2>
+                <p>Price chart and analysis tools for NSE-listed securities.</p>
+            </div>
+            <div class="ta-stock-controls">
+                <input id="taSymbol" type="search" value="RELIANCE" data-stock-suggest aria-label="Stock symbol" placeholder="Search symbol">
+                <button type="button" class="btn btn-primary btn-sm" id="taLoadSymbol">Load</button>
+            </div>
+        </div>
+        <div class="ta-stock-quote">
+            <strong id="taSelectedSymbol">RELIANCE</strong><span>NSE</span>
+            <span>Price <strong id="taCurrentPrice" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
+            <span>Change <strong id="taDayChange" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
+            <span>Day range <strong id="taDayRange" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
+            <span>52W range <span class="ta-na" title="52-week prices are unavailable">N/A</span></span>
+        </div>
+        <div class="ta-snapshot-status" role="status">Quote, range and indicator details are not available from the chart feed.</div>
+        <div class="ta-view-tabs" role="tablist" aria-label="Technical analysis views">
+            <button type="button" role="tab" aria-selected="true" data-ta-view="overview">Overview</button>
+            <button type="button" role="tab" aria-selected="false" data-ta-view="technicals">Technicals</button>
+            <button type="button" role="tab" aria-selected="false" data-ta-view="pivots">Pivot Levels</button>
+            <button type="button" role="tab" aria-selected="false" data-ta-view="patterns">Patterns</button>
+            <button type="button" role="tab" aria-selected="false" data-ta-view="peers">Peers</button>
+        </div>
+        <div class="ta-view-panel" data-ta-panel="overview"><iframe id="taChartFrame" class="ta-chart-frame" title="Candlestick chart for RELIANCE" src="/tv-chart?symbol=RELIANCE&interval=D"></iframe></div>
+        <div class="ta-view-panel" data-ta-panel="technicals" hidden>
+            <div class="ta-tech-content">
+                <table class="ta-tech-table">
+                    <thead><tr><th>Indicator</th><th>Value</th><th>Signal</th></tr></thead>
+                    <tbody>
+                        <tr><td>RSI (14)</td><td class="ta-mono"><span class="ta-na" title="Indicator data is unavailable">N/A</span></td><td><span class="ta-tech-signal">N/A</span></td></tr>
+                        <tr><td>MACD</td><td class="ta-mono"><span class="ta-na" title="Indicator data is unavailable">N/A</span></td><td><span class="ta-tech-signal">N/A</span></td></tr>
+                        <tr><td>EMA (9 / 21)</td><td class="ta-mono"><span class="ta-na" title="Indicator data is unavailable">N/A</span></td><td><span class="ta-tech-signal">N/A</span></td></tr>
+                        <tr><td>VWAP</td><td class="ta-mono"><span class="ta-na" title="Indicator data is unavailable">N/A</span></td><td><span class="ta-tech-signal">N/A</span></td></tr>
+                    </tbody>
+                </table>
+                <div class="ta-score-gauge" aria-label="Composite technical score unavailable">
+                    <span>Sell</span><div class="ta-score-track"></div><span>Buy</span>
+                </div>
+                <p class="ta-score-note"><span class="ta-na" title="Composite indicator score is unavailable">N/A</span> · Scanner score is not available in the OHLC chart response.</p>
+            </div>
+        </div>
+        <div class="ta-view-panel ta-unavailable" data-ta-panel="pivots" hidden>
+            <div>Use the existing Pivot Calculator to load daily pivot levels and confluence zones.</div>
+            <button type="button" class="btn btn-outline-primary btn-sm ta-open-pivots">Open Pivot Calculator</button>
+        </div>
+        <div class="ta-view-panel ta-unavailable" data-ta-panel="patterns" hidden>Pattern detection data is not available for the selected symbol.</div>
+        <div class="ta-view-panel ta-unavailable" data-ta-panel="peers" hidden>Peer comparison data is not available in the current technical-analysis feeds.</div>
+    </section>
     <div class="tools-tabs" role="tablist">
-        <button class="tools-tab active" data-tab="orb"><i class="fa-solid fa-flag-checkered"></i>ORB Scanner</button>
-        <button class="tools-tab" data-tab="rvol"><i class="fa-solid fa-fire"></i>RVOL Heatmap</button>
+        <button class="tools-tab active" data-tab="rvol"><i class="fa-solid fa-fire"></i>RVOL Heatmap</button>
         <button class="tools-tab" data-tab="gappers"><i class="fa-solid fa-arrows-up-down"></i>Gappers</button>
         <button class="tools-tab" data-tab="pivots"><i class="fa-solid fa-layer-group"></i>Pivots</button>
-        <button class="tools-tab" data-tab="momentum"><i class="fa-solid fa-rocket"></i>Momentum Burst</button>
         <button class="tools-tab" data-tab="basis"><i class="fa-solid fa-scale-balanced"></i>Index Basis</button>
         <button class="tools-tab" data-tab="rotation"><i class="fa-solid fa-arrows-spin"></i>Sector Rotation</button>
-        <button class="tools-tab" data-tab="arrg"><i class="fa-solid fa-chart-scatter"></i>Advanced Sector Rotation</button>
         <button class="tools-tab" data-tab="news"><i class="fa-solid fa-newspaper"></i>News Sentiment</button>
-        <button class="tools-tab" data-tab="oi"><i class="fa-solid fa-layer-group"></i>OI Buildup</button>
     </div>
 
+    <section class="scans-section" aria-label="Available scans">
+        <div class="scans-section-head">
+            <h2 class="scans-section-title">Scans</h2>
+            <div class="table-toolbar-left">
+                <div class="table-segmented" id="toolHistoryToggle" role="group" aria-label="Scan results view">
+                    <button type="button" data-view="recent" class="active">Recent</button>
+                    <button type="button" data-view="past">Past</button>
+                </div>
+                <button type="button" class="scans-view-all" id="toolViewAll">View All {{ icon('chevron-right', 14) }}</button>
+            </div>
+        </div>
+        <div class="scan-card-row-wrap">
+            <button type="button" class="scan-row-arrow scan-row-arrow-left" id="toolRowPrev" aria-label="Scroll scans left">{{ icon('chevron-left', 16) }}</button>
+            <div class="scan-card-row" id="toolCardRow">
+                <button type="button" class="scan-card is-active" data-scan-tool="rvol">
+                    <span class="scan-card-title">{{ icon('bar-chart', 16) }}RVOL Heatmap</span>
+                    <span class="scan-card-count"><strong data-scan-count="rvol">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Unusual volume right now</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="gappers">
+                    <span class="scan-card-title">{{ icon('arrow-up-down', 16) }}Gappers</span>
+                    <span class="scan-card-count"><strong data-scan-count="gappers">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Gap up, gap down and fills</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="orb">
+                    <span class="scan-card-title">{{ icon('scan-search', 16) }}ORB Scanner</span>
+                    <span class="scan-card-count"><strong data-scan-count="orb">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Opening-range breakouts</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="momentum">
+                    <span class="scan-card-title">{{ icon('zap', 16) }}Momentum Burst</span>
+                    <span class="scan-card-count"><strong data-scan-count="momentum">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Short-window price bursts</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="pivots">
+                    <span class="scan-card-title">{{ icon('layers', 16) }}Pivots</span>
+                    <span class="scan-card-count"><strong data-scan-count="pivots">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Classic, Fibonacci, Camarilla</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="rotation">
+                    <span class="scan-card-title">{{ icon('rotate', 16) }}Sector Rotation</span>
+                    <span class="scan-card-count"><strong data-scan-count="rotation">—</strong> Sectors</span>
+                    <span class="scan-card-meta">Where money is flowing now</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-tool="news">
+                    <span class="scan-card-title">{{ icon('newspaper', 16) }}News Sentiment</span>
+                    <span class="scan-card-count"><strong data-scan-count="news">—</strong> Headlines</span>
+                    <span class="scan-card-meta">Bullish / bearish tagging</span>
+                </button>
+            </div>
+            <button type="button" class="scan-row-arrow scan-row-arrow-right" id="toolRowNext" aria-label="Scroll scans right">{{ icon('chevron-right', 16) }}</button>
+        </div>
+    </section>
+
+    <div id="toolPast" class="ds-card" hidden>
+        <header class="ds-card-header">
+            <h2 class="ds-card-title">Past scans</h2>
+            <span class="scans-asof">Stored in this browser</span>
+        </header>
+        <div class="ds-table-scroll">
+            <table class="ds-table" aria-label="Past tool scans">
+                <thead><tr><th scope="col">Run</th><th scope="col">Scan</th><th scope="col" class="is-numeric">Results</th></tr></thead>
+                <tbody id="toolPastRows"><tr><td colspan="3" class="ds-table-empty">No past scans yet.</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ORB -->
-    <section class="tool-panel active" id="panel-orb">
+    <section class="tool-panel" id="panel-orb">
         {% if has_pro %}
         <div class="tool-header">
             <div><h2>Opening Range Breakout</h2><p>Stocks breaking the first N-minute high/low with volume confirmation.</p></div>
@@ -212,7 +381,7 @@
     </section>
 
     <!-- RVOL -->
-    <section class="tool-panel" id="panel-rvol">
+    <section class="tool-panel active" id="panel-rvol">
         {% if has_pro %}
         <div class="tool-header">
             <div><h2>Relative Volume Heatmap</h2><p>Today's volume vs 20-day average at same time-of-day. Higher = unusual activity.</p></div>
@@ -394,31 +563,135 @@
 
 <script>
 (function(){
+    // ── Scan cards and local scan history ───────────────────────────
+    const TOOL_HISTORY_KEY = 'fcToolScanHistory:v1';
+    const TOOL_LABELS = {
+        rvol: 'RVOL Heatmap', gappers: 'Gappers', orb: 'ORB Scanner',
+        momentum: 'Momentum Burst', pivots: 'Pivots', rotation: 'Sector Rotation',
+        news: 'News Sentiment', basis: 'Index Basis', oi: 'OI Build-up'
+    };
+
+    function setToolCount(tool, count) {
+        const element = document.querySelector('[data-scan-count="' + tool + '"]');
+        if (element) element.textContent = Number.isFinite(Number(count)) ? count : '—';
+    }
+
+    function readToolHistory() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(TOOL_HISTORY_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) { return []; }
+    }
+
+    function renderToolPast() {
+        const body = document.getElementById('toolPastRows');
+        if (!body) return;
+        const items = readToolHistory();
+        if (!items.length) {
+            body.innerHTML = '<tr><td colspan="3" class="ds-table-empty">No past scans yet. Run a scan and it will appear here.</td></tr>';
+            return;
+        }
+        body.innerHTML = items.map(function (item) {
+            return '<tr><td>' + new Date(item.t).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+                '<td>' + (TOOL_LABELS[item.tool] || item.tool) + '</td>' +
+                '<td class="is-numeric">' + item.count + '</td></tr>';
+        }).join('');
+    }
+
+    function recordToolScan(tool, count) {
+        const items = readToolHistory();
+        if (items.length && items[0].tool === tool && Date.now() - items[0].t < 15000) items.shift();
+        items.unshift({ t: Date.now(), tool: tool, count: Number(count) || 0 });
+        try { localStorage.setItem(TOOL_HISTORY_KEY, JSON.stringify(items.slice(0, 12))); } catch (error) {}
+        renderToolPast();
+    }
+
+    function setToolView(view) {
+        document.querySelectorAll('#toolHistoryToggle [data-view]').forEach(function (button) {
+            button.classList.toggle('active', button.getAttribute('data-view') === view);
+        });
+        const past = view === 'past';
+        const pastPanel = document.getElementById('toolPast');
+        if (pastPanel) pastPanel.hidden = !past;
+        document.querySelectorAll('.tool-panel').forEach(function (panel) {
+            panel.style.display = past ? 'none' : '';
+        });
+        if (past) renderToolPast();
+    }
+
+    const historyToggle = document.getElementById('toolHistoryToggle');
+    if (historyToggle) {
+        historyToggle.querySelectorAll('[data-view]').forEach(function (button) {
+            button.addEventListener('click', function () { setToolView(button.getAttribute('data-view')); });
+        });
+    }
+
+    function openTool(tool) {
+        setToolView('recent');
+        const tab = document.querySelector('.tools-tab[data-tab="' + tool + '"]');
+        if (tab) {
+            tab.click();
+            const panel = document.getElementById('panel-' + tool);
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.location.href = '/intraday-tools?tool=' + encodeURIComponent(tool);
+        }
+    }
+
+    document.querySelectorAll('#toolCardRow .scan-card').forEach(function (card) {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('#toolCardRow .scan-card').forEach(function (item) {
+                item.classList.toggle('is-active', item === card);
+            });
+            openTool(card.getAttribute('data-scan-tool'));
+        });
+    });
+
+    const toolRow = document.getElementById('toolCardRow');
+    const toolRowPrev = document.getElementById('toolRowPrev');
+    const toolRowNext = document.getElementById('toolRowNext');
+    if (toolRowPrev && toolRow) toolRowPrev.addEventListener('click', function () { toolRow.scrollBy({ left: -440, behavior: 'smooth' }); });
+    if (toolRowNext && toolRow) toolRowNext.addEventListener('click', function () { toolRow.scrollBy({ left: 440, behavior: 'smooth' }); });
+    const toolViewAll = document.getElementById('toolViewAll');
+    if (toolViewAll) toolViewAll.addEventListener('click', function () {
+        setToolView('recent');
+        const active = document.querySelector('.tool-panel.active') || document.getElementById('panel-rvol');
+        if (active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    renderToolPast();
+
     // Tab switching
     document.querySelectorAll('.tools-tab').forEach(b=>b.addEventListener('click',()=>{
         document.querySelectorAll('.tools-tab').forEach(x=>x.classList.remove('active'));
         document.querySelectorAll('.tool-panel').forEach(x=>x.classList.remove('active'));
         b.classList.add('active');
         document.getElementById('panel-'+b.dataset.tab).classList.add('active');
+        setToolView('recent');
+        document.querySelectorAll('#toolCardRow .scan-card').forEach(function (card) {
+            card.classList.toggle('is-active', card.getAttribute('data-scan-tool') === b.dataset.tab);
+        });
     }));
 
     const fmt=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
     const pct=(v)=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
     const cls=(v)=>v>0?'gain-pos':v<0?'gain-neg':'';
-    const setLoading=(id)=>{document.getElementById(id).innerHTML='<div class="spinner-wrap"><div class="app-spinner lg text-primary"></div><p class="mt-2 text-muted">Scanning…</p></div>';};
-    const setError=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h4>Scan failed</h4><p>${msg||'Try refreshing.'}</p></div>`;};
-    const empty=(id,msg)=>{document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No results</h4><p>${msg||''}</p></div>`;};
+    const setLoading=(id)=>{const el=document.getElementById(id); if(!el) return; el.innerHTML='<div class="spinner-wrap"><div class="app-spinner lg text-primary"></div><p class="mt-2 text-muted">Scanning…</p></div>';};
+    const setError=(id,msg)=>{const el=document.getElementById(id); if(!el) return; el.innerHTML=`<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h4>Scan failed</h4><p>${msg||'Try refreshing.'}</p></div>`;};
+    const empty=(id,msg)=>{const el=document.getElementById(id); if(!el) return; el.innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No results</h4><p>${msg||''}</p></div>`;};
     function _upgradeGate(id,r,d){
         if(r.status!==402 && (!d||d.error!=='upgrade_required')) return false;
         const plan=(d&&d.required_plan)||'pro';
         const planNice=plan.charAt(0).toUpperCase()+plan.slice(1);
-        document.getElementById(id).innerHTML=`<div class="empty-state"><i class="fa-solid fa-lock" style="color:#f59e0b"></i><h4>${planNice} feature</h4><p>${(d&&d.message)||'Upgrade your plan to unlock this scan.'}</p><a href="${(d&&d.upgrade_url)||'/billing'}" class="btn btn-primary btn-sm mt-2"><i class="fa-solid fa-rocket me-1"></i>Upgrade to ${planNice}</a></div>`;
+        const host=document.getElementById(id);
+        if(!host) return true;
+        host.innerHTML=`<div class="empty-state"><i class="fa-solid fa-lock" style="color:#f59e0b"></i><h4>${planNice} feature</h4><p>${(d&&d.message)||'Upgrade your plan to unlock this scan.'}</p><a href="${(d&&d.upgrade_url)||'/billing'}" class="btn btn-primary btn-sm mt-2"><i class="fa-solid fa-rocket me-1"></i>Upgrade to ${planNice}</a></div>`;
         if(window.PlanGate) window.PlanGate.show(d||{});
         return true;
     }
 
     function kpi(box, items){
         const el=document.getElementById(box);
+        if(!el) return;
         el.innerHTML=items.map(i=>`<div class="kpi-box"><div class="lbl">${i.label}</div><div class="val" style="color:${i.color||'var(--text)'}">${i.value}</div></div>`).join('');
         el.hidden=false;
     }
@@ -426,7 +699,7 @@
     // ============ ORB ============
     async function loadORB(){
         setLoading('orbContent');
-        document.getElementById('orbKpis').hidden=true;
+        const orbKpis=document.getElementById('orbKpis'); if(orbKpis) orbKpis.hidden=true;
         try{
             const m=document.getElementById('orbMin').value;
             const r=await fetch(`/api/intraday-tools/orb?minutes=${m}&refresh=1`,{method:'POST'});
@@ -439,6 +712,8 @@
                 {label:'Inside Range',value:d.inside||0},
                 {label:`ORB Window`,value:`${d.orb_minutes} min`},
             ]);
+            setToolCount('orb', (d.stocks||[]).length);
+            recordToolScan('orb', (d.stocks||[]).length);
             if(!d.stocks||!d.stocks.length){empty('orbContent','No stocks scanned.');return;}
             let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Status</th><th class="num">Price</th><th class="num">Day Change</th><th class="num">ORB Range</th><th class="num">Vol×</th><th>Score</th></tr></thead><tbody>';
             for(const s of d.stocks){
@@ -458,7 +733,7 @@
     // ============ RVOL ============
     async function loadRVOL(){
         setLoading('rvolContent');
-        document.getElementById('rvolKpis').hidden=true;
+        const rvolKpis=document.getElementById('rvolKpis'); if(rvolKpis) rvolKpis.hidden=true;
         try{
             const r=await fetch('/api/intraday-tools/rvol?refresh=1',{method:'POST'});
             const d=await r.json();
@@ -470,6 +745,8 @@
                 {label:'Elevated (>1.3x)',value:d.elevated||0,color:'#ca8a04'},
                 {label:'Scanned',value:(d.stocks||[]).length},
             ]);
+            setToolCount('rvol', (d.stocks||[]).length);
+            recordToolScan('rvol', (d.stocks||[]).length);
             if(!d.stocks||!d.stocks.length){empty('rvolContent','No data.');return;}
             const cells=d.stocks.map(s=>`
                 <div class="rvol-cell tier-${s.tier}" title="${s.symbol}">
@@ -485,7 +762,7 @@
     // ============ Gappers ============
     async function loadGappers(){
         setLoading('gappersContent');
-        document.getElementById('gappersKpis').hidden=true;
+        const gappersKpis=document.getElementById('gappersKpis'); if(gappersKpis) gappersKpis.hidden=true;
         try{
             const r=await fetch('/api/intraday-tools/gappers?refresh=1',{method:'POST'});
             const d=await r.json();
@@ -496,6 +773,8 @@
                 {label:'Filled',value:d.filled||0,color:'#0ea5e9'},
                 {label:'Still Open',value:d.open_gaps||0,color:'#f59e0b'},
             ]);
+            setToolCount('gappers', (d.stocks||[]).length);
+            recordToolScan('gappers', (d.stocks||[]).length);
             if(!d.stocks||!d.stocks.length){empty('gappersContent','No significant gaps today.');return;}
             let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Direction</th><th class="num">Gap %</th><th class="num">Prev Close</th><th class="num">Open</th><th class="num">Current</th><th>Filled?</th></tr></thead><tbody>';
             for(const s of d.stocks){
@@ -542,7 +821,7 @@
     // ============ Momentum ============
     async function loadMomentum(){
         setLoading('momContent');
-        document.getElementById('momKpis').hidden=true;
+        const momKpis=document.getElementById('momKpis'); if(momKpis) momKpis.hidden=true;
         try{
             const lb=document.getElementById('momLB').value;
             const r=await fetch(`/api/intraday-tools/momentum?lookback=${lb}&refresh=1`,{method:'POST'});
@@ -554,6 +833,8 @@
                 {label:'Lookback',value:`${d.lookback_min} min`},
                 {label:'Total',value:(d.stocks||[]).length},
             ]);
+            setToolCount('momentum', (d.stocks||[]).length);
+            recordToolScan('momentum', (d.stocks||[]).length);
             if(!d.stocks||!d.stocks.length){empty('momContent','No significant bursts.');return;}
             let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Direction</th><th class="num">Burst %</th><th class="num">Vol Thrust</th><th class="num">Day %</th><th class="num">Price</th><th class="num">Score</th></tr></thead><tbody>';
             for(const s of d.stocks){
@@ -633,7 +914,7 @@
 
     // ============ Sector Rotation ============
     async function loadRotation(){
-        setLoading('rotContent');document.getElementById('rotKpis').hidden=true;
+        setLoading('rotContent');const rotKpis=document.getElementById('rotKpis'); if(rotKpis) rotKpis.hidden=true;
         try{
             const r=await fetch('/api/intraday-tools/sector-rotation?refresh=1',{method:'POST'});
             const d=await r.json();
@@ -659,7 +940,7 @@
 
     // ============ News Sentiment ============
     async function loadNews(){
-        setLoading('newsContent');document.getElementById('newsKpis').hidden=true;
+        setLoading('newsContent');const newsKpis=document.getElementById('newsKpis'); if(newsKpis) newsKpis.hidden=true;
         try{
             const r=await fetch('/api/intraday-tools/news-sentiment?refresh=1',{method:'POST'});
             const d=await r.json();
@@ -774,15 +1055,6 @@
         }catch(e){setError('oiContent',e.message);}
     }
     { const _b=document.getElementById('oiScan'); if(_b) _b.addEventListener('click',loadOI); }
-    // Auto-load when the user opens the OI tab the first time.
-    {
-        const _btn=document.querySelector('.tools-tab[data-tab="oi"]');
-        if(_btn) _btn.addEventListener('click', function _once(){
-            _btn.removeEventListener('click', _once);
-            loadOI();
-        });
-    }
-
     // ============ Advanced Sector Rotation (RRG) ============
     const ARRG = {
         raw: null,
@@ -1530,29 +1802,35 @@
         setTimeout(()=>URL.revokeObjectURL(url), 1000);
     }
 
-    // Wire controls + auto-load when user first opens the tab
+    // Wire controls
     arrgBindControls();
-    {
-        const _btn = document.querySelector('.tools-tab[data-tab="arrg"]');
-        if (_btn) _btn.addEventListener('click', function _once(){
-            _btn.removeEventListener('click', _once);
-            arrgLoad(false);
-        });
-    }
 
-    // Initial load
-    loadORB();
+    const validTools = ['orb', 'rvol', 'gappers', 'pivots', 'momentum', 'basis', 'rotation', 'arrg', 'news', 'oi'];
+    const requestedTool = new URLSearchParams(window.location.search).get('tool');
+    const activeTool = validTools.includes(requestedTool) ? requestedTool : 'rvol';
+    document.querySelectorAll('.tool-panel').forEach(panel => panel.classList.remove('active'));
+    document.getElementById('panel-' + activeTool).classList.add('active');
+    document.querySelectorAll('.tools-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === activeTool));
+
+    const loaders = {
+        orb: loadORB,
+        rvol: loadRVOL,
+        gappers: loadGappers,
+        pivots: () => {},
+        momentum: loadMomentum,
+        basis: loadBasis,
+        rotation: loadRotation,
+        arrg: () => arrgLoad(false),
+        news: loadNews,
+        oi: loadOI
+    };
+    loaders[activeTool]();
 })();
 </script>
 
 <script>
 (function(){
     const TOOL_HELP = {
-        orb: {
-            what: "Finds stocks that break their first-N-minute high or low <strong>with volume backing</strong> — the classic opening-range setup that often runs for the rest of the session.",
-            how: ["Pick a window — 15 min for liquid large-caps, 30/60 min for volatile mid/small-caps.","Click <em>Scan</em> after the window closes.","Focus on rows with RVOL ≥ 2 and a clean break (not just a wick poke)."],
-            tip: "Enter only after the breakout candle <strong>closes</strong> beyond the range, not on the wick."
-        },
         rvol: {
             what: "Today's volume vs the 20-day average <strong>at the same time of day</strong>. Hot tiles = unusual interest, often before the news catches up.",
             how: ["Check mid-morning once patterns have settled.","Click <em>Refresh</em> and scan red / orange tiles first.","Cross-check the chart — RVOL alone isn't a signal."],
@@ -1568,11 +1846,6 @@
             how: ["Type a symbol and click <em>Compute</em>.","Use confluence zones as primary support / resistance.","Trade reversals at S/R, breakouts only when price closes through on volume."],
             tip: "The strongest reactions usually happen at zones with <strong>3 overlapping</strong> levels."
         },
-        momentum: {
-            what: "Stocks moving sharply over the last N minutes with <strong>above-average volume</strong>. Catches fresh trends as they form.",
-            how: ["Pick a lookback (15 / 30 / 60 / 120 min).","Click <em>Scan</em>.","Enter only when the stock's direction matches the index direction."],
-            tip: "Morning momentum bursts have far stronger follow-through than late-day ones."
-        },
         basis: {
             what: "Live difference between each index <strong>spot</strong> and its <strong>current-month future</strong> (premium or discount), benchmarked against the carry-cost <strong>fair value</strong>. Combined with today's <strong>FII net</strong> cash flow, this reveals the direction of institutional positioning before price actually moves.",
             how: ["Watch the basis column live — a <strong>wide premium</strong> (Fut &gt; Fair) signals fresh long flow; a <strong>deep discount</strong> (Fut &lt; Spot) signals short flow.","Cross-check with the <strong>FII Net</strong> box — same-sign basis + FII flow is the strongest read."],
@@ -1583,21 +1856,11 @@
             how: ["Click <em>Refresh</em>.","Focus on the top 2–3 sectors.","Drill into their leaders for individual entries."],
             tip: "Sectors leading the morning usually lead the day; major rotation tends to start after 1 PM."
         },
-        arrg: {
-            what: "Full <strong>Relative Rotation Graph (RRG)</strong>: each sector is plotted by its <strong>RS-Ratio</strong> (x) and <strong>RS-Momentum</strong> (y) versus the chosen benchmark, with a historical trail showing the rotation path through Leading → Weakening → Lagging → Improving.",
-            how: ["Pick a benchmark and timeframe; tune the trail length (5/10/20/Custom).","Sectors in <strong>Leading</strong> (top-right) are the day's strength leaders; <strong>Improving</strong> (top-left) are early-stage rotation in.","Watch for snakes crossing the X=100 or Y=100 lines — quadrant transitions often mark trend changes.","Use the legend to hide/solo sectors; zoom with the mouse-wheel and drag to pan; click <em>Reset View</em> to refit.","Export the chart as PNG or the underlying trail data as CSV from the toolbar."],
-            tip: "The <strong>direction</strong> of the snake matters more than the absolute position — a sector moving NE is rotating into strength, NW is the earliest possible buy signal."
-        },
         news: {
             what: "Last 48h headlines per ticker, scored bullish or bearish via keyword sentiment (RAG ingest).",
             how: ["Type a symbol.","Review the latest headlines.","Align news direction with the chart before trading."],
             tip: "Single-headline pops fade fast; <strong>sustained</strong> bullish flow over 24h is the tradable signal."
         },
-        oi: {
-            what: "Every NSE F&O stock's near-month future, classified by the joint sign of <strong>intraday price change</strong> and <strong>intraday OI change</strong>. The four buckets reveal who is actually opening or closing positions.",
-            how: ["<strong>Long Buildup</strong> (price ↑ + OI ↑) — fresh longs, bullish.","<strong>Short Buildup</strong> (price ↓ + OI ↑) — fresh shorts, bearish.","<strong>Short Covering</strong> (price ↑ + OI ↓) — shorts closing, bullish reversal.","<strong>Long Unwinding</strong> (price ↓ + OI ↓) — longs closing, bearish reversal.","Click the expand icon on any card to view it full-screen."],
-            tip: "The strongest signals are names with a large <strong>|Chg OI %|</strong> in the same direction as the broader index move."
-        }
     };
 
     function injectToolHelp(){
@@ -1635,6 +1898,51 @@
     } else {
         injectToolHelp();
     }
+})();
+</script>
+<script>
+(function () {
+    const input = document.getElementById('taSymbol');
+    const frame = document.getElementById('taChartFrame');
+    if (!input || !frame) return;
+    const selected = document.getElementById('taSelectedSymbol');
+    const load = () => {
+        const symbol = input.value.trim().toUpperCase().replace(/^[A-Z]+:/, '').replace(/\.NS$/i, '');
+        if (!/^[A-Z0-9._-]+$/.test(symbol)) {
+            input.setCustomValidity('Enter a valid stock symbol.');
+            input.reportValidity();
+            return;
+        }
+        input.setCustomValidity('');
+        input.value = symbol;
+        selected.textContent = symbol;
+        frame.title = 'Candlestick chart for ' + symbol;
+        frame.src = '/tv-chart?symbol=' + encodeURIComponent(symbol) + '&interval=D';
+    };
+    document.getElementById('taLoadSymbol').addEventListener('click', load);
+    input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') load();
+    });
+    document.querySelectorAll('[data-ta-view]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('[data-ta-view]').forEach(item => {
+                item.setAttribute('aria-selected', String(item === tab));
+            });
+            document.querySelectorAll('[data-ta-panel]').forEach(panel => {
+                panel.hidden = panel.dataset.taPanel !== tab.dataset.taView;
+            });
+        });
+    });
+    const openPivots = () => {
+        const pivotInput = document.getElementById('pivotSymbol');
+        if (pivotInput) pivotInput.value = selected.textContent;
+        const pivotTab = document.querySelector('.tools-tab[data-tab="pivots"]');
+        if (pivotTab) {
+            pivotTab.click();
+            document.getElementById('panel-pivots').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+    document.querySelector('.ta-open-pivots').addEventListener('click', openPivots);
 })();
 </script>
 {% endblock %}

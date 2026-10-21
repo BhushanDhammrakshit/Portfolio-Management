@@ -5,7 +5,7 @@
 .tools-tabs::-webkit-scrollbar{height:6px}
 .tools-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .tools-tab:hover{background:var(--surface-2);color:var(--text)}
-.tools-tab.active{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.25)}
+.tools-tab.active{background:var(--positive);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.25)}
 .tool-panel{display:none}
 .tool-panel.active{display:block}
 .tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
@@ -37,11 +37,11 @@
 .strategy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:14px}
 .strategy-btn{padding:14px;background:var(--surface);border:2px solid var(--border);border-radius:10px;text-align:left;cursor:pointer;transition:all .15s}
 .strategy-btn:hover{border-color:#16a34a;transform:translateY(-2px)}
-.strategy-btn.active{border-color:#16a34a;background:linear-gradient(135deg,#f0fdf4,#dcfce7)}
+.strategy-btn.active{border-color:#16a34a;background:var(--positive-bg)}
 [data-theme="dark"] .strategy-btn.active{background:rgba(22,163,74,.15)}
 .strategy-btn h5{margin:0;font-size:.92rem;font-weight:700}
 .strategy-btn p{margin:4px 0 0;font-size:.75rem;color:var(--text-muted)}
-.dcf-result{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:12px;padding:18px;margin-top:14px}
+.dcf-result{background:var(--positive-bg);border:2px solid #86efac;border-radius:12px;padding:18px;margin-top:14px}
 [data-theme="dark"] .dcf-result{background:rgba(22,163,74,.15);border-color:rgba(34,197,94,.3)}
 .dcf-result h3{margin:0 0 4px;font-size:1.6rem;font-weight:800}
 .peer-table th,.peer-table td{text-align:right;padding:8px 6px}
@@ -49,7 +49,7 @@
 .peer-table tr.target td{background:linear-gradient(135deg,#fef3c7,#fde68a);font-weight:700}
 [data-theme="dark"] .peer-table tr.target td{background:rgba(245,158,11,.15)}
 .score-bar{display:inline-block;width:90px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
-.score-bar .fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
+.score-bar .fill{height:100%;background:var(--positive)}
 .tag{display:inline-block;font-size:.65rem;background:var(--surface-2);border:1px solid var(--border);padding:1px 7px;border-radius:4px;margin-right:3px;color:var(--text-muted);font-weight:600}
 .qa-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px}
 .qa-context{background:var(--surface-2);border-left:3px solid #4f46e5;padding:10px 12px;margin-top:8px;font-size:.78rem;color:var(--text-muted)}
@@ -148,7 +148,7 @@
 
     <!-- Corporate Actions -->
     <section class="tool-panel" id="panel-corp">
-        <div class="tool-header"><div><h2>Corporate Actions Feed</h2><p>Dividends &amp; splits across your holdings. <strong style="color:var(--green)">🟢 = Buy window open (ex-date 2+ days away)</strong></p></div>
+        <div class="tool-header"><div><h2>Corporate Actions Feed</h2><p>Dividends &amp; splits across your holdings. <strong style="color:var(--green)">Buy window open (ex-date 2+ days away)</strong></p></div>
             <div class="tool-controls"><button class="btn btn-success btn-sm" id="corpGo">Load my holdings</button></div>
         </div>
         <div id="corpContent"></div>
@@ -410,7 +410,7 @@
             for(const s of d.stocks){
                 html+=`<div class="tool-card"><h4 style="margin:0 0 8px"><strong>${s.name}</strong> <small class="text-muted">${s.symbol}</small></h4><div class="table-scroll" style="max-height:200px"><table class="tool-table"><thead><tr><th>Date</th><th>Type</th><th class="num">Value</th><th>Status</th></tr></thead><tbody>`;
                 s.events.forEach(e=>{
-                    const badge=e.actionable?'<span class="pill pill-up">🟢 Buy Window</span>':e.upcoming?'<span class="pill pill-info">Upcoming</span>':'<span class="pill pill-neutral">Past</span>';
+                    const badge=e.actionable?'<span class="pill pill-up">Buy Window</span>':e.upcoming?'<span class="pill pill-info">Upcoming</span>':'<span class="pill pill-neutral">Past</span>';
                     html+=`<tr${e.actionable?' style="background:rgba(0,200,83,.07)"':''}><td>${e.date}</td><td><span class="pill ${e.type==='Dividend'?'pill-up':'pill-info'}">${e.type}</span></td><td class="num">${fmt(e.value,2)}${e.type==='Dividend'?' ₹/sh':' ratio'}</td><td>${badge}</td></tr>`;
                 });
                 html+='</tbody></table></div></div>';

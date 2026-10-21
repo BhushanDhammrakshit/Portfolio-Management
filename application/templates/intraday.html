@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_icons.html" import icon %}
 {% block content %}
 <script src="{{ url_for('static', filename='Scripts/ohlc_chart.js') }}"></script>
 <style>
@@ -21,26 +22,73 @@
 [data-theme="dark"] .detail-chart-wrap{background:#0f172a}
 .scan-time-badge{font-size:.68rem;font-weight:600;color:var(--text-muted);opacity:.85;white-space:nowrap}
 </style>
-<div class="intraday-page">
-    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+<div class="intraday-page scans-page">
+    <header class="page-header">
         <div>
-            <h1><i class="fa-solid fa-bolt me-2"></i>Intraday Signals</h1>
+            <h1 id="scannerTitle">Intraday RSI/MACD Scanner</h1>
             <p id="strategyTagline">RSI + MACD + EMA + VWAP strategy on top NIFTY 50 stocks. <span id="scanTime" class="scan-time-badge"></span></p>
         </div>
-        <button id="scanBtn" class="btn btn-primary btn-sm">
-            <i class="fa-solid fa-satellite-dish me-1"></i>Scan now
+        <button id="scanBtn" class="ds-button ds-button-primary ds-button-small">
+            {{ icon('scan-search', 14) }} Scan now
         </button>
     </header>
 
-    <!-- Strategy mode toggle -->
-    <div class="mode-toggle-row mb-3">
-        <button type="button" class="mode-btn active" data-mode="intraday">
-            <i class="fa-solid fa-bolt me-1"></i>Intraday (RSI/MACD/EMA/VWAP)
-        </button>
-        <button type="button" class="mode-btn{% if not has_pro %} mode-btn-locked{% endif %}" data-mode="swing"{% if not has_pro %} data-locked="pro"{% endif %}>
-            <i class="fa-solid {% if has_pro %}fa-rocket{% else %}fa-lock{% endif %} me-1"></i>Swing 10–15% / 1–2 wk (Qullamaggie + Minervini){% if not has_pro %} <span class="mode-lock-pill">PRO</span>{% endif %}
-        </button>
+    <div class="ds-info-banner-wrap">
+        {% if not has_pro %}
+        <div class="info-banner">Advanced intraday scanners — ORB, RVOL, Momentum Burst and Sector Rotation — are available on Pro. <a href="{{ url_for('billing.billing_page') }}">View plans</a></div>
+        {% else %}
+        <div class="info-banner">Signals use 15-minute bars and are for educational use only — not trading tips or buy/sell recommendations.</div>
+        {% endif %}
     </div>
+
+    <section class="scans-section" id="scanCardsSection" aria-label="Scan presets">
+        <div class="scans-section-head">
+            <h2 class="scans-section-title">Scans</h2>
+            <div class="table-toolbar-left">
+                <div class="table-segmented" id="scanHistoryToggle" role="group" aria-label="Scan results view">
+                    <button type="button" data-view="recent" class="active">Recent</button>
+                    <button type="button" data-view="past">Past</button>
+                </div>
+                <button type="button" class="scans-view-all" id="scanViewAll">View All {{ icon('chevron-right', 14) }}</button>
+            </div>
+        </div>
+        <div class="scan-card-row-wrap">
+            <button type="button" class="scan-row-arrow scan-row-arrow-left" id="scanRowPrev" aria-label="Scroll scans left">{{ icon('chevron-left', 16) }}</button>
+            <div class="scan-card-row" id="scanCardRow">
+                <button type="button" class="scan-card is-active" data-scan-filter="all">
+                    <span class="scan-card-title">{{ icon('scan-search', 16) }}All signals</span>
+                    <span class="scan-card-count"><strong data-count="all">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Every scanned symbol</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-filter="strong-buy">
+                    <span class="scan-card-title">{{ icon('zap', 16) }}Strong buys</span>
+                    <span class="scan-card-count"><strong data-count="strong-buy">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Highest-conviction long signals</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-filter="buy">
+                    <span class="scan-card-title">{{ icon('trending-up', 16) }}Buy signals</span>
+                    <span class="scan-card-count"><strong data-count="buy">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Includes strong buys</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-filter="sell">
+                    <span class="scan-card-title">{{ icon('arrow-up-down', 16) }}Sell signals</span>
+                    <span class="scan-card-count"><strong data-count="sell">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Short-side setups</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-filter="has-plan">
+                    <span class="scan-card-title">{{ icon('list', 16) }}Trade plans</span>
+                    <span class="scan-card-count"><strong data-count="has-plan">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Entry, stop and target defined</span>
+                </button>
+                <button type="button" class="scan-card" data-scan-filter="good-rr">
+                    <span class="scan-card-title">{{ icon('line-chart', 16) }}High R:R</span>
+                    <span class="scan-card-count"><strong data-count="good-rr">—</strong> Stocks</span>
+                    <span class="scan-card-meta">Risk/reward of 1.5 or better</span>
+                </button>
+            </div>
+            <button type="button" class="scan-row-arrow scan-row-arrow-right" id="scanRowNext" aria-label="Scroll scans right">{{ icon('chevron-right', 16) }}</button>
+        </div>
+    </section>
 
     <!-- Universe size chooser (intraday mode only) -->
     {% if scan_tiers %}
@@ -63,7 +111,6 @@
     </div>
     {% endif %}
 
-    <!-- Universe size chooser (swing mode only) -->
     {% if swing_tiers %}
     <div class="scan-size-block mb-3" id="swingSizeBlock" hidden>
         <div class="scan-size-head">
@@ -89,37 +136,26 @@
 
     <div id="scanError" hidden></div>
 
+    <div id="pastScans" class="ds-card" hidden>
+        <header class="ds-card-header">
+            <h2 class="ds-card-title">Past scans</h2>
+            <span class="scans-asof">Stored in this browser</span>
+        </header>
+        <div class="ds-table-scroll">
+            <table class="ds-table" aria-label="Past scan history">
+                <thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="is-numeric">Scanned</th><th scope="col" class="is-numeric">Buy</th><th scope="col" class="is-numeric">Sell</th><th scope="col" class="is-numeric">Setups</th></tr></thead>
+                <tbody id="pastScanRows"></tbody>
+            </table>
+        </div>
+    </div>
+
     <div id="scanContent" hidden>
         <!-- Summary cards -->
-        <div class="dashboard-cards mb-3" id="signalSummary">
-            <div class="dash-card" style="--card-accent:#16a34a">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fa-solid fa-arrow-up"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Buy signals</span>
-                    <span class="dash-card-value" id="buyCount">0</span>
-                </div>
-            </div>
-            <div class="dash-card" style="--card-accent:#dc2626">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fa-solid fa-arrow-down"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Sell signals</span>
-                    <span class="dash-card-value" id="sellCount">0</span>
-                </div>
-            </div>
-            <div class="dash-card" style="--card-accent:#f59e0b">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-minus"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Hold</span>
-                    <span class="dash-card-value" id="holdCount">0</span>
-                </div>
-            </div>
-            <div class="dash-card" style="--card-accent:#4f46e5">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#4f46e5,#6366f1)"><i class="fa-solid fa-chart-bar"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Scanned</span>
-                    <span class="dash-card-value" id="totalScanned">0</span>
-                </div>
-            </div>
+        <div class="signal-summary" id="signalSummary">
+            <div><span>Buy signals</span><strong id="buyCount">0</strong></div>
+            <div><span>Sell signals</span><strong id="sellCount">0</strong></div>
+            <div><span>Hold</span><strong id="holdCount">0</strong></div>
+            <div><span>Scanned</span><strong id="totalScanned">0</strong></div>
         </div>
 
         <!-- Filter bar -->
@@ -134,8 +170,20 @@
             <button class="tender-filter-btn" data-filter="good-rr">High R:R (≥1.5)</button>
         </div>
 
-        <!-- Signal cards grid -->
-        <div class="intraday-grid" id="signalGrid"></div>
+        <div class="signals-toolbar">
+            <input id="signalSearch" type="search" aria-label="Search signals" placeholder="Search symbols or setups">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="signalDensity" aria-pressed="false">Compact</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportSignalsCsv">Export CSV</button>
+        </div>
+        <div class="signals-layout" id="signalGrid">
+            <div class="signal-table-wrap">
+                <table class="signal-table" id="signalTable">
+                    <thead><tr><th>Symbol</th><th>Setup</th><th>Entry</th><th>Stop</th><th>Target</th><th>R:R</th><th>Rel. volume</th><th>Status</th></tr></thead>
+                    <tbody id="signalRows"></tbody>
+                </table>
+            </div>
+            <aside class="market-context-card" id="marketContext" aria-label="Scan market context"></aside>
+        </div>
     </div>
 
     <!-- Empty state -->
@@ -229,7 +277,7 @@
 .mode-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; box-shadow:0 2px 8px rgba(37,99,235,.25); }
 .mode-btn-locked { opacity:.78; cursor:pointer; }
 .mode-btn-locked:hover { background:rgba(245,158,11,.08); border-color:#f59e0b; color:#b45309; }
-.mode-lock-pill { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:.62rem; font-weight:800; background:linear-gradient(135deg,#fde68a,#f59e0b); color:#78350f; vertical-align:middle; }
+.mode-lock-pill { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; font-size:.62rem; font-weight:800; background:var(--warning); color:#78350f; vertical-align:middle; }
 
 /* Universe-size chooser */
 .scan-size-block { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
@@ -297,12 +345,53 @@
     .detail-kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .mode-btn { flex: 1 1 auto; text-align: center; }
 }
+.signal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--space-4);overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.signal-summary>div{display:flex;min-height:var(--analysis-summary-cell-min-height);flex-direction:column;justify-content:center;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-right:var(--border-width) solid var(--border)}
+.signal-summary>div:last-child{border-right:0}
+.signal-summary span{color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-transform:uppercase}
+.signal-summary strong{color:var(--text-primary);font:600 var(--fs-kpi-value)/var(--lh-kpi-value) var(--font-mono)}
+.signals-layout{display:grid;grid-template-columns:minmax(0,1fr) var(--analysis-context-width);gap:var(--card-gap);align-items:start}
+.signal-table-wrap{overflow:auto;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.signal-table{width:100%;min-width:var(--analysis-signal-table-min-width);border-collapse:collapse;font-size:var(--fs-table-cell)}
+.signal-table th{position:sticky;top:0;z-index:1;height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-align:right;white-space:nowrap}
+.signal-table th:first-child,.signal-table th:nth-child(2),.signal-table td:first-child,.signal-table td:nth-child(2){text-align:left}
+.signal-table td{height:var(--table-row-height);padding:var(--space-2) var(--space-3);border-top:var(--border-width) solid var(--border);color:var(--text-primary);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.signal-table tr.signal-card{cursor:pointer}
+.signal-table tr.signal-card:hover td{background:var(--bg-subtle)}
+.signal-table .signal-symbol{font-weight:600}
+.signal-table .signal-symbol small{display:block;color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:400}
+.signal-table .signal-value{font-family:var(--font-mono)}
+.signal-status{display:inline-flex;align-items:center;gap:6px;font-weight:500}
+.signal-status::before{width:var(--status-dot-size);height:var(--status-dot-size);border-radius:50%;background:var(--text-muted);content:""}
+.signal-status.buy::before{background:var(--positive)}
+.signal-status.sell::before{background:var(--negative)}
+.signal-context-card{padding:var(--space-4);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.signal-context-card h2{margin:0 0 var(--space-1);color:var(--text-primary);font-size:var(--fs-card-title);font-weight:600}
+.signal-context-card>p{margin:0 0 var(--space-3);color:var(--text-muted);font-size:var(--fs-caption)}
+.signal-context-row{display:flex;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:var(--border-width) solid var(--border);font-size:var(--fs-caption)}
+.signal-context-row span{color:var(--text-secondary)}
+.signal-context-row strong{color:var(--text-primary);font-family:var(--font-mono);font-weight:600}
+.signals-toolbar{display:flex;justify-content:flex-end;gap:var(--space-2);margin:0 0 var(--space-2)}
+.signals-toolbar input{width:min(100%,var(--analysis-search-width));height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
+.signal-table.compact td{height:var(--table-row-height-compact)}
+.intraday-page .page-header h1{font-size:var(--fs-page-title);font-weight:600}
+.intraday-page .page-header h1 i{display:none}
+.mode-btn,.scan-size-btn,.tender-filter-btn{border-radius:var(--radius);box-shadow:none!important}
+.scan-size-btn:hover,.swing-card:hover{transform:none;box-shadow:none}
+.signal-card{border-radius:var(--radius);border-left:1px solid var(--border)}
+.signal-card.signal-buy,.signal-card.signal-strong-buy,.signal-card.signal-sell,.signal-card.signal-strong-sell,.signal-card.signal-hold{border-left-color:var(--border);background:var(--surface)}
+.signal-card:hover{box-shadow:none;border-color:var(--border-strong)}
+.swing-grade-badge,.signal-badge{border-radius:var(--radius-tag)}
+@media(max-width:1023px){.signals-layout{grid-template-columns:1fr}.signal-context-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}.signal-context-card h2,.signal-context-card>p{grid-column:1/-1}}
+@media(max-width:767px){.signal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.signal-summary>div:nth-child(2){border-right:0}.signal-summary>div:nth-child(n+3){border-top:1px solid var(--border)}}
 </style>
 
 <script>
-const fmt = v => '₹' + Number(v||0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+const fmt = v => v == null || !Number.isFinite(Number(v))
+    ? 'N/A'
+    : (window.FCFormat ? window.FCFormat.currency(Number(v)) : '₹' + Number(v).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 let _scanData = [];
-let _mode = 'intraday';   // 'intraday' | 'swing'
+let _mode = new URLSearchParams(window.location.search).get('mode') === 'swing' ? 'swing' : 'intraday';
 
 const _defaultTier = document.querySelector('#scanSizeBlock .scan-size-btn.active');
 let _scanCount = Number(_defaultTier && _defaultTier.dataset.count) || 50;
@@ -324,16 +413,143 @@ const EMPTY_TEXT = {
 };
 
 function applyModeUI() {
+    document.getElementById('scannerTitle').textContent = _mode === 'swing'
+        ? 'Swing 10–15% Scanner'
+        : 'Day Trading Signals';
     document.getElementById('strategyTagline').innerHTML = TAGLINES[_mode] + ' <span id="scanTime" class="scan-time-badge"></span>';
     const empty = document.querySelector('#emptyState .empty-state p');
     if (empty) empty.innerHTML = EMPTY_TEXT[_mode];
     // Hide intraday-only filter bar in swing mode
     document.querySelector('.tender-filter-bar').style.display = (_mode === 'intraday') ? '' : 'none';
+    const signalsToolbar = document.querySelector('.signals-toolbar');
+    if (signalsToolbar) signalsToolbar.style.display = (_mode === 'intraday') ? '' : 'none';
     const sizeBlock = document.getElementById('scanSizeBlock');
     if (sizeBlock) sizeBlock.hidden = (_mode !== 'intraday');
     const swingBlock = document.getElementById('swingSizeBlock');
     if (swingBlock) swingBlock.hidden = (_mode !== 'swing');
+    const cards = document.getElementById('scanCardsSection');
+    if (cards) cards.hidden = (_mode === 'swing');
 }
+applyModeUI();
+
+// ── Scan cards, history and scan results view ─────────────────────────
+const SCAN_HISTORY_KEY = 'fcIntradayScanHistory:v1';
+
+function readScanHistory() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(SCAN_HISTORY_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) { return []; }
+}
+
+function writeScanHistory(items) {
+    try { localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(items)); } catch (error) {}
+}
+
+function updateScanCards(data) {
+    const stocks = (data && data.stocks) || [];
+    const counts = { all: stocks.length, 'strong-buy': 0, buy: 0, sell: 0, 'has-plan': 0, 'good-rr': 0 };
+    stocks.forEach(function (stock) {
+        const signal = String(stock.signal || '').toUpperCase();
+        if (signal.indexOf('STRONG BUY') !== -1) counts['strong-buy'] += 1;
+        if (signal.indexOf('BUY') !== -1) counts.buy += 1;
+        if (signal.indexOf('SELL') !== -1) counts.sell += 1;
+        if (stock.plan) {
+            counts['has-plan'] += 1;
+            if (Number(stock.plan.risk_reward) >= 1.5) counts['good-rr'] += 1;
+        }
+    });
+    document.querySelectorAll('#scanCardRow [data-count]').forEach(function (element) {
+        const key = element.getAttribute('data-count');
+        element.textContent = counts[key] == null ? '—' : counts[key];
+    });
+}
+
+function recordScan(data) {
+    if (!data) return;
+    const stocks = data.stocks || [];
+    const grades = data.grade_counts || {};
+    const entry = _mode === 'swing' ? {
+        t: Date.now(),
+        mode: 'swing',
+        scanned: stocks.length,
+        buy: grades['A+ SETUP'] || 0,
+        sell: grades['A SETUP'] || 0,
+        setups: stocks.filter(function (stock) { return stock.grade !== 'AVOID'; }).length
+    } : {
+        t: Date.now(),
+        mode: 'intraday',
+        scanned: stocks.length,
+        buy: Number(data.buy_count || 0),
+        sell: Number(data.sell_count || 0),
+        setups: stocks.filter(function (stock) { return !!stock.plan; }).length
+    };
+    const items = readScanHistory();
+    if (items.length && items[0].mode === entry.mode && Date.now() - items[0].t < 15000) items.shift();
+    items.unshift(entry);
+    writeScanHistory(items.slice(0, 12));
+    renderPastScans();
+}
+
+function renderPastScans() {
+    const body = document.getElementById('pastScanRows');
+    if (!body) return;
+    const items = readScanHistory();
+    if (!items.length) {
+        body.innerHTML = '<tr><td colspan="6" class="ds-table-empty">No past scans yet. Run a scan and it will appear here.</td></tr>';
+        return;
+    }
+    body.innerHTML = items.map(function (item) {
+        return '<tr>' +
+            '<td>' + new Date(item.t).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+            '<td><span class="ds-badge">' + (item.mode === 'swing' ? 'Swing' : 'Intraday') + '</span></td>' +
+            '<td class="is-numeric">' + item.scanned + '</td>' +
+            '<td class="is-numeric">' + item.buy + '</td>' +
+            '<td class="is-numeric">' + item.sell + '</td>' +
+            '<td class="is-numeric">' + item.setups + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function setScanView(view) {
+    document.querySelectorAll('#scanHistoryToggle [data-view]').forEach(function (button) {
+        button.classList.toggle('active', button.getAttribute('data-view') === view);
+    });
+    const past = view === 'past';
+    document.getElementById('pastScans').hidden = !past;
+    if (past) renderPastScans();
+    const hasResults = (_scanData || []).length > 0;
+    document.getElementById('scanContent').hidden = past || !hasResults;
+    document.getElementById('emptyState').hidden = past || hasResults;
+}
+
+document.querySelectorAll('#scanHistoryToggle [data-view]').forEach(function (button) {
+    button.addEventListener('click', function () { setScanView(button.getAttribute('data-view')); });
+});
+
+document.querySelectorAll('#scanCardRow .scan-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+        document.querySelectorAll('#scanCardRow .scan-card').forEach(function (item) {
+            item.classList.toggle('is-active', item === card);
+        });
+        const filter = card.getAttribute('data-scan-filter');
+        if (!(_scanData || []).length) { runScan(); return; }
+        setScanView('recent');
+        const target = document.querySelector('.tender-filter-btn[data-filter="' + filter + '"]');
+        if (target) target.click();
+        document.getElementById('scanGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+const scanRow = document.getElementById('scanCardRow');
+document.getElementById('scanRowPrev').addEventListener('click', function () { scanRow.scrollBy({ left: -440, behavior: 'smooth' }); });
+document.getElementById('scanRowNext').addEventListener('click', function () { scanRow.scrollBy({ left: 440, behavior: 'smooth' }); });
+document.getElementById('scanViewAll').addEventListener('click', function () {
+    if (!(_scanData || []).length) { runScan(); return; }
+    setScanView('recent');
+    document.getElementById('scanGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+renderPastScans();
 
 function updateScanHint() {
     const note = document.getElementById('scanSizeNote');
@@ -365,44 +581,6 @@ document.querySelectorAll('#swingSizeBlock .swing-size-btn').forEach(btn => {
     });
 });
 
-document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        if (btn.dataset.locked) {
-            const plan = btn.dataset.locked;
-            if (window.PlanGate) {
-                window.PlanGate.show({
-                    required_plan: plan,
-                    message: 'Swing 10–15% scanner is part of the Pro plan.',
-                    upgrade_url: '/billing?plan=' + plan,
-                });
-            } else {
-                window.location.href = '/billing?plan=' + plan;
-            }
-            return;
-        }
-        if (btn.classList.contains('active')) return;
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        _mode = btn.dataset.mode;
-        applyModeUI();
-        // Show empty state until user scans the new mode
-        document.getElementById('scanContent').hidden = true;
-        document.getElementById('emptyState').hidden = false;
-        document.getElementById('scanError').hidden = true;
-        // Restore cached payload for this mode if available
-        try {
-            const key = (_mode === 'intraday') ? intradayCacheKey() : swingCacheKey();
-            const entry = ppCache.getEntry(key);
-            if (entry && entry.v && entry.v.stocks && entry.v.stocks.length) {
-                _scanData = entry.v.stocks;
-                renderResults(entry.v, entry.t);
-                document.getElementById('emptyState').hidden = true;
-                document.getElementById('scanContent').hidden = false;
-            }
-        } catch (e) {}
-    });
-});
-
 document.getElementById('scanBtn').addEventListener('click', runScan);
 document.getElementById('emptyStartBtn').addEventListener('click', runScan);
 
@@ -414,12 +592,16 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
     let hasCached = false;
     try {
         // Prefer the current universe-size key, then any legacy key.
-        const entry = ppCache.getEntry(intradayCacheKey())
-            || ppCache.getEntry('intraday:scan:intraday')
-            || ppCache.getEntry('intraday:scan');
+        const entry = _mode === 'swing'
+            ? ppCache.getEntry(swingCacheKey())
+            : ppCache.getEntry(intradayCacheKey())
+                || ppCache.getEntry('intraday:scan:intraday')
+                || ppCache.getEntry('intraday:scan');
         if (entry && entry.v && entry.v.stocks && entry.v.stocks.length) {
             _scanData = entry.v.stocks;
             renderResults(entry.v, entry.t);
+            updateScanCards(entry.v);
+            setScanView('recent');
             const empty = document.getElementById('emptyState');
             const content = document.getElementById('scanContent');
             if (empty) empty.hidden = true;
@@ -431,7 +613,7 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
     } catch (e) { /* ignore */ }
 
     // Try Azure snapshot, then silent live revalidate
-    if (!hasCached) {
+    if (!hasCached && _mode === 'intraday') {
         try {
             const r = await fetch('/api/intraday/scan?snapshot=1&count=' + _scanCount);
             const data = await r.json().catch(() => ({}));
@@ -439,6 +621,8 @@ document.getElementById('emptyStartBtn').addEventListener('click', runScan);
                 _scanData = data.stocks;
                 try { ppCache.set(intradayCacheKey(), data); } catch (e) {}
                 renderResults(data);
+                updateScanCards(data);
+                setScanView('recent');
                 document.getElementById('emptyState').hidden = true;
                 document.getElementById('scanContent').hidden = false;
                 document.getElementById('scanBtn').innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
@@ -488,6 +672,9 @@ async function runScan() {
         const key = (_mode === 'swing') ? swingCacheKey() : intradayCacheKey();
         try { ppCache.set(key, data); } catch (e) {}
         renderResults(data);
+        updateScanCards(data);
+        recordScan(data);
+        setScanView('recent');
         loading.hidden = true;
         content.hidden = false;
     } catch (e) {
@@ -504,34 +691,10 @@ async function runScan() {
 // this markup first keeps intraday's ids valid no matter which mode ran last.
 function resetIntradaySummaryCards() {
     document.getElementById('signalSummary').innerHTML = `
-        <div class="dash-card" style="--card-accent:#16a34a">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fa-solid fa-arrow-up"></i></div>
-            <div class="dash-card-info">
-                <span class="dash-card-label">Buy signals</span>
-                <span class="dash-card-value" id="buyCount">0</span>
-            </div>
-        </div>
-        <div class="dash-card" style="--card-accent:#dc2626">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fa-solid fa-arrow-down"></i></div>
-            <div class="dash-card-info">
-                <span class="dash-card-label">Sell signals</span>
-                <span class="dash-card-value" id="sellCount">0</span>
-            </div>
-        </div>
-        <div class="dash-card" style="--card-accent:#f59e0b">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-minus"></i></div>
-            <div class="dash-card-info">
-                <span class="dash-card-label">Hold</span>
-                <span class="dash-card-value" id="holdCount">0</span>
-            </div>
-        </div>
-        <div class="dash-card" style="--card-accent:#4f46e5">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#4f46e5,#6366f1)"><i class="fa-solid fa-chart-bar"></i></div>
-            <div class="dash-card-info">
-                <span class="dash-card-label">Scanned</span>
-                <span class="dash-card-value" id="totalScanned">0</span>
-            </div>
-        </div>
+        <div><span>Buy signals</span><strong id="buyCount">0</strong></div>
+        <div><span>Sell signals</span><strong id="sellCount">0</strong></div>
+        <div><span>Hold</span><strong id="holdCount">0</strong></div>
+        <div><span>Scanned</span><strong id="totalScanned">0</strong></div>
     `;
 }
 
@@ -547,51 +710,45 @@ function renderResults(data, cachedAt) {
     document.getElementById('holdCount').textContent = data.hold_count;
     document.getElementById('totalScanned').textContent = data.stocks.length;
 
-    const grid = document.getElementById('signalGrid');
-    grid.innerHTML = data.stocks.map((s, i) => {
+    const rows = document.getElementById('signalRows');
+    rows.innerHTML = data.stocks.map((s, i) => {
         const sigLower = s.signal.toLowerCase().replace(' ', '-');
-        const badgeCls = s.signal.includes('STRONG') ?
-            (s.signal.includes('BUY') ? 'strong-buy' : 'strong-sell') :
-            (s.signal === 'BUY' ? 'buy' : (s.signal === 'SELL' ? 'sell' : 'hold'));
-        const changeCls = s.day_change >= 0 ? 'gain-positive' : 'gain-negative';
-        // Space-separated tags so "Buy" also matches STRONG BUY cards.
         const side = s.signal.includes('BUY') ? 'buy' : (s.signal.includes('SELL') ? 'sell' : 'hold');
         let filterTag = s.signal.includes('STRONG') ? side + ' strong-' + side : side;
         if (s.plan) {
             filterTag += ' has-plan';
             if (s.plan.risk_reward >= 1.5) filterTag += ' good-rr';
         }
-
-        return `<div class="signal-card signal-${sigLower}" data-filter="${filterTag}" data-idx="${i}" onclick="showDetail(${i})">
-            <div class="signal-card-header">
-                <div>
-                    <div class="signal-stock-name">${s.name}</div>
-                    <div class="signal-stock-symbol">${s.symbol}</div>
-                </div>
-                <span class="signal-badge ${badgeCls}">${s.signal}</span>
-            </div>
-            <div class="signal-price-row">
-                <span class="signal-price">${fmt(s.price)}</span>
-                <span class="signal-change ${changeCls}">${s.day_change >= 0 ? '+' : ''}${s.day_change_pct.toFixed(2)}% (${s.day_change >= 0 ? '+' : ''}${fmt(s.day_change)})</span>
-            </div>
-            <div class="signal-indicators">
-                <div class="signal-ind"><span class="signal-ind-label">RSI</span><span class="signal-ind-value" style="color:${s.rsi > 70 ? 'var(--danger)' : (s.rsi < 30 ? 'var(--success)' : 'var(--text)')}">${s.rsi}</span></div>
-                <div class="signal-ind"><span class="signal-ind-label">MACD</span><span class="signal-ind-value" style="color:${s.macd_cross === 'bullish' ? 'var(--success)' : 'var(--danger)'}">${s.macd_cross === 'bullish' ? '▲' : '▼'} ${s.macd_cross}</span></div>
-                <div class="signal-ind"><span class="signal-ind-label">EMA</span><span class="signal-ind-value" style="color:${s.ema_cross === 'bullish' ? 'var(--success)' : 'var(--danger)'}">${s.ema_cross === 'bullish' ? '▲' : '▼'} ${s.ema_cross}</span></div>
-                <div class="signal-ind"><span class="signal-ind-label">VWAP</span><span class="signal-ind-value" style="color:${s.above_vwap ? 'var(--success)' : 'var(--danger)'}">${s.above_vwap ? 'Above' : 'Below'}</span></div>
-            </div>
-            <ul class="signal-reason">${s.reasons.slice(0, 3).map(r => `<li>${r}</li>`).join('')}</ul>
-            ${s.plan ? `
-            <div class="intraday-plan-grid">
-                <div class="swing-plan-cell entry"><small>Entry</small><strong>${fmt(s.plan.entry)}</strong></div>
-                <div class="swing-plan-cell stop"><small>Stop</small><strong>${fmt(s.plan.stop)}</strong></div>
-                <div class="swing-plan-cell target"><small>Target</small><strong>${fmt(s.plan.target)}</strong></div>
-                <div class="swing-plan-cell rr"><small>R:R</small><strong>${s.plan.risk_reward}</strong></div>
-            </div>
-            <div class="intraday-setup-tag">${s.setup_type === 'trend' ? 'Trend-continuation setup' : 'Reversion / bounce setup'}</div>
-            ` : `<div class="intraday-setup-tag muted">${s.setup_type === 'mixed' ? 'Mixed signal — no trade plan' : 'No clear setup'}</div>`}
-        </div>`;
+        const planValue = (key) => s.plan && s.plan[key] != null ? fmt(s.plan[key]) : '<span class="text-muted">N/A</span>';
+        const rr = s.plan && s.plan.risk_reward != null ? Number(s.plan.risk_reward).toFixed(2) : '<span class="text-muted">N/A</span>';
+        const setup = s.setup_type === 'trend' ? 'Trend continuation' :
+            s.setup_type === 'reversion' ? 'Reversion' : s.setup_type === 'mixed' ? 'Mixed' : 'Neutral';
+        return `<tr class="signal-card signal-${sigLower}" data-filter="${filterTag}" data-idx="${i}" onclick="showDetail(${i})">
+            <td class="signal-symbol">${s.name}<small>${s.symbol} · ${fmt(s.price)}</small></td>
+            <td>${setup}</td>
+            <td class="signal-value">${planValue('entry')}</td>
+            <td class="signal-value">${planValue('stop')}</td>
+            <td class="signal-value">${planValue('target')}</td>
+            <td class="signal-value">${rr}</td>
+            <td class="signal-value">${s.vol_ratio == null || !Number.isFinite(Number(s.vol_ratio)) ? '<span class="text-muted">N/A</span>' : Number(s.vol_ratio).toFixed(2) + '×'}</td>
+            <td><span class="signal-status ${side}">${s.signal}</span></td>
+        </tr>`;
     }).join('');
+    const total = Math.max(data.stocks.length, 1);
+    const aboveVwap = data.stocks.filter(stock => stock.above_vwap).length;
+    const avgChange = data.stocks.length
+        ? data.stocks.reduce((sum, stock) => sum + Number(stock.day_change_pct || 0), 0) / total
+        : null;
+    document.getElementById('marketContext').innerHTML = `
+        <div class="signal-context-card">
+            <h2>Scan Market Context</h2>
+            <p>Aggregate conditions across the scanned universe</p>
+            <div class="signal-context-row"><span>Buy signals</span><strong>${data.buy_count}</strong></div>
+            <div class="signal-context-row"><span>Sell signals</span><strong>${data.sell_count}</strong></div>
+            <div class="signal-context-row"><span>Above VWAP</span><strong>${data.stocks.length ? `${aboveVwap} / ${data.stocks.length}` : 'N/A'}</strong></div>
+            <div class="signal-context-row"><span>Average day change</span><strong>${avgChange == null ? 'N/A' : `${avgChange >= 0 ? '+' : ''}${avgChange.toFixed(2)}%`}</strong></div>
+        </div>`;
+    applySignalFilters();
 }
 
 function renderSwingResults(data, cachedAt) {
@@ -612,7 +769,7 @@ function renderSwingResults(data, cachedAt) {
             <div class="dash-card-info"><span class="dash-card-label">A+ Setups</span><span class="dash-card-value">${aPlus}</span></div>
         </div>
         <div class="dash-card" style="--card-accent:#16a34a">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fa-solid fa-rocket"></i></div>
+            <div class="dash-card-icon" style="background:var(--positive)"><i class="fa-solid fa-rocket"></i></div>
             <div class="dash-card-info"><span class="dash-card-label">A Setups</span><span class="dash-card-value">${a}</span></div>
         </div>
         <div class="dash-card" style="--card-accent:#2563eb">
@@ -620,7 +777,7 @@ function renderSwingResults(data, cachedAt) {
             <div class="dash-card-info"><span class="dash-card-label">B Setups</span><span class="dash-card-value">${b}</span></div>
         </div>
         <div class="dash-card" style="--card-accent:#f59e0b">
-            <div class="dash-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-eye"></i></div>
+            <div class="dash-card-icon" style="background:var(--warning)"><i class="fa-solid fa-eye"></i></div>
             <div class="dash-card-info"><span class="dash-card-label">Watch list</span><span class="dash-card-value">${watch}</span></div>
         </div>
     `;
@@ -829,16 +986,48 @@ function showDetail(idx) {
 }
 
 // Filters
+function applySignalFilters() {
+    const filterButton = document.querySelector('.tender-filter-btn.active');
+    const filter = filterButton ? filterButton.dataset.filter : 'all';
+    const query = (document.getElementById('signalSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('#signalRows .signal-card').forEach(row => {
+        const tags = (row.dataset.filter || '').split(' ');
+        const matchesFilter = filter === 'all' || tags.includes(filter);
+        row.style.display = matchesFilter && row.textContent.toLowerCase().includes(query) ? '' : 'none';
+    });
+}
 document.querySelectorAll('.tender-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tender-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const f = btn.dataset.filter;
-        document.querySelectorAll('.signal-card').forEach(card => {
-            const tags = (card.dataset.filter || '').split(' ');
-            card.style.display = (f === 'all' || tags.includes(f)) ? '' : 'none';
-        });
+        applySignalFilters();
     });
+});
+document.getElementById('signalSearch').addEventListener('input', applySignalFilters);
+document.getElementById('signalDensity').addEventListener('click', event => {
+    const compact = document.getElementById('signalTable').classList.toggle('compact');
+    event.currentTarget.textContent = compact ? 'Comfortable' : 'Compact';
+    event.currentTarget.setAttribute('aria-pressed', String(compact));
+});
+document.getElementById('exportSignalsCsv').addEventListener('click', () => {
+    const rows = [['Symbol', 'Name', 'Setup', 'Entry', 'Stop', 'Target', 'Risk:Reward', 'Relative Volume', 'Status']];
+    _scanData.forEach(stock => rows.push([
+        stock.symbol, stock.name, stock.setup_type,
+        stock.plan && stock.plan.entry, stock.plan && stock.plan.stop,
+        stock.plan && stock.plan.target, stock.plan && stock.plan.risk_reward,
+        stock.vol_ratio, stock.signal
+    ]));
+    const csv = rows.map(row => row.map(value => {
+        let cell = String(value ?? '');
+        if (/^[=+\-@\t\r]/.test(cell)) cell = "'" + cell;
+        return /[",\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
+    }).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'day-trading-signals.csv';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 </script>
 {% endblock %}

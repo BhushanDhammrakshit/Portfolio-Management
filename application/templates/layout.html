@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <!-- viewport-fit=cover is required for env(safe-area-inset-*) to resolve to
-         anything but 0 on notched iPhones. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1e293b" />
-    <title>{% if title %}{{ title }} · Finance Candle{% else %}Finance Candle{% endif %}</title>
+    <meta name="theme-color" content="#FFFFFF" />
+    <title>{% if title %}{{ title }} · financeCandle{% else %}financeCandle{% endif %}</title>
 
-    <meta name="description" content="{% block meta_description %}Finance Candle — AI-powered portfolio and trading analytics for the Indian markets: multi-broker sync, options analytics, fundamentals and AI insights.{% endblock %}" />
+    <meta name="description" content="{% block meta_description %}financeCandle — portfolio and trading analytics for the Indian markets: multi-broker sync, options analytics, fundamentals and AI insights.{% endblock %}" />
     <meta name="robots" content="{% block meta_robots %}noindex, nofollow{% endblock %}" />
     <link rel="canonical" href="{{ request.base_url }}" />
 
@@ -23,257 +21,432 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/style.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/skeleton.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/tokens.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/ui.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/design-system.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/markets.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/phase6.css') }}" />
+    <script src="{{ url_for('static', filename='Scripts/design-system/formatters.js') }}"></script>
     {% block head_extra %}{% endblock %}
 </head>
 <body class="app-body">
 <script>
-// Apply saved theme immediately to prevent flash
+// Resolve the saved theme before first paint so there is no flash.
 (function(){
-    var t = localStorage.getItem('ppTheme');
-    if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
-        document.documentElement.setAttribute('data-theme','dark');
-    }
+    var mode = 'light';
+    try {
+        mode = localStorage.getItem('fcTheme') || localStorage.getItem('ppTheme') || 'light';
+        if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') mode = 'light';
+    } catch (e) {}
+    var resolved = mode === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : mode;
+    document.documentElement.setAttribute('data-theme', resolved);
+    document.documentElement.setAttribute('data-theme-mode', mode);
+    document.body.dataset.density = localStorage.getItem('fcCompactTables') === 'true' ? 'compact' : 'comfortable';
 })();
 </script>
 
+{% from "_icons.html" import icon %}
+{% import "_analytics_components.html" as analytics with context %}
+{% set nav_section = 'markets' %}
+{% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
+{% elif title in ['Fundamentals', 'Stock Screener', 'Volume Alerts', 'Market Pulse', 'Investing Tools'] or (title == 'Intraday Tools' and request.args.get('tool')) %}{% set nav_section = 'scans' %}
+{% elif title in ['Options Analytics', 'F&O Gap Forecast', 'F&O Forecast Summary'] %}{% set nav_section = 'options' %}
+{% elif title in ['Portfolio', 'AI & Tools', 'AI Assistant', 'Add Stock', 'My Account', 'Plans & Billing', 'Settings', 'Admin Portal', 'Mutual Funds'] %}{% set nav_section = 'my-space' %}{% endif %}
 <aside class="app-sidebar" id="appSidebar">
-    <div class="app-sidebar-brand">
-        <a href="/home" class="brand-link">
-            <span class="brand-icon"><img class="brand-img" src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
-            <span class="brand-text">Finance<span class="brand-accent">Candle</span></span>
+    <nav class="app-sidebar-nav" aria-label="Legacy navigation">
+
+        <button type="button" class="nav-group-label" data-group="markets"><span>Markets</span>{{ icon('chevron-down', 12, 'nav-group-chev') }}</button>
+        <a href="{{ url_for('home') }}" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
+            {{ icon('dashboard') }}<span>Dashboard</span>
         </a>
-        <button class="sidebar-collapse-btn d-none d-lg-inline-flex" id="sidebarCollapse" aria-label="Toggle sidebar">
-            <i class="fa-solid fa-angles-left"></i>
+        <a href="{{ url_for('heatmap.heatmap') }}" class="nav-item {% if title == 'Sector Heatmap' %}active{% endif %}">
+            {{ icon('layers') }}<span>Market Overview</span>
+        </a>
+        <a href="{{ url_for('global_markets_api.global_markets_page') }}" class="nav-item {% if title == 'Global Markets' %}active{% endif %}">
+            {{ icon('globe') }}<span>Global Markets</span>
+        </a>
+        <a href="{{ url_for('tendor_api.show_stock_news') }}" class="nav-item {% if title == 'News & Trends' %}active{% endif %}">
+            {{ icon('newspaper') }}<span>News &amp; Events</span>
+        </a>
+
+        <button type="button" class="nav-group-label" data-group="analysis"><span>Analysis</span>{{ icon('chevron-down', 12, 'nav-group-chev') }}</button>
+        <a href="{{ url_for('portfolioAnalysis') }}" class="nav-item {% if title == 'Portfolio Analysis' %}active{% endif %}">
+            {{ icon('briefcase') }}<span>Portfolio Analysis</span>
+        </a>
+        <a href="{{ url_for('advanced_dashboard') }}" class="nav-item {% if title == 'Advanced Metrics' %}active{% endif %}">
+            {{ icon('line-chart') }}<span>Advanced Metrics</span>
+        </a>
+        {% if 'intraday' in persona_groups %}
+        <a href="{{ url_for('intraday_api.intraday_page', mode='intraday') }}" class="nav-item {% if title == 'Intraday Scanner' and request.args.get('mode') != 'swing' %}active{% endif %}">
+            {{ icon('zap') }}<span>Intraday RSI/MACD</span>
+        </a>
+        <a href="{{ url_for('intraday_api.intraday_page', mode='swing') }}" class="nav-item {% if title == 'Intraday Scanner' and request.args.get('mode') == 'swing' %}active{% endif %}">
+            {{ icon('trending-up') }}<span>Swing 10–15%</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.intraday_tools_page') }}" class="nav-item {% if title == 'Intraday Tools' and not request.args.get('tool') %}active{% endif %}">
+            {{ icon('candlestick') }}<span>Technical Analysis</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.intraday_tools_page', tool='orb') }}" class="nav-item {% if title == 'Intraday Tools' and request.args.get('tool') == 'orb' %}active{% endif %}">
+            {{ icon('scan-search') }}<span>ORB Scanner</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.intraday_tools_page', tool='momentum') }}" class="nav-item {% if title == 'Intraday Tools' and request.args.get('tool') == 'momentum' %}active{% endif %}">
+            {{ icon('zap') }}<span>Momentum Burst</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.intraday_tools_page', tool='arrg') }}" class="nav-item {% if title == 'Intraday Tools' and request.args.get('tool') == 'arrg' %}active{% endif %}">
+            {{ icon('rotate') }}<span>Advanced Sector Rotation</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.intraday_tools_page', tool='oi') }}" class="nav-item {% if title == 'Intraday Tools' and request.args.get('tool') == 'oi' %}active{% endif %}">
+            {{ icon('layers') }}<span>OI Buildup</span>
+        </a>
+        <a href="{{ url_for('option_chain_api.option_chain_page') }}" class="nav-item {% if title == 'Options Analytics' %}active{% endif %}">
+            {{ icon('link') }}<span>Options Analytics</span>
+        </a>
+        <a href="{{ url_for('fno_gap_api.fno_gap_page') }}" class="nav-item {% if title == 'F&O Gap Forecast' %}active{% endif %}">
+            {{ icon('arrow-up-down') }}<span>F&amp;O Gap Forecast</span>
+        </a>
+        {% endif %}
+        {% if 'swing' in persona_groups %}
+        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}" class="nav-item {% if title == 'Swing Trading' %}active{% endif %}">
+            {{ icon('trending-up') }}<span>Swing Trading</span>
+        </a>
+        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#patterns" class="nav-item">
+            {{ icon('shapes') }}<span>Chart Patterns</span>
+        </a>
+        <a href="{{ url_for('swing_tools_api.rrg_page') }}" class="nav-item {% if title == 'RRG Rotation' %}active{% endif %}">
+            {{ icon('rotate') }}<span>RRG Rotation</span>
+        </a>
+        {% endif %}
+        {% if 'investing' in persona_groups %}
+        <a href="{{ url_for('fundamentals_api.fundamentals_page') }}" class="nav-item {% if title == 'Fundamentals' %}active{% endif %}">
+            {{ icon('book-open') }}<span>Fundamentals</span>
+        </a>
+        <a href="{{ url_for('investing_tools_api.investing_tools_page') }}" class="nav-item {% if title == 'Investing Tools' %}active{% endif %}">
+            {{ icon('factory') }}<span>Investing Tools</span>
+        </a>
+        <a href="{{ url_for('mutual_funds_api.mutual_funds_page') }}" class="nav-item {% if title == 'Mutual Funds' %}active{% endif %}">
+            {{ icon('piggy-bank') }}<span>Mutual Funds</span>
+        </a>
+        {% endif %}
+
+        <button type="button" class="nav-group-label" data-group="scans"><span>Scans</span>{{ icon('chevron-down', 12, 'nav-group-chev') }}</button>
+        <a href="{{ url_for('screener_api.stock_screener_page') }}" class="nav-item {% if title == 'Stock Screener' %}active{% endif %}">
+            {{ icon('sliders') }}<span>Stock Screener</span>
+        </a>
+        <a href="{{ url_for('volume_api.volume_page') }}" class="nav-item {% if title == 'Volume Alerts' %}active{% endif %}">
+            {{ icon('bar-chart') }}<span>Volume Shockers</span>
+        </a>
+        <a href="{{ url_for('market_pulse_api.market_pulse_page') }}" class="nav-item {% if title == 'Market Pulse' %}active{% endif %}">
+            {{ icon('radio') }}<span>Market Pulse</span>
+        </a>
+        <button type="button" class="nav-group-label" data-group="my-space"><span>My Space</span>{{ icon('chevron-down', 12, 'nav-group-chev') }}</button>
+        <a href="{{ url_for('portfolioMaker') }}" class="nav-item {% if title == 'Portfolio' %}active{% endif %}">
+            {{ icon('briefcase') }}<span>Portfolio</span>
+        </a>
+        <a href="{{ url_for('ai_tools_api.ai_tools_page', view='watchlist') }}" class="nav-item {% if title == 'Watchlist' %}active{% endif %}">
+            {{ icon('eye') }}<span>Watchlist</span>
+        </a>
+        <a href="{{ url_for('algoHelper') }}" class="nav-item {% if title == 'AI Assistant' %}active{% endif %}">
+            {{ icon('robot') }}<span>AI Assistant</span>
+        </a>
+        <a href="{{ url_for('ai_tools_api.ai_tools_page', view='tools') }}" class="nav-item {% if title == 'AI & Tools' %}active{% endif %}">
+            {{ icon('sparkles') }}<span>AI &amp; Tools</span>
+        </a>
+        <a href="{{ url_for('profile_page') }}" class="nav-item {% if title == 'My Account' %}active{% endif %}">
+            {{ icon('user') }}<span>My Account</span>
+        </a>
+        <a href="{{ url_for('billing.billing_page') }}" class="nav-item {% if title == 'Plans & Billing' %}active{% endif %}">
+            {{ icon('credit-card') }}<span>Plans &amp; Billing</span>
+        </a>
+        <a href="{{ url_for('settings') }}" class="nav-item {% if title == 'Settings' %}active{% endif %}">
+            {{ icon('settings') }}<span>Settings</span>
+        </a>
+        <a href="#" class="nav-item" onclick="window.openFeedbackModal();return false">
+            {{ icon('mail') }}<span>Send Feedback</span>
+        </a>
+        {% if is_admin %}
+        <a href="{{ url_for('admin_portal.admin_page') }}" class="nav-item {% if title == 'Admin Portal' %}active{% endif %}">
+            {{ icon('shield') }}<span>Admin Portal</span>
+        </a>
+        {% endif %}
+        <a href="#" class="nav-item nav-item-logout" id="legacyLogoutLink">
+            {{ icon('log-out') }}<span>Logout</span>
+        </a>
+    </nav>
+    <nav class="nav-rail" aria-label="Main sections">
+        <button type="button" class="nav-rail-menu" id="sidebarCollapse" aria-label="Collapse section panel" aria-expanded="true" title="Collapse section panel">{{ icon('menu', 20) }}</button>
+        <a href="{{ url_for('home') }}" class="nav-rail-item {% if nav_section == 'markets' %}active{% endif %}" data-section="markets" title="Markets" aria-label="Markets">{{ icon('globe', 20) }}<span>Markets</span></a>
+        <a href="{{ url_for('portfolioAnalysis') }}" class="nav-rail-item {% if nav_section == 'analysis' %}active{% endif %}" data-section="analysis" title="Analysis" aria-label="Analysis">{{ icon('line-chart', 20) }}<span>Analysis</span></a>
+        <a href="{{ url_for('fundamentals_api.fundamentals_page') }}" class="nav-rail-item {% if nav_section == 'scans' %}active{% endif %}" data-section="scans" title="Scans" aria-label="Scans">{{ icon('scan-search', 20) }}<span>Scans</span></a>
+        <a href="{{ url_for('option_chain_api.option_chain_page') }}" class="nav-rail-item {% if nav_section == 'options' %}active{% endif %}" data-section="options" title="Options" aria-label="Options">{{ icon('candlestick', 20) }}<span>Options</span></a>
+        <a href="{{ url_for('ai_tools_api.ai_tools_page') }}" class="nav-rail-item {% if nav_section == 'my-space' %}active{% endif %}" data-section="my-space" title="My Space" aria-label="My Space">{{ icon('user', 20) }}<span>My Space</span></a>
+        <div class="nav-rail-bottom">
+            <div class="dropdown dropup rail-dropdown">
+                <button class="nav-rail-control" id="railThemeToggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Theme" title="Theme">
+                    <span id="railThemeIcon"><span data-theme-icon="light">{{ icon('sun', 18) }}</span><span data-theme-icon="dark" hidden>{{ icon('moon', 18) }}</span><span data-theme-icon="auto" hidden>{{ icon('monitor', 18) }}</span></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="railThemeToggle">
+                    <li><button type="button" class="dropdown-item" data-theme-set="light">{{ icon('sun', 16) }} Light</button></li>
+                    <li><button type="button" class="dropdown-item" data-theme-set="dark">{{ icon('moon', 16) }} Dark</button></li>
+                    <li><button type="button" class="dropdown-item" data-theme-set="auto">{{ icon('monitor', 16) }} Auto</button></li>
+                </ul>
+            </div>
+            <div class="dropdown dropup rail-dropdown">
+                <button class="nav-rail-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu" title="Account"><span class="user-avatar">{{ (name or 'U')[:1] | upper }}</span></button>
+                {{ analytics.AccountMenu(is_admin) }}
+            </div>
+        </div>
+    </nav>
+    <nav class="nav-panel" id="appSidebarNav" aria-label="Section pages" data-active-section="{{ nav_section }}">
+        <div class="nav-panel-heading" data-panel-heading="markets">Markets</div>
+        <div class="nav-panel-pages" data-panel-section="markets" {% if nav_section != 'markets' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('home'), 'dashboard', 'Dashboard', title == 'Dashboard') }}
+            {{ analytics.NavRow(url_for('heatmap.heatmap'), 'layers', 'Market Overview', title == 'Sector Heatmap') }}
+            {{ analytics.NavRow(url_for('global_markets_api.global_markets_page'), 'globe', 'Global Markets', title == 'Global Markets') }}
+            {{ analytics.NavRow(url_for('tendor_api.show_stock_news'), 'newspaper', 'News & Events', title == 'News & Trends') }}
+        </div>
+        <div class="nav-panel-heading" data-panel-heading="analysis" hidden>Analysis</div>
+        <div class="nav-panel-pages" data-panel-section="analysis" {% if nav_section != 'analysis' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page'), 'candlestick', 'Technical Analysis', title == 'Intraday Tools' and not request.args.get('tool')) }}
+            {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='intraday'), 'zap', 'Day Trading Scanner', title == 'Intraday Scanner' and request.args.get('mode') != 'swing') }}
+            {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='swing'), 'trending-up', 'Swing Scanner', title == 'Intraday Scanner' and request.args.get('mode') == 'swing') }}
+            {{ analytics.NavRow(url_for('swing_tools_api.swing_tools_page'), 'trending-up', 'Swing Trading', title == 'Swing Tools') }}
+            {{ analytics.NavRow(url_for('swing_tools_api.rrg_page'), 'rotate', 'RRG Rotation', title == 'RRG Rotation') }}
+            {{ analytics.NavRow(url_for('advanced_dashboard'), 'line-chart', 'Advanced Metrics', title == 'Advanced Metrics') }}
+            {{ analytics.NavRow(url_for('portfolioAnalysis'), 'briefcase', 'Portfolio Analysis', title == 'Portfolio Analysis') }}
+        </div>
+        <div class="nav-panel-heading" data-panel-heading="scans" hidden>Scans</div>
+        <div class="nav-panel-pages" data-panel-section="scans" {% if nav_section != 'scans' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('screener_api.stock_screener_page'), 'sliders', 'Stock Screener', title == 'Stock Screener') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='orb'), 'scan-search', 'ORB Scanner', title == 'Intraday Tools' and request.args.get('tool') == 'orb') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='momentum'), 'zap', 'Momentum Burst', title == 'Intraday Tools' and request.args.get('tool') == 'momentum') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='arrg'), 'rotate', 'Sector Rotation', title == 'Intraday Tools' and request.args.get('tool') == 'arrg') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='oi'), 'layers', 'OI Buildup', title == 'Intraday Tools' and request.args.get('tool') == 'oi') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='gappers'), 'arrow-up-right', 'Daily Gappers', title == 'Intraday Tools' and request.args.get('tool') == 'gappers') }}
+            {{ analytics.NavRow(url_for('volume_api.volume_page'), 'bar-chart', 'Volume Shockers', title == 'Volume Alerts') }}
+            {{ analytics.NavRow(url_for('market_pulse_api.market_pulse_page'), 'radio', 'Market Pulse', title == 'Market Pulse') }}
+            {{ analytics.NavRow(url_for('investing_tools_api.investing_tools_page'), 'factory', 'Investing Tools', title == 'Investing Tools') }}
+        </div>
+        <div class="nav-panel-heading" data-panel-heading="options" hidden>Options</div>
+        <div class="nav-panel-pages" data-panel-section="options" {% if nav_section != 'options' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('option_chain_api.option_chain_page'), 'link', 'Options Analytics', title == 'Options Analytics') }}
+            {{ analytics.NavRow(url_for('fno_gap_api.fno_gap_page'), 'arrow-up-down', 'F&O Gap Forecast', title == 'F&O Gap Forecast') }}
+            {{ analytics.NavRow(url_for('fno_gap_api.fno_gap_summary_page'), 'list', 'F&O Forecast Summary', title == 'F&O Forecast Summary') }}
+        </div>
+        <div class="nav-panel-heading" data-panel-heading="my-space" hidden>My Space</div>
+        <div class="nav-panel-pages" data-panel-section="my-space" {% if nav_section != 'my-space' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('ai_tools_api.ai_tools_page', view='watchlist'), 'eye', 'Watchlist', title == 'Watchlist') }}
+            {{ analytics.NavRow(url_for('portfolioMaker'), 'briefcase', 'Portfolio', title == 'Portfolio') }}
+            {{ analytics.NavRow(url_for('algoHelper'), 'robot', 'AI Assistant', title == 'AI Assistant') }}
+            {{ analytics.NavRow(url_for('ai_tools_api.ai_tools_page', view='tools'), 'sparkles', 'AI & Tools', title == 'AI & Tools') }}
+            {{ analytics.NavRow(url_for('mutual_funds_api.mutual_funds_page'), 'piggy-bank', 'Mutual Funds', title == 'Mutual Funds') }}
+            {% if is_admin %}{{ analytics.NavRow(url_for('admin_portal.admin_page'), 'shield', 'Admin Portal', title == 'Admin Portal') }}{% endif %}
+        </div>
+    </nav>
+</aside>
+
+<header class="app-header">
+    <div class="app-header-left">
+        <a href="{{ url_for('home') }}" class="app-brand" aria-label="financeCandle home">
+            <span class="brand-mark">{{ icon('candlestick', 18) }}</span>
+            <span class="fc-wordmark">finance<b>Candle</b></span>
+        </a>
+        <button class="topbar-toggle" id="legacySidebarCollapse" aria-label="Toggle sidebar" title="Toggle sidebar">
+            {{ icon('panel-left', 18) }}
         </button>
     </div>
 
-    <nav class="app-sidebar-nav" id="appSidebarNav">
-        <button type="button" class="nav-group-label" data-group="workspace"><span>Workspace</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="/home" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
-            <i class="fa-solid fa-house"></i><span>Dashboard</span>
-        </a>
-        <a href="{{ url_for('portfolioAnalysis') }}" class="nav-item {% if title == 'Portfolio Analysis' %}active{% endif %}">
-            <i class="fa-solid fa-magnifying-glass-chart"></i><span>Portfolio Analysis</span>
-        </a>
-        <a href="{{ url_for('advanced_dashboard') }}" class="nav-item {% if title == 'Advanced Metrics' %}active{% endif %}">
-            <i class="fa-solid fa-chart-line"></i><span>Advanced Metrics</span>
-        </a>
-        <a href="{{ url_for('portfolioMaker') }}" class="nav-item {% if title == 'Add Stock' %}active{% endif %}">
-            <i class="fa-solid fa-plus"></i><span>Add Stock</span>
-        </a>
+    <div class="app-search" id="appSearch">
+        {{ icon('search', 16) }}
+        <input type="search" id="appSearchInput" class="app-search-input"
+               placeholder="Search stocks, indices, scans"
+               autocomplete="off" spellcheck="false" role="combobox"
+               aria-autocomplete="list" aria-expanded="false" aria-controls="appSearchPop" />
+        <kbd class="search-kbd">/</kbd>
+        <div class="search-pop" id="appSearchPop" role="listbox" aria-label="Search results"></div>
+    </div>
 
-        {% if 'intraday' in persona_groups %}
-        <button type="button" class="nav-group-label" data-group="intraday"><span>Intraday</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('intraday_tools_api.intraday_tools_page') }}" class="nav-item {% if title == 'Intraday Tools' %}active{% endif %}">
-            <i class="fa-solid fa-bolt"></i><span>Intraday Tools</span>
-        </a>
-        <a href="{{ url_for('intraday_api.intraday_page') }}" class="nav-item {% if title == 'Intraday Scanner' %}active{% endif %}">
-            <i class="fa-solid fa-satellite-dish"></i><span>Intraday Scanner</span>
-        </a>
-        <a href="{{ url_for('volume_api.volume_page') }}" class="nav-item {% if title == 'Volume Alerts' %}active{% endif %}">
-            <i class="fa-solid fa-chart-column"></i><span>Volume Alerts</span>
-        </a>
-        <a href="{{ url_for('market_pulse_api.market_pulse_page') }}" class="nav-item {% if title == 'Market Pulse' %}active{% endif %}">
-            <i class="fa-solid fa-tower-broadcast"></i><span>Market Pulse</span>
-        </a>
-        <a href="{{ url_for('option_chain_api.option_chain_page') }}" class="nav-item {% if title == 'Options Analytics' %}active{% endif %}">
-            <i class="fa-solid fa-link"></i><span>Options Analytics</span>
-        </a>
-        <a href="{{ url_for('fno_gap_api.fno_gap_page') }}" class="nav-item {% if title == 'F&O Gap Forecast' %}active{% endif %}">
-            <i class="fa-solid fa-arrows-up-down"></i><span>F&amp;O Gap Forecast</span>
+    <button class="icon-btn mobile-search-btn" id="mobileSearchBtn" aria-label="Open search" title="Search">
+        {{ icon('search', 18) }}
+    </button>
+
+    <div class="topbar-actions">
+        {% if current_plan %}
+        <a href="{{ url_for('billing.billing_page') }}" class="plan-badge plan-badge-{{ current_plan.id }}" title="Your current plan — manage in Billing">
+            {% if current_plan.id == 'elite' %}{{ icon('sparkles', 11) }}{% elif current_plan.id == 'pro' %}{{ icon('zap', 11) }}{% endif %}{{ current_plan.id }}
         </a>
         {% endif %}
 
-        {% if 'swing' in persona_groups %}
-        <button type="button" class="nav-group-label" data-group="swing-free"><span>Free Swing Tools</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#sectors" class="nav-item">
-            <i class="fa-solid fa-industry"></i><span>Sector Leaders</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#options" class="nav-item">
-            <i class="fa-solid fa-link"></i><span>Options-Confirmed</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#fii" class="nav-item">
-            <i class="fa-solid fa-building-columns"></i><span>FII / DII</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#mtf" class="nav-item">
-            <i class="fa-solid fa-layer-group"></i><span>MTF Alignment</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#pocket" class="nav-item">
-            <i class="fa-solid fa-bolt-lightning"></i><span>Pocket Pivot</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#backtest" class="nav-item">
-            <i class="fa-solid fa-flask"></i><span>Backtest Sandbox</span>
-        </a>
-
-        <button type="button" class="nav-group-label" data-group="swing-paid"><span>Paid Swing Tools</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#breakout" class="nav-item">
-            <i class="fa-solid fa-compress"></i><span>Breakouts</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#rs" class="nav-item">
-            <i class="fa-solid fa-chart-line"></i><span>Relative Strength</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#patterns" class="nav-item">
-            <i class="fa-solid fa-shapes"></i><span>Chart Patterns</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#rotation" class="nav-item">
-            <i class="fa-solid fa-arrows-spin"></i><span>Sector Rotation</span>
-        </a>
-        <a href="{{ url_for('swing_tools_api.swing_tools_page') }}#52wh" class="nav-item">
-            <i class="fa-solid fa-arrow-trend-up"></i><span>Near 52W High</span>
-        </a>
-        <a href="{{ url_for('option_chain_api.option_chain_page') }}" class="nav-item {% if title == 'Options Analytics' %}active{% endif %}">
-            <i class="fa-solid fa-link"></i><span>Options Analytics</span>
-        </a>
-        {% endif %}
-
-        <button type="button" class="nav-group-label" data-group="rotation"><span>Rotation</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('swing_tools_api.rrg_page') }}" class="nav-item {% if title == 'RRG Rotation' %}active{% endif %}">
-            <i class="fa-solid fa-arrows-spin"></i><span>RRG Rotation</span>
-        </a>
-
-        {% if 'investing' in persona_groups %}
-        <button type="button" class="nav-group-label" data-group="investing"><span>Investing</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('investing_tools_api.investing_tools_page') }}" class="nav-item {% if title == 'Investing Tools' %}active{% endif %}">
-            <i class="fa-solid fa-seedling"></i><span>Investing Tools</span>
-        </a>
-        <a href="{{ url_for('fundamentals_api.fundamentals_page') }}" class="nav-item {% if title == 'Fundamentals' %}active{% endif %}">
-            <i class="fa-solid fa-book-open"></i><span>Fundamentals</span>
-        </a>
-        <a href="{{ url_for('mutual_funds_api.mutual_funds_page') }}" class="nav-item {% if title == 'Mutual Funds' %}active{% endif %}">
-            <i class="fa-solid fa-piggy-bank"></i><span>Mutual Funds</span>
-        </a>
-        {% endif %}
-
-        <button type="button" class="nav-group-label" data-group="markets"><span>Markets</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('heatmap.heatmap') }}" class="nav-item {% if title == 'Sector Heatmap' %}active{% endif %}">
-            <i class="fa-solid fa-table-cells-large"></i><span>Sector Heatmap</span>
-        </a>
-        <a href="{{ url_for('global_markets_api.global_markets_page') }}" class="nav-item {% if title == 'Global Markets' %}active{% endif %}">
-            <i class="fa-solid fa-globe"></i><span>Global Markets</span>
-        </a>
-        <a href="{{ url_for('tendor_api.show_stock_news') }}" class="nav-item {% if title == 'News & Trends' %}active{% endif %}">
-            <i class="fa-solid fa-newspaper"></i><span>News & Trends</span>
-        </a>
-
-        <button type="button" class="nav-group-label" data-group="ai"><span>AI</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('algoHelper') }}" class="nav-item {% if title == 'AI Assistant' %}active{% endif %}">
-            <i class="fa-solid fa-robot"></i><span>AI Assistant</span>
-        </a>
-        <a href="{{ url_for('ai_tools_api.ai_tools_page') }}" class="nav-item {% if title == 'AI & Tools' %}active{% endif %}">
-            <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI &amp; Tools</span>
-        </a>
-
-        <button type="button" class="nav-group-label" data-group="account"><span>Account</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('profile_page') }}" class="nav-item {% if title == 'My Account' %}active{% endif %}">
-            <i class="fa-solid fa-user"></i><span>My Account</span>
-        </a>
-        <a href="{{ url_for('billing.billing_page') }}" class="nav-item {% if title == 'Plans & Billing' %}active{% endif %}">
-            <i class="fa-solid fa-crown"></i><span>Plans &amp; Billing</span>
-        </a>
-        <a href="{{ url_for('settings') }}" class="nav-item {% if title == 'Settings' %}active{% endif %}">
-            <i class="fa-solid fa-gear"></i><span>Settings</span>
-        </a>
-        <a href="#" class="nav-item" onclick="document.getElementById('fcFeedbackModal').hidden=false;return false">
-            <i class="fa-solid fa-envelope"></i><span>Send Feedback</span>
-        </a>
-        {% if is_admin %}
-        <button type="button" class="nav-group-label" data-group="admin"><span>Admin</span><i class="fa-solid fa-chevron-down nav-group-chev"></i></button>
-        <a href="{{ url_for('admin_portal.admin_page') }}" class="nav-item {% if title == 'Admin Portal' %}active{% endif %}">
-            <i class="fa-solid fa-shield-halved"></i><span>Admin Portal</span>
-        </a>
-        {% endif %}
-        <a href="#" class="nav-item nav-item-logout" id="logoutLink">
-            <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
-        </a>
-    </nav>
-
-</aside>
-
-<div class="app-main" id="appMain">
-    <header class="app-topbar">
-        <button class="topbar-burger" id="mobileSidebarOpen" aria-label="Open menu">
-            <i class="fa-solid fa-bars"></i>
-        </button>
-        <div class="topbar-actions">
-            {% if current_plan %}
-            <a href="{{ url_for('billing.billing_page') }}" class="plan-badge plan-badge-{{ current_plan.id }}" title="Your current plan — manage in Billing">
-                {% if current_plan.id == 'elite' %}<i class="fa-solid fa-gem plan-badge-icon"></i>{% elif current_plan.id == 'pro' %}<i class="fa-solid fa-bolt plan-badge-icon"></i>{% endif %}{{ current_plan.id }}
-            </a>
-            {% endif %}
-            {% if user_persona %}
-            <div class="persona-switch dropdown">
-                <button class="persona-switch-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Switch your workspace">
-                    <span class="persona-switch-ico"><i class="fa-solid {{ user_persona.icon }}"></i></span>
-                    <span class="persona-switch-label d-none d-sm-inline">{{ user_persona.short }}</span>
-                    <i class="fa-solid fa-chevron-down ms-1 persona-switch-chev"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow persona-switch-menu">
-                    <li class="persona-switch-head">Switch workspace</li>
-                    {% for pid, p in all_personas.items() %}
-                    <li>
-                        {% if p.coming_soon %}
-                        <button type="button" class="persona-switch-item persona-switch-item-soon"
-                                data-coming-soon-persona="{{ p.label }}">
+        {% if user_persona %}
+        <div class="persona-switch dropdown">
+            <button class="persona-switch-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Switch your workspace">
+                <span class="persona-switch-ico"><i class="fa-solid {{ user_persona.icon }}"></i></span>
+                <span class="persona-switch-label d-none d-lg-inline">{{ user_persona.short }}</span>
+                {{ icon('chevron-down', 12) }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end persona-switch-menu">
+                <li class="persona-switch-head">Switch workspace</li>
+                {% for pid, p in all_personas.items() %}
+                <li>
+                    {% if p.coming_soon %}
+                    <button type="button" class="persona-switch-item persona-switch-item-soon"
+                            data-coming-soon-persona="{{ p.label }}">
+                        <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
+                        <span class="persona-switch-item-text">
+                            <span class="persona-switch-item-title">{{ p.label }}<span class="lock-badge">Soon</span></span>
+                            <span class="persona-switch-item-sub">{{ p.tagline }}</span>
+                        </span>
+                    </button>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('set_persona') }}" class="persona-switch-form">
+                        <input type="hidden" name="persona" value="{{ pid }}">
+                        <input type="hidden" name="next" value="/home">
+                        <button type="submit" class="persona-switch-item {% if user_persona.id == pid %}active{% endif %}">
                             <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
                             <span class="persona-switch-item-text">
-                                <span class="persona-switch-item-title">{{ p.label }}<span class="lock-badge"><i class="fa-solid fa-clock"></i>Soon</span></span>
+                                <span class="persona-switch-item-title">{{ p.label }}</span>
                                 <span class="persona-switch-item-sub">{{ p.tagline }}</span>
                             </span>
+                            {% if user_persona.id == pid %}<i class="fa-solid fa-check persona-switch-item-check"></i>{% endif %}
                         </button>
-                        {% else %}
-                        <form method="POST" action="{{ url_for('set_persona') }}" class="persona-switch-form">
-                            <input type="hidden" name="persona" value="{{ pid }}">
-                            <input type="hidden" name="next" value="/home">
-                            <button type="submit" class="persona-switch-item {% if user_persona.id == pid %}active{% endif %}">
-                                <span class="persona-switch-item-ico"><i class="fa-solid {{ p.icon }}"></i></span>
-                                <span class="persona-switch-item-text">
-                                    <span class="persona-switch-item-title">{{ p.label }}</span>
-                                    <span class="persona-switch-item-sub">{{ p.tagline }}</span>
-                                </span>
-                                {% if user_persona.id == pid %}<i class="fa-solid fa-check persona-switch-item-check"></i>{% endif %}
-                            </button>
-                        </form>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            <a href="{{ url_for('portfolioMaker') }}" class="btn btn-sm btn-primary topbar-cta">
-                <i class="fa-solid fa-plus"></i><span class="topbar-cta-text"> Add Stock</span>
-            </a>
-            <div class="topbar-user dropdown">
-                <button class="topbar-user-btn" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="user-avatar user-avatar-sm">{{ (name or 'U')[:1] | upper }}</span>
-                    <span class="d-none d-md-inline-block">{{ name or 'User' }}</span>
-                    <i class="fa-solid fa-chevron-down ms-1 d-none d-md-inline"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><a class="dropdown-item" href="{{ url_for('profile_page') }}"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('billing.billing_page') }}"><i class="fa-solid fa-crown me-2"></i>Plans &amp; Billing{% if current_plan and current_plan.id != 'free' %} <span class="badge bg-success ms-1" style="font-size:.6rem;vertical-align:middle">{{ current_plan.name }}</span>{% endif %}</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fa-solid fa-gear me-2"></i>Settings</a></li>
-                    {% if is_admin %}
-                    <li><a class="dropdown-item" href="{{ url_for('admin_portal.admin_page') }}"><i class="fa-solid fa-shield-halved me-2 text-primary"></i>Admin Portal</a></li>
-                    <li><a class="dropdown-item" href="#" id="adminRefreshTokens"><i class="fa-solid fa-rotate me-2 text-warning"></i>Refresh Tokens</a></li>
+                    </form>
                     {% endif %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center justify-content-between" href="#" id="themeToggleTop" role="menuitem">
-                            <span><i class="fa-solid fa-moon me-2" id="themeToggleIcon"></i><span id="themeToggleLabel">Dark Mode</span></span>
-                            <span class="theme-switch" aria-hidden="true">
-                                <span class="theme-switch-knob"></span>
-                            </span>
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" id="logoutLinkTop"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
-                </ul>
-            </div>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
-    </header>
+        {% endif %}
+
+        <span class="market-pill" id="marketStatus" title="Indian cash market session (IST)">
+            <span class="market-dot"></span><span id="marketStatusText">Market</span>
+        </span>
+
+        <div class="dropdown topbar-theme">
+            <button class="icon-btn" id="themeToggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Theme" title="Theme">
+                <span id="themeIcon">
+                    <span data-theme-icon="light">{{ icon('sun', 18) }}</span>
+                    <span data-theme-icon="dark" hidden>{{ icon('moon', 18) }}</span>
+                    <span data-theme-icon="auto" hidden>{{ icon('monitor', 18) }}</span>
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeToggle">
+                <li><button type="button" class="dropdown-item" data-theme-set="light">{{ icon('sun', 16) }} Light</button></li>
+                <li><button type="button" class="dropdown-item" data-theme-set="dark">{{ icon('moon', 16) }} Dark</button></li>
+                <li><button type="button" class="dropdown-item" data-theme-set="auto">{{ icon('monitor', 16) }} Auto (system)</button></li>
+            </ul>
+        </div>
+
+        <div class="dropdown">
+            <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications" title="Notifications">
+                {{ icon('bell', 18) }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end notifications-menu">
+                <li><h6 class="dropdown-header">Alerts</h6></li>
+                <li><a class="dropdown-item" href="{{ url_for('ai_tools_api.ai_tools_page', view='alerts') }}">{{ icon('bell', 16) }} Price alerts</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('market_pulse_api.market_pulse_page') }}">{{ icon('radio', 16) }} Market pulse</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('tendor_api.show_stock_news') }}">{{ icon('newspaper', 16) }} News &amp; events</a></li>
+            </ul>
+        </div>
+
+        <div class="topbar-user dropdown">
+            <button class="topbar-user-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
+                <span class="user-avatar user-avatar-sm">{{ (name or 'U')[:1] | upper }}</span>
+                <span class="profile-name d-none d-md-inline">{{ name or 'User' }}</span>
+                {{ icon('chevron-down', 12) }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end account-menu">
+                <li><a class="dropdown-item" href="{{ url_for('profile_page') }}">{{ icon('user', 16) }} My Account</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('billing.billing_page') }}">{{ icon('credit-card', 16) }} Plans &amp; Billing</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('settings') }}">{{ icon('settings', 16) }} Settings</a></li>
+                <li><a class="dropdown-item" href="#" onclick="window.openFeedbackModal();return false">{{ icon('mail', 16) }} Send Feedback</a></li>
+                {% if is_admin %}
+                <li><a class="dropdown-item" href="{{ url_for('admin_portal.admin_page') }}">{{ icon('shield', 16) }} Admin Portal</a></li>
+                <li><a class="dropdown-item" href="#" id="adminRefreshTokens">{{ icon('rotate', 16) }} Refresh Tokens</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" id="logoutLinkTop">{{ icon('log-out', 16) }} Logout</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+<div class="app-main" id="appMain">
+<div class="fc-ticker" aria-label="Index ticker">
+    <div class="ticker-item" data-ticker-symbol="^NSEI">
+        <span class="ticker-name">NIFTY 50</span>
+        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
+        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+    </div>
+    <span class="ticker-divider" aria-hidden="true"></span>
+    <div class="ticker-item" data-ticker-symbol="^BSESN">
+        <span class="ticker-name">SENSEX</span>
+        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
+        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+    </div>
+    <span class="ticker-divider" aria-hidden="true"></span>
+    <div class="ticker-item" data-ticker-symbol="^NSEBANK">
+        <span class="ticker-name">BANK NIFTY</span>
+        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
+        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+    </div>
+</div>
+
+<script>
+window.FC_SEARCH = {
+    pages: [
+        { title: 'Dashboard', sub: 'Workspace', url: {{ url_for('home')|tojson }}, icon: 'dashboard' },
+        { title: 'Portfolio Analysis', sub: 'Analysis', url: {{ url_for('portfolioAnalysis')|tojson }}, icon: 'briefcase' },
+        { title: 'Advanced Metrics', sub: 'Analysis', url: {{ url_for('advanced_dashboard')|tojson }}, icon: 'line-chart' },
+        { title: 'Market Overview', sub: 'Markets', url: {{ url_for('heatmap.heatmap')|tojson }}, icon: 'layers' },
+        { title: 'Global Markets', sub: 'Markets', url: {{ url_for('global_markets_api.global_markets_page')|tojson }}, icon: 'globe' },
+        { title: 'News & Events', sub: 'Markets', url: {{ url_for('tendor_api.show_stock_news')|tojson }}, icon: 'newspaper' },
+        { title: 'Intraday RSI/MACD', sub: 'Analysis', url: {{ url_for('intraday_api.intraday_page', mode='intraday')|tojson }}, icon: 'zap' },
+        { title: 'Swing 10–15%', sub: 'Analysis', url: {{ url_for('intraday_api.intraday_page', mode='swing')|tojson }}, icon: 'trending-up' },
+        { title: 'ORB Scanner', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='orb')|tojson }}, icon: 'scan-search' },
+        { title: 'Momentum Burst', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='momentum')|tojson }}, icon: 'zap' },
+        { title: 'Advanced Sector Rotation', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='arrg')|tojson }}, icon: 'rotate' },
+        { title: 'OI Buildup', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='oi')|tojson }}, icon: 'layers' },
+        { title: 'Technical Analysis', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page')|tojson }}, icon: 'flask' },
+        { title: 'Volume Shockers', sub: 'Scans', url: {{ url_for('volume_api.volume_page')|tojson }}, icon: 'bar-chart' },
+        { title: 'Market Pulse', sub: 'Scans', url: {{ url_for('market_pulse_api.market_pulse_page')|tojson }}, icon: 'radio' },
+        { title: 'Options Analytics', sub: 'F&O', url: {{ url_for('option_chain_api.option_chain_page')|tojson }}, icon: 'link' },
+        { title: 'F&O Gap Forecast', sub: 'F&O', url: {{ url_for('fno_gap_api.fno_gap_page')|tojson }}, icon: 'arrow-up-down' },
+        { title: 'Swing Trading', sub: 'Swing', url: {{ url_for('swing_tools_api.swing_tools_page')|tojson }}, icon: 'trending-up' },
+        { title: 'RRG Rotation', sub: 'Swing', url: {{ url_for('swing_tools_api.rrg_page')|tojson }}, icon: 'rotate' },
+        { title: 'Fundamentals', sub: 'Investing', url: {{ url_for('fundamentals_api.fundamentals_page')|tojson }}, icon: 'book-open' },
+        { title: 'Mutual Funds', sub: 'Investing', url: {{ url_for('mutual_funds_api.mutual_funds_page')|tojson }}, icon: 'piggy-bank' },
+        { title: 'Investing Tools', sub: 'Investing', url: {{ url_for('investing_tools_api.investing_tools_page')|tojson }}, icon: 'factory' },
+        { title: 'AI Assistant', sub: 'AI', url: {{ url_for('algoHelper')|tojson }}, icon: 'robot' },
+        { title: 'AI & Tools', sub: 'AI', url: {{ url_for('ai_tools_api.ai_tools_page', view='tools')|tojson }}, icon: 'sparkles' },
+        { title: 'Portfolio', sub: 'My Space', url: {{ url_for('portfolioMaker')|tojson }}, icon: 'briefcase' },
+        { title: 'Swing Tools', sub: 'Analysis', url: {{ url_for('swing_tools_api.swing_tools_page')|tojson }}, icon: 'trending-up' },
+        { title: 'Investing Tools', sub: 'Scans', url: {{ url_for('investing_tools_api.investing_tools_page')|tojson }}, icon: 'factory' },
+        { title: 'Mutual Funds', sub: 'My Space', url: {{ url_for('mutual_funds_api.mutual_funds_page')|tojson }}, icon: 'piggy-bank' },
+        { title: 'F&O Forecast Summary', sub: 'Options', url: {{ url_for('fno_gap_api.fno_gap_summary_page')|tojson }}, icon: 'list' },
+        { title: 'Stock Chart', sub: 'Analysis', url: {{ url_for('tv_chart', symbol='RELIANCE')|tojson }}, icon: 'line-chart' },
+        { title: 'My Account', sub: 'Account', url: {{ url_for('profile_page')|tojson }}, icon: 'user' },
+        { title: 'Plans & Billing', sub: 'Account', url: {{ url_for('billing.billing_page')|tojson }}, icon: 'credit-card' },
+        { title: 'Settings', sub: 'Account', url: {{ url_for('settings')|tojson }}, icon: 'settings' }
+    ],
+    indices: [
+        { title: 'NIFTY 50', sub: 'NSE · Index', symbol: 'NIFTY' },
+        { title: 'SENSEX', sub: 'BSE · Index', symbol: 'SENSEX' },
+        { title: 'BANK NIFTY', sub: 'NSE · Index', symbol: 'BANKNIFTY' }
+    ],
+    scans: [
+        { title: 'Volume Shockers', sub: 'Unusual volume', url: {{ url_for('volume_api.volume_page')|tojson }} },
+        { title: 'Market Pulse', sub: 'Breadth & movers', url: {{ url_for('market_pulse_api.market_pulse_page')|tojson }} },
+        { title: 'Swing Breakouts', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#breakout')|tojson }} },
+        { title: '52-Week High / Low', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#52wh')|tojson }} },
+        { title: 'Options-Confirmed', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#options')|tojson }} },
+        { title: 'Daily Gappers', sub: 'Intraday tools', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='gappers')|tojson }} }
+    ]
+};
+</script>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -337,6 +510,20 @@
 </div>
 
 <div class="mobile-sidebar-backdrop" id="mobileBackdrop"></div>
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+    <a href="{{ url_for('home') }}" class="mbn-item {% if title == 'Dashboard' %}active{% endif %}">
+        {{ icon('dashboard', 20) }}<span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('swing_tools_api.swing_tools_page') }}" class="mbn-item {% if title == 'Swing Trading' %}active{% endif %}">
+        {{ icon('trending-up', 20) }}<span>Swing</span>
+    </a>
+    <a href="{{ url_for('portfolioAnalysis') }}" class="mbn-item {% if title == 'Portfolio Analysis' %}active{% endif %}">
+        {{ icon('briefcase', 20) }}<span>Portfolio</span>
+    </a>
+    <button type="button" class="mbn-item" id="mobileMoreBtn">
+        {{ icon('menu', 20) }}<span>More</span>
+    </button>
+</nav>
 
 <!-- Global custom modal for alerts & confirmations -->
 <div class="modal fade" id="appModal" tabindex="-1" aria-hidden="true">
@@ -361,7 +548,6 @@
     <div class="modal-content upgrade-modal-content">
       <button type="button" class="btn-close upgrade-close" data-bs-dismiss="modal" aria-label="Close"></button>
       <div class="upgrade-hero">
-        <div class="upgrade-crown"><i class="fa-solid fa-crown"></i></div>
         <h4 id="upgradeTitle" class="upgrade-title">Upgrade required</h4>
         <div id="upgradeBody" class="upgrade-body"></div>
         <div id="upgradePerks" class="upgrade-perks"></div>
@@ -376,197 +562,147 @@
   </div>
 </div>
 
-<style>
-.upgrade-modal-content{border:none;border-radius:14px;overflow:hidden;position:relative}
-.upgrade-close{position:absolute;top:14px;right:14px;z-index:5;filter:invert(1);opacity:.85}
-.upgrade-hero{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 60%,#fbbf24 100%);padding:30px 28px 22px;text-align:center;color:#3a2a05}
-.upgrade-crown{width:64px;height:64px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 6px 18px rgba(180,120,0,.25)}
-.upgrade-crown i{color:#f59e0b;font-size:1.7rem}
-.upgrade-title{font-weight:800;margin-bottom:8px;font-size:1.3rem}
-.upgrade-body{font-size:.95rem;line-height:1.5;color:#5a4012;margin-bottom:14px}
-.upgrade-body strong{color:#7c2d12}
-.upgrade-perks{display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.55);border-radius:10px;padding:12px 16px;text-align:left;font-size:.86rem;color:#3a2a05}
-.upgrade-perks:empty{display:none}
-.upgrade-perks .perk{display:flex;align-items:center;gap:8px}
-.upgrade-perks .perk i{color:#16a34a}
-.upgrade-footer{padding:16px 22px;display:flex;justify-content:flex-end;gap:10px;background:#fff}
-
-/* Locked-feature visual treatment */
-.feature-locked{position:relative;opacity:.85;cursor:not-allowed!important}
-.feature-locked::after{content:"\f521";font-family:"Font Awesome 6 Free";font-weight:900;margin-left:8px;color:#f59e0b}
-button.feature-locked,a.feature-locked{background:#94a3b8!important;border-color:#94a3b8!important;color:#fff!important}
-button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;border-color:#f59e0b!important}
-.lock-badge{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-left:6px}
-
-/* ── Elite trial strip ─────────────────────────────────────────── */
-.trial-strip{
-    display:flex;align-items:center;justify-content:space-between;gap:16px;
-    flex-wrap:wrap;
-    margin:0 0 18px;padding:12px 18px;border-radius:14px;
-    background:
-        radial-gradient(120% 160% at 0% 0%, rgba(99,102,241,.30), transparent 60%),
-        linear-gradient(135deg,#161a33,#0f1226);
-    border:1px solid rgba(129,140,248,.35);
-    box-shadow:0 12px 34px -16px rgba(99,102,241,.6);
-}
-.trial-strip-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.trial-strip-badge{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:5px 11px;border-radius:999px;
-    background:linear-gradient(135deg,#fbbf24,#f59e0b);
-    color:#1a1206;font-weight:800;font-size:.68rem;letter-spacing:.06em;
-    box-shadow:0 4px 12px rgba(245,158,11,.4);white-space:nowrap;
-}
-.trial-strip-text{color:#e2e8f0;font-size:.9rem}
-.trial-strip-text strong{color:#fff}
-.trial-strip-cta{
-    display:inline-flex;align-items:center;gap:7px;
-    padding:9px 18px;border-radius:10px;text-decoration:none;white-space:nowrap;
-    background:linear-gradient(135deg,#6366f1,#4f46e5);
-    color:#fff;font-weight:700;font-size:.86rem;
-    box-shadow:0 6px 20px rgba(99,102,241,.4);transition:transform .15s,box-shadow .15s;
-}
-.trial-strip-cta:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(99,102,241,.55);color:#fff}
-@media(max-width:640px){.trial-strip{flex-direction:column;align-items:flex-start}.trial-strip-cta{width:100%;justify-content:center}}
-
-/* ── Persona switcher (topbar) ─────────────────────────────────── */
-.persona-switch{position:relative}
-.persona-switch-btn{
-  display:inline-flex;align-items:center;gap:8px;
-  border:1px solid var(--border-color,#e2e8f0);
-  background:var(--card-bg,#fff);
-  color:var(--text-color,#1e293b);
-  border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:600;
-  cursor:pointer;transition:all .15s ease;line-height:1;
-}
-.persona-switch-btn:hover{border-color:#6366f1;box-shadow:0 2px 10px rgba(99,102,241,.15)}
-.persona-switch-ico{
-  width:24px;height:24px;border-radius:50%;
-  display:inline-flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:.72rem;
-}
-.persona-switch-chev{font-size:.65rem;opacity:.6}
-.persona-switch-menu{padding:6px;min-width:280px;border:none;border-radius:14px}
-.persona-switch-head{
-  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:#94a3b8;padding:8px 10px 6px;
-}
-.persona-switch-form{margin:0}
-.persona-switch-item{
-  width:100%;display:flex;align-items:center;gap:12px;text-align:left;
-  background:transparent;border:none;border-radius:10px;padding:10px;cursor:pointer;
-  transition:background .12s ease;color:inherit;
-}
-.persona-switch-item:hover{background:var(--hover-bg,#f1f5f9)}
-.persona-switch-item.active{background:rgba(99,102,241,.10)}
-.persona-switch-item-ico{
-  flex:0 0 auto;width:36px;height:36px;border-radius:10px;
-  display:inline-flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#eef2ff,#e0e7ff);color:#6366f1;font-size:.95rem;
-}
-.persona-switch-item.active .persona-switch-item-ico{
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;
-}
-.persona-switch-item-text{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
-.persona-switch-item-title{font-size:.88rem;font-weight:700;line-height:1.2;color:#1e293b}
-.persona-switch-item-sub{font-size:.74rem;color:#64748b;line-height:1.2;margin-top:2px}
-.persona-switch-item-check{color:#6366f1;font-size:.8rem}
-.persona-switch-item-soon{opacity:.7;cursor:not-allowed}
-.persona-switch-item-soon:hover{background:transparent}
-.persona-switch-item-title .lock-badge{margin-left:8px;vertical-align:middle}
-.persona-switch-head{color:#64748b}
-[data-theme="dark"] .persona-switch-btn{background:#1e293b;border-color:rgba(255,255,255,.12);color:#e2e8f0}
-[data-theme="dark"] .persona-switch-menu{background:#1e293b}
-[data-theme="dark"] .persona-switch-head{color:#94a3b8}
-[data-theme="dark"] .persona-switch-item:hover{background:rgba(255,255,255,.06)}
-[data-theme="dark"] .persona-switch-item.active{background:rgba(99,102,241,.20)}
-[data-theme="dark"] .persona-switch-item-ico{background:rgba(99,102,241,.18);color:#a5b4fc}
-[data-theme="dark"] .persona-switch-item-title{color:#f1f5f9}
-[data-theme="dark"] .persona-switch-item-sub{color:#94a3b8}
-</style>
-
+<script src="{{ url_for('static', filename='Scripts/design-system/components.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="{{ url_for('static', filename='Scripts/fc-charts.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/pp-cache.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/progressive.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/pp-loader.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/stock-suggest.js') }}"></script>
 <script>
 (function(){
-  const sidebar = document.getElementById('appSidebar');
-  const main = document.getElementById('appMain');
   const collapseBtn = document.getElementById('sidebarCollapse');
-  const mobileOpen = document.getElementById('mobileSidebarOpen');
-  const backdrop = document.getElementById('mobileBackdrop');
+  const nav = document.getElementById('appSidebarNav');
+  const railItems = document.querySelectorAll('.nav-rail-item');
+  const panelItems = nav ? nav.querySelectorAll('.nav-row') : [];
+  const mobileQuery = window.matchMedia('(max-width: 767.98px)');
+  const drawerQuery = window.matchMedia('(min-width: 768px) and (max-width: 1023.98px)');
+  const tabletQuery = window.matchMedia('(min-width: 1024px) and (max-width: 1279.98px)');
+  const activeSection = nav ? nav.dataset.activeSection : 'markets';
 
-  // Persist desktop collapsed state
-  if (localStorage.getItem('sidebarCollapsed') === '1') {
-    document.body.classList.add('sidebar-collapsed');
-  }
-  function updateCollapseIcon(){
-    if (!collapseBtn) return;
-    const ico = collapseBtn.querySelector('i');
-    if (document.body.classList.contains('sidebar-collapsed')) {
-      ico.classList.replace('fa-angles-left','fa-angles-right');
+  function syncSidebarState() {
+    let saved = null;
+    try { saved = localStorage.getItem('sidebarCollapsed'); } catch (e) {}
+    document.body.classList.remove('sidebar-panel-open');
+    if (tabletQuery.matches) {
+      document.body.classList.remove('sidebar-collapsed');
+      document.body.classList.toggle('sidebar-panel-expanded-tablet', saved === '0');
     } else {
-      ico.classList.replace('fa-angles-right','fa-angles-left');
+      document.body.classList.remove('sidebar-panel-expanded-tablet');
+      document.body.classList.toggle('sidebar-collapsed', saved === '1');
     }
   }
-  updateCollapseIcon();
-  if (collapseBtn) collapseBtn.addEventListener('click', function(){
-    document.body.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed',
-      document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
-    updateCollapseIcon();
-  });
-  if (mobileOpen) mobileOpen.addEventListener('click', function(){
-    document.body.classList.add('sidebar-mobile-open');
-  });
-  if (backdrop) backdrop.addEventListener('click', function(){
-    document.body.classList.remove('sidebar-mobile-open');
-  });
+  syncSidebarState();
 
-  // ── Per-group collapse / expand on the sidebar ───────────────────
-  (function(){
-    const STORE_KEY = 'sidebar:groups:v1';
-    const nav = document.getElementById('appSidebarNav');
+  function updatePanelButton() {
+    if (!collapseBtn) return;
+    const isDrawer = drawerQuery.matches;
+    const expanded = isDrawer
+      ? document.body.classList.contains('sidebar-panel-open')
+      : tabletQuery.matches
+        ? document.body.classList.contains('sidebar-panel-expanded-tablet')
+        : !document.body.classList.contains('sidebar-collapsed');
+    const label = isDrawer
+      ? (expanded ? 'Close section panel' : 'Open section panel')
+      : (expanded ? 'Collapse section panel' : 'Expand section panel');
+    collapseBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    collapseBtn.setAttribute('aria-label', label);
+    collapseBtn.title = label;
+  }
+
+  function setSection(section) {
     if (!nav) return;
-    const labels = nav.querySelectorAll('.nav-group-label');
-    let state = {};
-    try { state = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch(e) { state = {}; }
-
-    function itemsAfter(label){
-      const items = [];
-      let n = label.nextElementSibling;
-      while (n && !n.classList.contains('nav-group-label')) {
-        if (n.classList.contains('nav-item')) items.push(n);
-        n = n.nextElementSibling;
-      }
-      return items;
-    }
-    function applyGroup(label, collapsed){
-      label.classList.toggle('is-collapsed', !!collapsed);
-      label.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      itemsAfter(label).forEach(el => el.classList.toggle('nav-group-hidden', !!collapsed));
-    }
-    function persist(){
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
-    }
-
-    labels.forEach(label => {
-      const key = label.dataset.group || label.textContent.trim().toLowerCase();
-      // If a child item is .active, force the group open regardless of saved state.
-      const hasActive = itemsAfter(label).some(el => el.classList.contains('active'));
-      const collapsed = hasActive ? false : !!state[key];
-      applyGroup(label, collapsed);
-
-      label.addEventListener('click', function(){
-        const next = !label.classList.contains('is-collapsed');
-        applyGroup(label, next);
-        state[key] = next;
-        persist();
-      });
+    nav.dataset.activeSection = section;
+    nav.querySelectorAll('[data-panel-section]').forEach(function(panel) {
+      panel.hidden = panel.dataset.panelSection !== section;
     });
-  })();
+    nav.querySelectorAll('[data-panel-heading]').forEach(function(heading) {
+      heading.hidden = heading.dataset.panelHeading !== section;
+    });
+    railItems.forEach(function(item) {
+      const selected = item.dataset.section === section;
+      item.classList.toggle('active', selected);
+      if (selected) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
+    });
+  }
+  setSection(activeSection);
+  updatePanelButton();
+
+  if (collapseBtn) collapseBtn.addEventListener('click', function() {
+    if (drawerQuery.matches) {
+      document.body.classList.toggle('sidebar-panel-open');
+      updatePanelButton();
+      return;
+    }
+    if (tabletQuery.matches) {
+      document.body.classList.toggle('sidebar-panel-expanded-tablet');
+      const expanded = document.body.classList.contains('sidebar-panel-expanded-tablet');
+      updatePanelButton();
+      try { localStorage.setItem('sidebarCollapsed', expanded ? '0' : '1'); } catch (e) {}
+      return;
+    }
+    document.body.classList.toggle('sidebar-collapsed');
+    const collapsed = document.body.classList.contains('sidebar-collapsed');
+    updatePanelButton();
+    try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+  });
+
+  railItems.forEach(function(item) {
+    item.addEventListener('click', function(event) {
+      if (!mobileQuery.matches) return;
+      event.preventDefault();
+      const section = item.dataset.section;
+      const sameOpenSection = nav && nav.dataset.activeSection === section &&
+        document.body.classList.contains('sidebar-panel-open');
+      setSection(section);
+      document.body.classList.toggle('sidebar-panel-open', !sameOpenSection);
+      updatePanelButton();
+    });
+  });
+  panelItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      document.body.classList.remove('sidebar-panel-open');
+    });
+  });
+  document.querySelectorAll('.scan-row-arrow').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const row = button.closest('.scan-card-row-wrap').querySelector('.scan-card-row');
+      row.scrollBy({ left: Number(button.dataset.scrollDirection) * 212, behavior: 'smooth' });
+    });
+  });
+  const backdrop = document.getElementById('mobileBackdrop');
+  if (backdrop) backdrop.addEventListener('click', function() {
+    document.body.classList.remove('sidebar-panel-open');
+    updatePanelButton();
+  });
+  [mobileQuery, drawerQuery, tabletQuery].forEach(function(query) {
+    query.addEventListener('change', function() {
+      syncSidebarState();
+      updatePanelButton();
+    });
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      document.body.classList.remove('sidebar-panel-open');
+      updatePanelButton();
+      return;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' &&
+        event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const current = document.activeElement;
+    const group = current && current.closest('.nav-rail, .nav-panel-pages');
+    if (!group) return;
+    const items = Array.from(group.querySelectorAll('.nav-rail-item, .nav-row')).filter(function(item) {
+      return !item.hidden && item.offsetParent !== null;
+    });
+    const index = items.indexOf(current);
+    if (index < 0 || !items.length) return;
+    event.preventDefault();
+    const delta = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1;
+    items[(index + delta + items.length) % items.length].focus();
+  });
 
   // Logout confirmation
   const modalEl = document.getElementById('logoutModal');
@@ -600,34 +736,52 @@ button.feature-locked:hover,a.feature-locked:hover{background:#f59e0b!important;
     });
   }
 
-  // ── Theme toggle (in topbar user dropdown) ────────────────────────
-  const themeToggleEl = document.getElementById('themeToggleTop');
-  const themeIconEl   = document.getElementById('themeToggleIcon');
-  const themeLabelEl  = document.getElementById('themeToggleLabel');
-  function reflectTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (themeIconEl) {
-      themeIconEl.classList.remove('fa-moon', 'fa-sun');
-      themeIconEl.classList.add(isDark ? 'fa-sun' : 'fa-moon');
-    }
-    if (themeLabelEl) themeLabelEl.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-    if (themeToggleEl) themeToggleEl.classList.toggle('is-dark', isDark);
+  // ── Theme: Light / Dark / Auto ───────────────────────────────────
+  const THEME_KEY = 'fcTheme';
+  function systemDark(){
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
-  reflectTheme();
-  if (themeToggleEl) {
-    themeToggleEl.addEventListener('click', function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const next = isDark ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      try { localStorage.setItem('ppTheme', next); } catch(_) {}
-      reflectTheme();
-      // Keep the settings page checkbox in sync if it's open.
-      const dm = document.getElementById('settingDarkMode');
-      if (dm) dm.checked = (next === 'dark');
+  function resolvedTheme(mode){
+    return mode === 'auto' ? (systemDark() ? 'dark' : 'light') : mode;
+  }
+  function reflectTheme(mode){
+    document.documentElement.setAttribute('data-theme-mode', mode);
+    document.querySelectorAll('[data-theme-icon]').forEach(function(el){
+      el.hidden = el.getAttribute('data-theme-icon') !== mode;
+    });
+    const dm = document.getElementById('settingDarkMode');
+    if (dm) dm.checked = resolvedTheme(mode) === 'dark';
+  }
+  function applyTheme(mode, persist){
+    if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') mode = 'light';
+    document.documentElement.setAttribute('data-theme', resolvedTheme(mode));
+    reflectTheme(mode);
+    if (persist) {
+      try { localStorage.setItem(THEME_KEY, mode); localStorage.removeItem('ppTheme'); } catch(_) {}
+    }
+  }
+  let savedMode = 'light';
+  try { savedMode = localStorage.getItem(THEME_KEY) || localStorage.getItem('ppTheme') || 'light'; } catch(_) {}
+  applyTheme(savedMode, false);
+  document.querySelectorAll('[data-theme-set]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      applyTheme(btn.getAttribute('data-theme-set'), true);
+      const dd = btn.closest('.dropdown') && btn.closest('.dropdown').querySelector('[data-bs-toggle="dropdown"]');
+      if (dd && window.bootstrap) bootstrap.Dropdown.getOrCreateInstance(dd).hide();
+    });
+  });
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+      let mode = 'light';
+      try { mode = localStorage.getItem(THEME_KEY) || 'light'; } catch(_) {}
+      if (mode === 'auto') applyTheme('auto', false);
     });
   }
+
+  // ── Mobile navigation drawer ─────────────────────────────────────
+  document.querySelectorAll('#mobileMoreBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){ document.body.classList.add('sidebar-mobile-open'); });
+  });
 })();
 
 /* ===== Global custom modal helpers ===== */
@@ -731,63 +885,6 @@ window.appPlanRank = {free:0, pro:1, elite:2};
 </script>
 
 <!-- ============ TradingView Chart Modal (centered) ============ -->
-<style>
-  /* Backdrop covers full viewport */
-  #tvBackdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);
-    backdrop-filter:blur(2px);opacity:0;pointer-events:none;
-    transition:opacity .2s ease;z-index:1090}
-  body.tv-open #tvBackdrop{opacity:1;pointer-events:auto}
-  /* Centered modal dialog */
-  #tvDrawer{position:fixed;top:50%;left:50%;transform:translate(-50%,-48%) scale(.96);
-    width:min(1100px,92vw);height:min(720px,82vh);
-    background:var(--surface);border-radius:14px;border:1px solid var(--border-strong);
-    box-shadow:0 24px 70px rgba(0,0,0,.45);
-    opacity:0;pointer-events:none;
-    transition:opacity .2s ease, transform .25s cubic-bezier(.4,0,.2,1);
-    z-index:1100;overflow:hidden;display:flex;flex-direction:column}
-  body.tv-open #tvDrawer{opacity:1;pointer-events:auto;
-    transform:translate(-50%,-50%) scale(1)}
-  @media (max-width: 700px){
-    #tvDrawer{width:96vw;height:88vh;border-radius:10px}
-  }
-  #tvDrawer .tv-head{display:flex;align-items:center;justify-content:space-between;
-    padding:10px 18px;border-bottom:1px solid var(--border);
-    background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;flex-shrink:0}
-  #tvDrawer .tv-head h3{margin:0;font-size:1rem;font-weight:700;letter-spacing:.2px;
-    display:flex;align-items:center;gap:8px;color:#fff}
-  #tvDrawer .tv-head h3 .tv-badge{font-size:.65rem;background:rgba(255,255,255,.18);
-    padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:.5px}
-  #tvDrawer .tv-actions{display:flex;gap:8px;align-items:center}
-  #tvDrawer .tv-actions a,#tvDrawer .tv-actions button{
-    background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);
-    border-radius:8px;padding:6px 12px;font-size:.78rem;font-weight:600;cursor:pointer;
-    text-decoration:none;transition:.15s;display:inline-flex;align-items:center;gap:6px;line-height:1}
-  #tvDrawer .tv-actions a:hover,#tvDrawer .tv-actions button:hover{background:rgba(255,255,255,.22)}
-  #tvDrawer .tv-body{flex:1 1 auto;background:#f1f3f6;position:relative;min-height:0;overflow:hidden}
-  #tvDrawer .tv-body iframe{border:0;width:100%;height:100%;display:block;background:#f1f3f6}
-  /* Clickable stock cell styling (used by auto-decorate below) */
-  .tool-table td .stock-cell{cursor:pointer;color:#1d4ed8;border-bottom:1px dashed rgba(29,78,216,.35);
-    transition:.15s;display:inline-flex;align-items:center;gap:6px}
-  .tool-table td .stock-cell:hover{color:#1e40af;border-bottom-color:#1e40af}
-  .tool-table td .stock-cell::after{content:"\f201";font-family:"Font Awesome 6 Free";font-weight:900;
-    font-size:.62rem;opacity:.35}
-  .tool-table td .stock-cell:hover::after{opacity:.9}
-  .tool-table tbody tr.tv-active{background:rgba(29,78,216,.07)}
-  /* Lock background scroll while modal is open */
-  body.tv-open{overflow:hidden}
-  /* Mobile: keep the modal header on one line and never push Close off-screen */
-  @media (max-width: 560px){
-    #tvDrawer .tv-head{padding:8px 10px;gap:6px}
-    #tvDrawer .tv-head h3{font-size:.82rem;gap:5px;min-width:0;flex:1 1 auto;overflow:hidden}
-    #tvDrawer .tv-head h3 #tvTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #tvDrawer .tv-actions{gap:5px;flex:0 0 auto}
-    #tvDrawer .tv-actions a,#tvDrawer .tv-actions button{padding:6px 8px;font-size:.72rem}
-    /* TradingView link → icon only to save room; Close stays labelled */
-    #tvOpen span,#tvOpen{font-size:0}
-    #tvOpen i{font-size:.8rem}
-    #tvTfBtn #tvTfLabel{font-size:.72rem}
-  }
-</style>
 <div id="tvBackdrop" aria-hidden="true"></div>
 <aside id="tvDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Stock chart">
   <div class="tv-head">
@@ -923,69 +1020,6 @@ window.appPlanRank = {free:0, pro:1, elite:2};
 </script>
 
 <!-- ── Global Plan Gate (handles 402 upgrade_required from any API) ── -->
-<style>
-  #planGateModal{position:fixed;inset:0;z-index:11000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);padding:20px}
-  #planGateModal.show{display:flex}
-  #planGateModal .pg-card{background:var(--surface,#fff);color:var(--text,#0f172a);border:1px solid var(--border,#e2e8f0);border-radius:14px;max-width:440px;width:100%;padding:28px 26px;box-shadow:0 20px 60px rgba(2,6,23,.35);text-align:center;animation:pgIn .18s ease-out}
-  [data-theme="dark"] #planGateModal .pg-card{background:linear-gradient(180deg,#1e293b,#0f172a);border-color:var(--border-strong,#334155)}
-  @keyframes pgIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-  #planGateModal .pg-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#fde68a,#f59e0b);color:#78350f;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:14px;box-shadow:0 4px 14px rgba(245,158,11,.35)}
-  #planGateModal .pg-title{font-size:1.2rem;font-weight:700;margin:0 0 6px;color:var(--text,#0f172a);background:none !important;-webkit-background-clip:initial !important;background-clip:initial !important;-webkit-text-fill-color:currentColor !important;text-fill-color:currentColor !important}
-  [data-theme="dark"] #planGateModal .pg-title{color:#f8fafc}
-  #planGateModal .pg-msg{color:var(--text-muted,#64748b);font-size:.93rem;margin:0 0 18px;line-height:1.45}
-  [data-theme="dark"] #planGateModal .pg-msg{color:#cbd5e1}
-  #planGateModal .pg-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  #planGateModal .pg-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;font-weight:600;font-size:.9rem;text-decoration:none;border:0;cursor:pointer;transition:all .15s}
-  #planGateModal .pg-btn-ghost{background:transparent;color:var(--text-muted,#64748b);border:1px solid var(--border,#e2e8f0)}
-  #planGateModal .pg-btn-ghost:hover{background:var(--surface-2,#f1f5f9)}
-  [data-theme="dark"] #planGateModal .pg-btn-ghost{border-color:var(--border-strong,#334155);color:#cbd5e1}
-  [data-theme="dark"] #planGateModal .pg-btn-ghost:hover{background:rgba(148,163,184,.12)}
-  #planGateModal .pg-btn-primary{background:#2563eb;color:#fff}
-  #planGateModal .pg-btn-primary:hover{background:#1d4ed8}
-
-  /* Inline upgrade lock card (rendered server-side for gated tools) */
-  .upgrade-locked-card{
-    background:var(--surface,#fff);
-    border:1px solid var(--border,#e2e8f0);
-    border-radius:14px;
-    padding:32px 28px;
-    text-align:center;
-    max-width:560px;
-    margin:24px auto;
-    box-shadow:0 4px 18px rgba(2,6,23,.05);
-    color:var(--text,#0f172a);
-  }
-  [data-theme="dark"] .upgrade-locked-card{
-    background:linear-gradient(180deg,rgba(30,41,59,.95),rgba(15,23,42,.95));
-    border-color:var(--border-strong,#334155);
-    box-shadow:0 8px 28px rgba(0,0,0,.45);
-  }
-  .upgrade-locked-card.compact{padding:22px 18px;margin:12px auto}
-  .upgrade-locked-icon{
-    width:60px;height:60px;border-radius:14px;
-    background:linear-gradient(135deg,#fde68a,#f59e0b);
-    color:#78350f;
-    display:inline-flex;align-items:center;justify-content:center;
-    font-size:1.55rem;margin-bottom:14px;
-    box-shadow:0 4px 14px rgba(245,158,11,.35);
-  }
-  .upgrade-locked-card.compact .upgrade-locked-icon{width:48px;height:48px;font-size:1.25rem;margin-bottom:10px}
-  .upgrade-locked-title{
-    font-size:1.18rem;font-weight:700;margin:0 0 8px;
-    color:var(--text,#0f172a);
-    /* Override any inherited gradient/text-fill from h1-h6 themes */
-    background:none !important;
-    -webkit-background-clip:initial !important;
-    background-clip:initial !important;
-    -webkit-text-fill-color:currentColor !important;
-    text-fill-color:currentColor !important;
-  }
-  [data-theme="dark"] .upgrade-locked-title{color:#f8fafc}
-  .upgrade-locked-card.compact .upgrade-locked-title{font-size:1.02rem}
-  .upgrade-locked-msg{color:var(--text-muted,#64748b);font-size:.94rem;margin:0 0 18px;line-height:1.55;max-width:440px;margin-left:auto;margin-right:auto}
-  [data-theme="dark"] .upgrade-locked-msg{color:#cbd5e1}
-  .upgrade-locked-btn{display:inline-flex;align-items:center;gap:6px}
-</style>
 <script>
 (function(){
   function buildModal(){
@@ -1043,6 +1077,298 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   };
 })();
 </script>
+<script>
+/* ===== Universal search, market status and index ticker ===== */
+(function(){
+    const DATA = window.FC_SEARCH || { pages: [], indices: [], scans: [] };
+    const input = document.getElementById('appSearchInput');
+    const pop = document.getElementById('appSearchPop');
+    const searchWrap = document.getElementById('appSearch');
+    if (!input || !pop) return;
+
+    const state = { stocks: [], flat: [], active: -1, seq: 0, timer: 0 };
+
+    const ICONS = {
+        stock: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
+        index: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>',
+        scan: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        page: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>'
+    };
+
+    function svg(kind){
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[kind] || ICONS.page) + '</svg>';
+    }
+
+    function esc(value){
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function(c){
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function itemHtml(item, index){
+        return '<div class="search-item" role="option" data-idx="' + index + '" data-kind="' + item.kind + '">'
+            + svg(item.kind)
+            + '<span class="search-item-main"><span class="search-item-title">' + esc(item.title)
+            + '</span><span class="search-item-sub">' + esc(item.sub || '') + '</span></span>'
+            + (item.tag ? '<span class="search-item-tag">' + esc(item.tag) + '</span>' : '')
+            + '</div>';
+    }
+
+    function buildGroups(query){
+        const q = query.trim().toLowerCase();
+        const groups = [];
+
+        if (q) {
+            if (state.stocks.length) {
+                groups.push({
+                    label: 'Stocks',
+                    items: state.stocks.slice(0, 6).map(function(s){
+                        const sym = s.symbol || s.Symbol || '';
+                        return {
+                            kind: 'stock',
+                            title: s.name || s.Name || sym,
+                            sub: (s.exchange || s.Exchange || 'NSE') + ' · ' + sym,
+                            symbol: sym,
+                            tag: 'Chart'
+                        };
+                    })
+                });
+            }
+            const indices = DATA.indices.filter(function(i){
+                return (i.title + ' ' + i.sub).toLowerCase().indexOf(q) !== -1;
+            }).map(function(i){
+                return { kind: 'index', title: i.title, sub: i.sub, symbol: i.symbol, tag: 'Index' };
+            });
+            if (indices.length) groups.push({ label: 'Indices', items: indices });
+
+            const scans = DATA.scans.filter(function(s){
+                return (s.title + ' ' + s.sub).toLowerCase().indexOf(q) !== -1;
+            }).map(function(s){
+                return { kind: 'scan', title: s.title, sub: s.sub, url: s.url, tag: 'Scan' };
+            });
+            if (scans.length) groups.push({ label: 'Scans', items: scans });
+
+            const pages = DATA.pages.filter(function(p){
+                return (p.title + ' ' + p.sub).toLowerCase().indexOf(q) !== -1;
+            }).slice(0, 6).map(function(p){
+                return { kind: 'page', title: p.title, sub: p.sub, url: p.url, tag: 'Page' };
+            });
+            if (pages.length) groups.push({ label: 'Pages', items: pages });
+        } else {
+            groups.push({
+                label: 'Indices',
+                items: DATA.indices.map(function(i){
+                    return { kind: 'index', title: i.title, sub: i.sub, symbol: i.symbol, tag: 'Index' };
+                })
+            });
+            groups.push({
+                label: 'Scans',
+                items: DATA.scans.slice(0, 5).map(function(s){
+                    return { kind: 'scan', title: s.title, sub: s.sub, url: s.url, tag: 'Scan' };
+                })
+            });
+            groups.push({
+                label: 'Quick links',
+                items: DATA.pages.slice(0, 5).map(function(p){
+                    return { kind: 'page', title: p.title, sub: p.sub, url: p.url, tag: 'Page' };
+                })
+            });
+        }
+        return groups;
+    }
+
+    function render(){
+        const groups = buildGroups(input.value);
+        let idx = 0;
+        let html = '';
+        state.flat = [];
+        groups.forEach(function(group){
+            html += '<div class="search-group-label">' + esc(group.label) + '</div>';
+            group.items.forEach(function(item){
+                item.idx = idx++;
+                state.flat.push(item);
+                html += itemHtml(item, item.idx);
+            });
+        });
+        if (!state.flat.length) {
+            html = '<div class="search-empty">No matches for “' + esc(input.value.trim()) + '”.</div>';
+        }
+        pop.innerHTML = html;
+        state.active = -1;
+    }
+
+    function openPop(){
+        render();
+        pop.classList.add('open');
+        input.setAttribute('aria-expanded', 'true');
+    }
+
+    function closePop(){
+        pop.classList.remove('open');
+        input.setAttribute('aria-expanded', 'false');
+        state.active = -1;
+    }
+
+    function setActive(next){
+        if (!state.flat.length) return;
+        if (state.active >= 0) {
+            const prev = pop.querySelector('.search-item[data-idx="' + state.active + '"]');
+            if (prev) prev.classList.remove('is-active');
+        }
+        state.active = (next + state.flat.length) % state.flat.length;
+        const el = pop.querySelector('.search-item[data-idx="' + state.active + '"]');
+        if (el) {
+            el.classList.add('is-active');
+            el.scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function pick(item){
+        if (!item) return;
+        closePop();
+        if (item.kind === 'stock' || item.kind === 'index') {
+            const symbol = String(item.symbol || '').replace(/\.NS$/i, '').replace(/\.BO$/i, '');
+            if (window.openTVChart) {
+                window.openTVChart(symbol);
+            } else {
+                window.open('https://www.tradingview.com/chart/?symbol=NSE%3A' + encodeURIComponent(symbol), '_blank', 'noopener');
+            }
+            return;
+        }
+        if (item.url) window.location.href = item.url;
+    }
+
+    function fetchStocks(query){
+        const seq = ++state.seq;
+        fetch('/api/stock/search?q=' + encodeURIComponent(query), { credentials: 'same-origin' })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(data){
+                if (seq !== state.seq) return;
+                state.stocks = (data && Array.isArray(data.results)) ? data.results : [];
+                if (document.activeElement === input) render();
+            })
+            .catch(function(){
+                if (seq !== state.seq) return;
+                state.stocks = [];
+            });
+    }
+
+    input.addEventListener('focus', openPop);
+    input.addEventListener('input', function(){
+        const q = input.value.trim();
+        render();
+        pop.classList.add('open');
+        input.setAttribute('aria-expanded', 'true');
+        state.stocks = [];
+        clearTimeout(state.timer);
+        if (q.length >= 2) {
+            state.timer = setTimeout(function(){ fetchStocks(q); }, 180);
+        }
+    });
+
+    input.addEventListener('keydown', function(e){
+        if (e.key === 'ArrowDown') { e.preventDefault(); if (!pop.classList.contains('open')) openPop(); setActive(state.active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(state.active - 1); }
+        else if (e.key === 'Enter') {
+            e.preventDefault();
+            pick(state.active >= 0 ? state.flat[state.active] : state.flat[0]);
+        }
+        else if (e.key === 'Escape') { closePop(); input.blur(); }
+    });
+
+    pop.addEventListener('click', function(e){
+        const el = e.target.closest('.search-item');
+        if (!el) return;
+        pick(state.flat[Number(el.getAttribute('data-idx'))]);
+    });
+
+    document.addEventListener('click', function(e){
+        if (!searchWrap.contains(e.target)) closePop();
+    });
+
+    document.addEventListener('keydown', function(e){
+        const active = document.activeElement;
+        const typing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
+        if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            if (window.innerWidth < 768) searchWrap.classList.add('mobile-open');
+            input.focus();
+            input.select();
+        }
+    });
+
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+    if (mobileSearchBtn) {
+        mobileSearchBtn.addEventListener('click', function(){
+            searchWrap.classList.toggle('mobile-open');
+            if (searchWrap.classList.contains('mobile-open')) input.focus();
+        });
+    }
+
+    // ── Market session pill (NSE cash, IST) ─────────────────────────
+    function marketOpen(){
+        try {
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Kolkata', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false
+            }).formatToParts(new Date());
+            const get = function(t){ const p = parts.find(function(x){ return x.type === t; }); return p ? p.value : ''; };
+            const day = get('weekday');
+            const minutes = Number(get('hour')) * 60 + Number(get('minute'));
+            return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].indexOf(day) !== -1 && minutes >= 555 && minutes <= 930;
+        } catch (e) { return false; }
+    }
+    function paintMarketStatus(){
+        const pill = document.getElementById('marketStatus');
+        const label = document.getElementById('marketStatusText');
+        if (!pill || !label) return;
+        const open = marketOpen();
+        pill.classList.toggle('is-closed', !open);
+        label.textContent = open ? 'Market open' : 'Market closed';
+        pill.title = 'NSE cash market · 09:15–15:30 IST';
+    }
+    paintMarketStatus();
+    setInterval(paintMarketStatus, 60000);
+
+    // ── Index ticker (reuses the cached global-markets feed) ───────
+    function number(value, reason){
+        return window.FCFormat.number(value, 2, reason);
+    }
+    function paintTicker(){
+        fetch('/api/global-markets', { credentials: 'same-origin' })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(data){
+                if (!data) return;
+                const items = [];
+                (data.regions || []).forEach(function(region){ (region.items || []).forEach(function(i){ items.push(i); }); });
+                if (!items.length) return;
+                document.querySelectorAll('[data-ticker-symbol]').forEach(function(node){
+                    const symbol = node.getAttribute('data-ticker-symbol');
+                    const quote = items.find(function(i){ return i.ticker === symbol; });
+                    if (!quote) return;
+                    const valueEl = node.querySelector('.ticker-val');
+                    const changeEl = node.querySelector('.ticker-chg');
+                    const pct = Number(quote.change_pct);
+                    const change = Number(quote.change);
+                    const hasChange = quote.change_pct !== null && quote.change_pct !== undefined &&
+                        quote.change_pct !== '' && quote.change !== null && quote.change !== undefined &&
+                        quote.change !== '' && Number.isFinite(pct) && Number.isFinite(change);
+                    if (valueEl) valueEl.innerHTML = number(quote.price, 'Index quote is unavailable');
+                    if (changeEl) {
+                        changeEl.innerHTML = hasChange
+                            ? (change >= 0 ? '+' : '') + number(change) + ' (' + window.FCFormat.percent(pct, true) + ')'
+                            : window.FCFormat.missing('Index change is unavailable');
+                        changeEl.classList.remove('pos', 'neg');
+                        if (hasChange) changeEl.classList.add(pct >= 0 ? 'pos' : 'neg');
+                    }
+                });
+            })
+            .catch(function(){});
+    }
+    paintTicker();
+    setInterval(paintTicker, 120000);
+})();
+</script>
+
 {% block scripts %}{% endblock %}
 
 <!-- Floating feedback button -->
@@ -1056,8 +1382,8 @@ window.appPlanRank = {free:0, pro:1, elite:2};
     <div class="fc-fb-header">
       <div class="fc-fb-header-icon"><i class="fa-solid fa-paper-plane"></i></div>
       <div>
-        <h5>We'd love your feedback</h5>
-        <p class="fc-fb-subtitle">Help us improve FinanceCandle for you</p>
+        <h5>Send Feedback</h5>
+        <p class="fc-fb-subtitle">Submit a comment or report an issue.</p>
       </div>
       <button type="button" class="fc-fb-close" id="fcFbClose"><i class="fa-solid fa-xmark"></i></button>
     </div>
@@ -1065,25 +1391,22 @@ window.appPlanRank = {free:0, pro:1, elite:2};
     <!-- Form state -->
     <form id="fcFeedbackForm" class="fc-fb-body">
       <div class="fc-fb-field">
-        <label class="fc-fb-label">What's this about?</label>
-        <div class="fc-fb-pills" id="fcCategoryPills">
-          <button type="button" class="fc-fb-pill" data-value="bug"><i class="fa-solid fa-bug"></i>Bug</button>
-          <button type="button" class="fc-fb-pill" data-value="feature"><i class="fa-solid fa-lightbulb"></i>Feature</button>
-          <button type="button" class="fc-fb-pill active" data-value="general"><i class="fa-solid fa-comment"></i>Feedback</button>
-          <button type="button" class="fc-fb-pill" data-value="data"><i class="fa-solid fa-chart-line"></i>Data</button>
-          <button type="button" class="fc-fb-pill" data-value="other"><i class="fa-solid fa-ellipsis"></i>Other</button>
-        </div>
-        <input type="hidden" name="category" value="general">
+        <label class="fc-fb-label">Category</label>
+        <select name="category" class="fc-fb-select" aria-label="Feedback category">
+          <option value="general">General feedback</option>
+          <option value="bug">Bug report</option>
+          <option value="feature">Feature request</option>
+          <option value="data">Data issue</option>
+          <option value="other">Other</option>
+        </select>
       </div>
       <div class="fc-fb-field">
-        <label class="fc-fb-label">Your message</label>
-        <textarea name="message" class="fc-fb-textarea" rows="5" placeholder="Describe your experience, suggest improvements, or report an issue\u2026" required minlength="5" maxlength="5000"></textarea>
+        <label class="fc-fb-label">Message</label>
+        <textarea name="message" class="fc-fb-textarea" rows="5" placeholder="Describe an issue or provide feedback." required minlength="5" maxlength="5000"></textarea>
         <div class="fc-fb-charcount"><span id="fcCharCount">0</span> / 5000</div>
       </div>
       <div id="fcFbStatus" class="fc-fb-status" hidden></div>
-      <button type="submit" class="fc-fb-submit" id="fcFbSubmit">
-        <i class="fa-solid fa-paper-plane me-1"></i>Send Feedback
-      </button>
+      <button type="submit" class="fc-fb-submit" id="fcFbSubmit">Send Feedback</button>
     </form>
 
     <!-- Success state -->
@@ -1095,86 +1418,6 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   </div>
 </div>
 
-<style>
-.fc-feedback-fab{
-  position:fixed;bottom:24px;right:24px;z-index:9999;
-  bottom:calc(24px + env(safe-area-inset-bottom));
-  width:52px;height:52px;border-radius:50%;border:none;
-  background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.25rem;cursor:pointer;
-  box-shadow:0 4px 14px rgba(99,102,241,.35),0 0 0 0 rgba(99,102,241,.3);
-  transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
-  animation:fc-fab-pulse 3s ease-in-out infinite;
-}
-.fc-feedback-fab:hover{transform:scale(1.12) rotate(-5deg);box-shadow:0 6px 24px rgba(99,102,241,.5);animation:none}
-@keyframes fc-fab-pulse{0%,100%{box-shadow:0 4px 14px rgba(99,102,241,.35),0 0 0 0 rgba(99,102,241,.3)}50%{box-shadow:0 4px 14px rgba(99,102,241,.35),0 0 0 8px rgba(99,102,241,0)}}
-@media(max-width:768px){.fc-feedback-fab{bottom:16px;right:16px;width:46px;height:46px;font-size:1.1rem}}
-
-/* Mobile: standard bottom-sheet chat-widget layout — full width, anchored to
-   the bottom edge, slides up (instead of a small centered floating card). */
-@media(max-width:600px){
-  .fc-fb-overlay{align-items:flex-end;padding:0}
-  .fc-fb-modal{
-    max-width:100%;width:100%;border-radius:18px 18px 0 0;
-    max-height:88dvh;display:flex;flex-direction:column;
-    transform:translateY(100%) scale(1);
-  }
-  .fc-fb-overlay.visible .fc-fb-modal{transform:translateY(0) scale(1)}
-  .fc-fb-header{padding:20px 18px 14px;position:relative}
-  .fc-fb-header::before{
-    content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);
-    width:36px;height:4px;border-radius:2px;background:var(--border,#e2e8f0);
-  }
-  .fc-fb-body{padding:16px 18px calc(16px + env(safe-area-inset-bottom));overflow-y:auto;flex:1}
-  .fc-fb-textarea{min-height:96px}
-}
-
-.fc-fb-overlay{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .2s;pointer-events:none}
-.fc-fb-overlay.visible{opacity:1;pointer-events:all}
-.fc-fb-overlay.visible .fc-fb-modal{transform:translateY(0) scale(1);opacity:1}
-
-.fc-fb-modal{background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:18px;width:100%;max-width:460px;box-shadow:0 25px 80px rgba(0,0,0,.18),0 0 0 1px rgba(99,102,241,.08);overflow:hidden;transform:translateY(12px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s}
-
-.fc-fb-header{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid var(--border,#e5e7eb);background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(79,70,229,.02))}
-.fc-fb-header-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
-.fc-fb-header h5{margin:0;font-size:1.05rem;font-weight:800;color:var(--text,#0f172a)}
-.fc-fb-subtitle{margin:2px 0 0;font-size:.78rem;color:var(--text-muted,#64748b);font-weight:500}
-.fc-fb-close{background:var(--surface-2,#f1f5f9);border:1px solid var(--border,#e5e7eb);width:32px;height:32px;border-radius:8px;color:var(--text-muted,#64748b);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;margin-left:auto;transition:all .15s}
-.fc-fb-close:hover{background:rgba(220,38,38,.08);color:#dc2626;border-color:rgba(220,38,38,.3)}
-
-.fc-fb-body{padding:24px;display:flex;flex-direction:column;gap:18px}
-.fc-fb-field{display:flex;flex-direction:column;gap:8px}
-.fc-fb-label{font-size:.8rem;font-weight:700;color:var(--text,#0f172a)}
-
-.fc-fb-pills{display:flex;gap:6px;flex-wrap:wrap}
-.fc-fb-pill{padding:7px 12px;border:1px solid var(--border,#e5e7eb);border-radius:999px;background:var(--surface,#fff);color:var(--text-muted,#64748b);font-size:.76rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
-.fc-fb-pill:hover{border-color:#6366f1;color:#6366f1;background:rgba(99,102,241,.04)}
-.fc-fb-pill.active{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(99,102,241,.3)}
-.fc-fb-pill i{font-size:.7rem}
-
-.fc-fb-textarea{padding:12px 14px;border:1px solid var(--border,#e5e7eb);border-radius:10px;font-size:.88rem;background:var(--surface,#fff);color:var(--text,#0f172a);resize:vertical;min-height:120px;line-height:1.6;transition:border-color .15s,box-shadow .15s}
-.fc-fb-textarea:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.fc-fb-textarea::placeholder{color:var(--text-muted,#94a3b8)}
-.fc-fb-charcount{font-size:.7rem;color:var(--text-muted,#94a3b8);text-align:right;font-variant-numeric:tabular-nums}
-
-.fc-fb-submit{padding:12px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(99,102,241,.25)}
-.fc-fb-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.4)}
-.fc-fb-submit:active:not(:disabled){transform:translateY(0)}
-.fc-fb-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
-
-.fc-fb-status{padding:12px 16px;border-radius:10px;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:8px}
-.fc-fb-status.success{background:rgba(22,163,74,.08);color:#15803d;border:1px solid rgba(22,163,74,.2)}
-.fc-fb-status.error{background:rgba(220,38,38,.08);color:#b91c1c;border:1px solid rgba(220,38,38,.2)}
-.fc-fb-status i{font-size:.9rem}
-
-.fc-fb-success{padding:48px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
-.fc-fb-success-icon{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(22,163,74,.12),rgba(22,163,74,.06));color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:fc-success-pop .4s cubic-bezier(.34,1.56,.64,1)}
-@keyframes fc-success-pop{0%{transform:scale(0)}100%{transform:scale(1)}}
-.fc-fb-success h4{margin:0;font-size:1.2rem;font-weight:800;color:var(--text,#0f172a)}
-.fc-fb-success p{margin:0;font-size:.88rem;color:var(--text-muted,#64748b);max-width:280px;line-height:1.5}
-</style>
-
 <script>
 (function(){
   const modal = document.getElementById('fcFeedbackModal');
@@ -1184,24 +1427,15 @@ window.appPlanRank = {free:0, pro:1, elite:2};
   const success = document.getElementById('fcFbSuccess');
   const textarea = form.querySelector('textarea[name=message]');
   const charCount = document.getElementById('fcCharCount');
-  const catInput = form.querySelector('input[name=category]');
-  const pills = document.getElementById('fcCategoryPills');
+  const catInput = form.querySelector('select[name=category]');
 
   function openModal(){ modal.hidden = false; requestAnimationFrame(() => modal.classList.add('visible')); textarea.focus(); }
+  window.openFeedbackModal = openModal;
   function closeModal(){ modal.classList.remove('visible'); setTimeout(() => { modal.hidden = true; success.hidden = true; form.hidden = false; status.hidden = true; }, 250); }
 
   document.getElementById('fcFabBtn').addEventListener('click', openModal);
   document.getElementById('fcFbClose').addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-  // Category pills
-  pills.addEventListener('click', (e) => {
-    const pill = e.target.closest('.fc-fb-pill');
-    if (!pill) return;
-    pills.querySelectorAll('.fc-fb-pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    catInput.value = pill.dataset.value;
-  });
 
   // Character counter
   textarea.addEventListener('input', () => { charCount.textContent = textarea.value.length; });

@@ -1,134 +1,165 @@
 {% extends "layout.html" %}
+{% from "_icons.html" import icon %}
 {% block content %}
 <style>
-.mp-page{display:flex;flex-direction:column;gap:14px}
-.mp-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:4px}
-.mp-loading{padding:40px;text-align:center;color:var(--text-muted)}
-.mp-error{padding:18px;border:1px solid #dc2626;border-radius:8px;background:rgba(220,38,38,.05);color:#b91c1c}
-.mp-pos{color:#16a34a;font-weight:600}
-.mp-neg{color:#dc2626;font-weight:600}
-[data-theme="dark"] .mp-pos{color:#4ade80}
-[data-theme="dark"] .mp-neg{color:#f87171}
-.mp-empty{padding:24px;text-align:center;color:var(--text-muted);font-size:.85rem}
-
-/* Market breadth + movers panel */
-.mp-breadth-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
-.mp-breadth-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:center}
-.mp-breadth-grid{display:grid;grid-template-columns:320px 1fr;gap:14px}
-@media (max-width:960px){.mp-breadth-grid{grid-template-columns:1fr}}
-.mp-breadth-meters{display:flex;flex-direction:column;gap:10px}
-.mp-breadth-row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;align-items:center;font-size:.78rem}
-.mp-breadth-bar{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden}
-.mp-breadth-fill{height:100%;display:block}
-.mp-breadth-fill.adv{background:#16a34a}
-.mp-breadth-fill.dec{background:#dc2626}
-.mp-breadth-fill.unc{background:#94a3b8}
-.mp-movers-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:720px){.mp-movers-grid{grid-template-columns:1fr}}
-.mp-movers-box{border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.mp-movers-box h5{margin:0;padding:8px 10px;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2);font-weight:800}
-.mp-movers-box.g h5{color:#16a34a}
-.mp-movers-box.l h5{color:#dc2626}
-.mp-mini-table{width:100%;border-collapse:collapse;font-size:.76rem}
-.mp-mini-table th,.mp-mini-table td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
-.mp-mini-table th:first-child,.mp-mini-table td:first-child{text-align:left}
-
-/* Corporate + reference panel */
-.mp-corp-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
-.mp-corp-panel h6{margin:0 0 10px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
-.mp-corp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media (max-width:980px){.mp-corp-grid{grid-template-columns:1fr}}
-.mp-corp-col{border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.mp-corp-col h5{margin:0;padding:8px 10px;background:var(--surface-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800;color:var(--text)}
-.mp-corp-list{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
-.mp-corp-list li{padding:8px 10px;border-bottom:1px solid var(--border);font-size:.75rem;line-height:1.35}
-.mp-corp-list li .sym{font-weight:800;color:var(--text)}
-.mp-corp-list li .meta{font-size:.68rem;color:var(--text-muted)}
-.mp-corp-list a{color:var(--link,#2563eb);text-decoration:none}
-.mp-corp-list a:hover{text-decoration:underline}
-.mp-header h1{font-size:2.5rem}
+.mp-breadth { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: var(--space-5); }
+.mp-meters { display: flex; flex-direction: column; gap: var(--space-3); }
+.mp-breadth-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-size: var(--fs-label); }
+.mp-breadth-bar { display: block; height: 8px; overflow: hidden; background: var(--bg-subtle); border-radius: var(--radius-pill); }
+.mp-breadth-fill { display: block; height: 100%; }
+.mp-breadth-fill.adv { background: var(--positive); }
+.mp-breadth-fill.dec { background: var(--negative); }
+.mp-breadth-fill.unc { background: var(--text-muted); }
+.mp-nifty { color: var(--text-muted); font-size: var(--fs-caption); }
+.mp-nifty strong { color: var(--text-primary); font-family: var(--font-mono); }
+.mp-movers-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap); }
+.mp-movers-table { min-width: 520px; }
+.mp-movers-table td, .mp-movers-table th { height: var(--table-row-height-compact); font-size: var(--fs-label); }
+.mp-symbol { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.mp-pos { color: var(--positive); }
+.mp-neg { color: var(--negative); }
+.mp-corp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--card-gap); }
+.mp-corp-list { display: flex; flex-direction: column; gap: 0; max-height: 320px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.mp-corp-list li { padding: var(--space-2) var(--space-3); border-bottom: var(--border-width) solid var(--border); color: var(--text-secondary); font-size: var(--fs-label); line-height: 1.5; }
+.mp-corp-list li:last-child { border-bottom: 0; }
+.mp-corp-list .sym { color: var(--text-primary); font-weight: var(--fw-semibold); }
+.mp-corp-list .meta { color: var(--text-muted); font-size: var(--fs-caption); }
+.mp-corp-list a { color: var(--brand); }
+.mp-empty { padding: var(--space-4) var(--space-3); color: var(--text-muted); font-size: var(--fs-label); text-align: center; }
+.mp-error { margin: 0; }
+@media (max-width: 1023.98px) {
+    .mp-breadth { grid-template-columns: minmax(0, 1fr); }
+    .mp-corp-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767.98px) {
+    .mp-movers-grid { grid-template-columns: minmax(0, 1fr); }
+}
 </style>
 
-<div class="mp-page">
-    <header class="mp-header">
+<div class="scans-page">
+    <header class="page-header">
         <div>
-            <h1 style="margin:0"><i class="fa-solid fa-tower-broadcast me-2"></i>Market Pulse</h1>
-            <p class="text-muted" style="margin:4px 0 0;font-size:.85rem">
-                NSE-sourced market breadth, top movers, corporate announcements, actions and board meetings.
-            </p>
+            <h1>Market Pulse</h1>
+            <p>NSE-sourced breadth, top movers, corporate announcements, actions and board meetings.</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span id="mpAsOf" class="text-muted" style="font-size:.78rem"></span>
-            <button id="mpRefresh" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-rotate me-1"></i>Refresh
-            </button>
+        <div class="scans-actions">
+            <span class="scans-asof" id="mpAsOf"></span>
+            <button id="mpRefresh" class="ds-button ds-button-primary ds-button-small">{{ icon('rotate', 14) }} Refresh</button>
         </div>
     </header>
 
-    <div id="mpLoading" class="mp-loading">
-        <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
-        <p class="mt-2">Fetching live data from NSE…</p>
+    <div class="ds-info-banner-wrap">
+        <div class="info-banner">Movers are derived from the NSE variation feed. Delivery percentage is not published in this feed, so it is shown as N/A.</div>
     </div>
 
-    <div id="mpError" class="mp-error" hidden></div>
+    <div id="mpLoading" class="ds-card">
+        <div class="ds-card-body">
+            <div class="ds-skeleton" role="status" aria-label="Loading market pulse">
+                <span class="ds-skeleton-line"></span><span class="ds-skeleton-line"></span><span class="ds-skeleton-line"></span>
+            </div>
+            <p class="scans-asof" style="margin-top:var(--space-3)">Fetching live data from NSE…</p>
+        </div>
+    </div>
 
-    <div id="mpContent" hidden>
-        <div class="mp-breadth-panel">
-            <h6>
-                <span><i class="fa-solid fa-chart-pie me-1"></i>Market Breadth &amp; Movers (NIFTY 50)</span>
-                <span id="mpBreadthTs" style="text-transform:none;letter-spacing:0;color:var(--text)">—</span>
-            </h6>
-            <div class="mp-breadth-grid">
-                <div class="mp-breadth-meters">
-                    <div class="mp-breadth-row">
-                        <span>Advances</span>
-                        <span class="mp-breadth-bar"><span id="mpAdvFill" class="mp-breadth-fill adv" style="width:0%"></span></span>
-                        <strong id="mpAdvVal">0</strong>
+    <div id="mpError" class="ds-state ds-error-state mp-error" role="alert" hidden></div>
+
+    <div id="mpContent" class="scans-section" hidden>
+        <section class="ds-card" aria-label="Market breadth and movers">
+            <header class="ds-card-header">
+                <h2 class="ds-card-title">Market breadth &amp; movers</h2>
+                <span class="scans-asof" id="mpBreadthTs">—</span>
+            </header>
+            <div class="ds-card-body">
+                <div class="mp-breadth">
+                    <div class="mp-meters">
+                        <div class="mp-breadth-row">
+                            <span>Advances</span>
+                            <span class="mp-breadth-bar"><span id="mpAdvFill" class="mp-breadth-fill adv" style="width:0%"></span></span>
+                            <strong id="mpAdvVal">0</strong>
+                        </div>
+                        <div class="mp-breadth-row">
+                            <span>Declines</span>
+                            <span class="mp-breadth-bar"><span id="mpDecFill" class="mp-breadth-fill dec" style="width:0%"></span></span>
+                            <strong id="mpDecVal">0</strong>
+                        </div>
+                        <div class="mp-breadth-row">
+                            <span>Unchanged</span>
+                            <span class="mp-breadth-bar"><span id="mpUncFill" class="mp-breadth-fill unc" style="width:0%"></span></span>
+                            <strong id="mpUncVal">0</strong>
+                        </div>
+                        <div class="mp-nifty">NIFTY 50: <strong id="mpBreadthNifty">—</strong></div>
                     </div>
-                    <div class="mp-breadth-row">
-                        <span>Declines</span>
-                        <span class="mp-breadth-bar"><span id="mpDecFill" class="mp-breadth-fill dec" style="width:0%"></span></span>
-                        <strong id="mpDecVal">0</strong>
-                    </div>
-                    <div class="mp-breadth-row">
-                        <span>Unchanged</span>
-                        <span class="mp-breadth-bar"><span id="mpUncFill" class="mp-breadth-fill unc" style="width:0%"></span></span>
-                        <strong id="mpUncVal">0</strong>
-                    </div>
-                    <div style="font-size:.72rem;color:var(--text-muted)">
-                        NIFTY: <b id="mpBreadthNifty">—</b>
-                    </div>
-                </div>
-                <div class="mp-movers-grid">
-                    <div class="mp-movers-box g">
-                        <h5>Top Gainers</h5>
-                        <div id="mpTopGainers"></div>
-                    </div>
-                    <div class="mp-movers-box l">
-                        <h5>Top Losers</h5>
-                        <div id="mpTopLosers"></div>
+                    <div class="mp-movers-grid">
+                        <section class="ds-card" aria-label="Top gainers">
+                            <header class="ds-card-header">
+                                <h2 class="ds-card-title">Top gainers</h2>
+                                <span class="ds-badge ds-badge-positive">Up</span>
+                            </header>
+                            <div class="ds-table-scroll">
+                                <table class="ds-table mp-movers-table">
+                                    <thead><tr>
+                                        <th scope="col">Symbol</th>
+                                        <th scope="col" class="is-numeric">LTP</th>
+                                        <th scope="col" class="is-numeric">% Chg</th>
+                                        <th scope="col" class="is-numeric">Vol ×</th>
+                                        <th scope="col" class="is-numeric">Delivery %</th>
+                                        <th scope="col">Trend</th>
+                                    </tr></thead>
+                                    <tbody id="mpTopGainers"></tbody>
+                                </table>
+                            </div>
+                        </section>
+                        <section class="ds-card" aria-label="Top losers">
+                            <header class="ds-card-header">
+                                <h2 class="ds-card-title">Top losers</h2>
+                                <span class="ds-badge ds-badge-negative">Down</span>
+                            </header>
+                            <div class="ds-table-scroll">
+                                <table class="ds-table mp-movers-table">
+                                    <thead><tr>
+                                        <th scope="col">Symbol</th>
+                                        <th scope="col" class="is-numeric">LTP</th>
+                                        <th scope="col" class="is-numeric">% Chg</th>
+                                        <th scope="col" class="is-numeric">Vol ×</th>
+                                        <th scope="col" class="is-numeric">Delivery %</th>
+                                        <th scope="col">Trend</th>
+                                    </tr></thead>
+                                    <tbody id="mpTopLosers"></tbody>
+                                </table>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
-        </div>
+            <div class="table-toolbar-split" style="padding:var(--space-2) var(--space-3);border-top:var(--border-width) solid var(--border)">
+                <span class="window-label">Sparkline window</span>
+                <div class="table-segmented" id="mpWindow" role="group" aria-label="Sparkline window">
+                    <button type="button" data-window="1d">1D</button>
+                    <button type="button" data-window="1w">1W</button>
+                    <button type="button" data-window="1m" class="active">1M</button>
+                </div>
+            </div>
+        </section>
 
-        <div class="mp-corp-panel">
-            <h6><i class="fa-solid fa-building-columns me-1"></i>Corporate &amp; Reference Data (NSE)</h6>
+        <section aria-label="Corporate and reference data">
+            <div class="scans-section-head">
+                <h2 class="scans-section-title">Corporate &amp; reference data</h2>
+            </div>
             <div class="mp-corp-grid">
-                <div class="mp-corp-col">
-                    <h5>Announcements</h5>
+                <section class="ds-card">
+                    <header class="ds-card-header"><h2 class="ds-card-title">Announcements</h2></header>
                     <ul id="mpCorpAnnouncements" class="mp-corp-list"></ul>
-                </div>
-                <div class="mp-corp-col">
-                    <h5>Corporate Actions</h5>
+                </section>
+                <section class="ds-card">
+                    <header class="ds-card-header"><h2 class="ds-card-title">Corporate actions</h2></header>
                     <ul id="mpCorpActions" class="mp-corp-list"></ul>
-                </div>
-                <div class="mp-corp-col">
-                    <h5>Board Meetings</h5>
+                </section>
+                <section class="ds-card">
+                    <header class="ds-card-header"><h2 class="ds-card-title">Board meetings</h2></header>
                     <ul id="mpCorpBoards" class="mp-corp-list"></ul>
-                </div>
+                </section>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 
@@ -139,65 +170,71 @@ function mpEscape(s) {
     }[c]));
 }
 
+let mpData = null;
+let mpSparks = {};
+let mpWindow = '1m';
+let mpSparkKey = '';
+const MP_WINDOW_POINTS = { '1d': 2, '1w': 6, '1m': 22 };
+
+function sparkSvg(values) {
+    if (!Array.isArray(values) || values.length < 2 || !values.some(function (value) { return Number(value) > 0; })) {
+        return '<span class="fc-na" title="Price history is unavailable for this window.">N/A</span>';
+    }
+    const width = 84, height = 24;
+    const min = Math.min.apply(null, values);
+    const max = Math.max.apply(null, values);
+    const span = (max - min) || 1;
+    const points = values.map(function (value, index) {
+        const x = index / (values.length - 1) * width;
+        const y = height - ((value - min) / span) * (height - 4) - 2;
+        return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }).join(' ');
+    const up = values[values.length - 1] >= values[0];
+    return '<svg class="sparkline" viewBox="0 0 84 24" role="img" aria-label="Price trend">' +
+        '<path class="sparkline-line ' + (up ? 'is-up' : 'is-down') + '" d="' + points + '"/></svg>';
+}
+
+function sparkCell(symbol) {
+    const item = mpSparks[symbol] || {};
+    const points = MP_WINDOW_POINTS[mpWindow] || 22;
+    return sparkSvg((item.spark || []).slice(-points));
+}
+
 function setBusy(busy) {
     document.getElementById('mpLoading').hidden = !busy;
     if (busy) document.getElementById('mpError').hidden = true;
 }
 
-async function loadMarketPulse(refresh, options) {
-    options = options || {};
-    const silent = !!options.silent;
-    const suppressErrors = !!options.suppressErrors;
-    const snapshotOnly = !!options.snapshotOnly;
-    const content = document.getElementById('mpContent');
-    setBusy(content.hidden && !silent);
-    const btn = document.getElementById('mpRefresh');
-    const manageButton = refresh || (!silent && !snapshotOnly);
-    if (manageButton) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Loading…';
-    }
-    try {
-        const params = new URLSearchParams();
-        if (refresh) params.set('refresh', '1');
-        if (snapshotOnly) params.set('snapshot', '1');
-        const query = params.toString();
-        const url = '/api/market-pulse' + (query ? '?' + query : '');
-        const r = await fetch(url);
-        const data = await r.json().catch(() => ({}));
-        if (data && data.error) throw new Error(data.error + (data.detail ? ' — ' + data.detail : ''));
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        if (data && data.snapshot_missing) return false;
-        try { ppCache.set('marketpulse:data', data); } catch (e) {}
-        renderBreadthMovers(data.market_breadth_movers || null);
-        renderCorporateReference(data.corporate_reference || null);
-        const ts = (data.market_breadth_movers || {}).timestamp
-                || (data.corporate_reference || {}).timestamp || '';
-        document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts + (data.snapshot ? ' · cached' : '')) : '';
-        content.hidden = false;
-        document.getElementById('mpLoading').hidden = true;
-        document.getElementById('mpError').hidden = true;
-        return true;
-    } catch (e) {
-        if (!suppressErrors && content.hidden) {
-            const err = document.getElementById('mpError');
-            err.textContent = 'Failed to load market pulse: ' + (e.message || e);
-            err.hidden = false;
-            document.getElementById('mpLoading').hidden = true;
-        }
-        return false;
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
-    }
+function moverRows(rows, emptyText) {
+    if (!rows || !rows.length) return '<tr><td colspan="6" class="mp-empty">' + mpEscape(emptyText) + '</td></tr>';
+    return rows.slice(0, 8).map(function (row) {
+        const pct = Number(row.pct_chg || 0);
+        const multiple = mpSparks[row.symbol] ? mpSparks[row.symbol].volume_multiple : null;
+        const multipleText = multiple == null
+            ? '<span class="fc-na" title="Average volume is unavailable for this symbol.">N/A</span>'
+            : '<span class="vol-multiple">' + Number(multiple).toFixed(2) + '×</span>';
+        return '<tr>' +
+            '<td><span class="mp-symbol">' + mpEscape(row.symbol) + '</span></td>' +
+            '<td class="is-numeric">' + Number(row.ltp || 0).toLocaleString('en-IN') + '</td>' +
+            '<td class="is-numeric ' + (pct >= 0 ? 'mp-pos' : 'mp-neg') + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</td>' +
+            '<td class="is-numeric">' + multipleText + '</td>' +
+            '<td class="is-numeric"><span class="fc-na" title="Delivery percentage is not available from the NSE variation feed.">N/A</span></td>' +
+            '<td>' + sparkCell(row.symbol) + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function renderMoverTables() {
+    const bm = mpData && mpData.market_breadth_movers;
+    document.getElementById('mpTopGainers').innerHTML = moverRows(bm && bm.top_gainers, 'No gainers right now');
+    document.getElementById('mpTopLosers').innerHTML = moverRows(bm && bm.top_losers, 'No losers right now');
 }
 
 function renderBreadthMovers(bm) {
     const ts = document.getElementById('mpBreadthTs');
     if (!bm) {
         ts.textContent = 'No data';
-        document.getElementById('mpTopGainers').innerHTML = '<div class="mp-empty">No movers</div>';
-        document.getElementById('mpTopLosers').innerHTML = '<div class="mp-empty">No movers</div>';
+        renderMoverTables();
         return;
     }
     const adv = Number(bm.advances || 0);
@@ -214,33 +251,38 @@ function renderBreadthMovers(bm) {
     ts.textContent = bm.timestamp || '—';
 
     const nx = bm.nifty || {};
-    const p = Number(nx.pct_chg || 0);
+    const change = Number(nx.pct_chg || 0);
     document.getElementById('mpBreadthNifty').innerHTML =
-        `${Number(nx.last || 0).toLocaleString('en-IN')} ` +
-        `<span class="${p >= 0 ? 'mp-pos' : 'mp-neg'}">(${p >= 0 ? '+' : ''}${p.toFixed(2)}%)</span>`;
+        Number(nx.last || 0).toLocaleString('en-IN') +
+        ' <span class="' + (change >= 0 ? 'mp-pos' : 'mp-neg') + '">(' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%)</span>';
 
-    const table = (rows, emptyText) => {
-        if (!rows || !rows.length) return `<div class="mp-empty">${emptyText}</div>`;
-        return `<table class="mp-mini-table"><thead><tr><th>Symbol</th><th>LTP</th><th>%Chg</th><th>Vol</th></tr></thead><tbody>` +
-            rows.slice(0, 8).map(r => {
-                const pc = Number(r.pct_chg || 0);
-                return `<tr>
-                    <td><b>${mpEscape(r.symbol || '')}</b></td>
-                    <td>${Number(r.ltp || 0).toLocaleString('en-IN')}</td>
-                    <td class="${pc >= 0 ? 'mp-pos' : 'mp-neg'}">${pc >= 0 ? '+' : ''}${pc.toFixed(2)}%</td>
-                    <td>${Number(r.volume || 0).toLocaleString('en-IN')}</td>
-                </tr>`;
-            }).join('') + '</tbody></table>';
-    };
-    document.getElementById('mpTopGainers').innerHTML = table(bm.top_gainers || [], 'No gainers right now');
-    document.getElementById('mpTopLosers').innerHTML = table(bm.top_losers || [], 'No losers right now');
+    renderMoverTables();
+}
+
+async function loadSparks(bm) {
+    if (!bm) return;
+    const symbols = [];
+    (bm.top_gainers || []).concat(bm.top_losers || []).forEach(function (row) {
+        if (row.symbol && symbols.indexOf(row.symbol) === -1) symbols.push(row.symbol);
+    });
+    if (!symbols.length) return;
+    const key = symbols.slice().sort().join(',');
+    if (key === mpSparkKey) { renderMoverTables(); return; }
+    try {
+        const response = await fetch('/api/market-pulse/sparklines?symbols=' + encodeURIComponent(symbols.join(',')));
+        if (!response.ok) return;
+        const payload = await response.json();
+        mpSparks = Object.assign({}, mpSparks, payload.symbols || {});
+        mpSparkKey = key;
+        renderMoverTables();
+    } catch (error) { /* the table already renders N/A for missing history */ }
 }
 
 function renderCorporateReference(corp) {
     const renderList = (id, items, fn, emptyText) => {
         const el = document.getElementById(id);
         if (!items || !items.length) {
-            el.innerHTML = `<li><span class="meta">${emptyText}</span></li>`;
+            el.innerHTML = '<li><span class="meta">' + mpEscape(emptyText) + '</span></li>';
             return;
         }
         el.innerHTML = items.slice(0, 12).map(fn).join('');
@@ -253,58 +295,104 @@ function renderCorporateReference(corp) {
         return;
     }
 
-    renderList(
-        'mpCorpAnnouncements',
-        corp.announcements || [],
-        (x) => `<li>
-            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.title || '')}</div>
-            <div class="meta">${mpEscape(x.when || '')}${x.url ? ` · <a href="${mpEscape(x.url)}" target="_blank" rel="noopener">Attachment</a>` : ''}</div>
-        </li>`,
-        'No announcements'
-    );
-    renderList(
-        'mpCorpActions',
-        corp.corporate_actions || [],
-        (x) => `<li>
-            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.subject || '')}</div>
-            <div class="meta">Ex-date: ${mpEscape(x.ex_date || '—')}${x.record_date ? ` · Record: ${mpEscape(x.record_date)}` : ''}</div>
-        </li>`,
-        'No corporate actions'
-    );
-    renderList(
-        'mpCorpBoards',
-        corp.board_meetings || [],
-        (x) => `<li>
-            <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.purpose || '')}</div>
-            <div class="meta">${mpEscape(x.date || '—')} ${x.desc ? `· ${mpEscape(x.desc)}` : ''}</div>
-        </li>`,
-        'No board meetings'
-    );
+    renderList('mpCorpAnnouncements', corp.announcements || [], (x) => `<li>
+        <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.title || '')}</div>
+        <div class="meta">${mpEscape(x.when || '')}${x.url ? ` · <a href="${mpEscape(x.url)}" target="_blank" rel="noopener">Attachment</a>` : ''}</div>
+    </li>`, 'No announcements');
+    renderList('mpCorpActions', corp.corporate_actions || [], (x) => `<li>
+        <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.subject || '')}</div>
+        <div class="meta">Ex-date: ${mpEscape(x.ex_date || '—')}${x.record_date ? ` · Record: ${mpEscape(x.record_date)}` : ''}</div>
+    </li>`, 'No corporate actions');
+    renderList('mpCorpBoards', corp.board_meetings || [], (x) => `<li>
+        <div><span class="sym">${mpEscape(x.symbol || '')}</span> ${mpEscape(x.purpose || '')}</div>
+        <div class="meta">${mpEscape(x.date || '—')} ${x.desc ? `· ${mpEscape(x.desc)}` : ''}</div>
+    </li>`, 'No board meetings');
+}
+
+const mpRefreshLabel = document.getElementById('mpRefresh').innerHTML;
+
+async function loadMarketPulse(refresh, options) {
+    options = options || {};
+    const silent = !!options.silent;
+    const suppressErrors = !!options.suppressErrors;
+    const snapshotOnly = !!options.snapshotOnly;
+    const content = document.getElementById('mpContent');
+    setBusy(content.hidden && !silent);
+    const btn = document.getElementById('mpRefresh');
+    const manageButton = refresh || (!silent && !snapshotOnly);
+    if (manageButton) {
+        btn.disabled = true;
+        btn.innerHTML = 'Loading…';
+    }
+    try {
+        const params = new URLSearchParams();
+        if (refresh) params.set('refresh', '1');
+        if (snapshotOnly) params.set('snapshot', '1');
+        const query = params.toString();
+        const response = await fetch('/api/market-pulse' + (query ? '?' + query : ''));
+        const data = await response.json().catch(() => ({}));
+        if (data && data.error) throw new Error(data.error + (data.detail ? ' — ' + data.detail : ''));
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        if (data && data.snapshot_missing) return false;
+        try { ppCache.set('marketpulse:data', data); } catch (error) {}
+        mpData = data;
+        renderBreadthMovers(data.market_breadth_movers || null);
+        renderCorporateReference(data.corporate_reference || null);
+        const ts = (data.market_breadth_movers || {}).timestamp
+                || (data.corporate_reference || {}).timestamp || '';
+        document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts + (data.snapshot ? ' · cached' : '')) : '';
+        content.hidden = false;
+        document.getElementById('mpLoading').hidden = true;
+        document.getElementById('mpError').hidden = true;
+        loadSparks(data.market_breadth_movers || null);
+        return true;
+    } catch (error) {
+        if (!suppressErrors && content.hidden) {
+            const el = document.getElementById('mpError');
+            el.innerHTML = '<h3>Market Pulse unavailable</h3><p>' + mpEscape(error.message || String(error)) + '</p>';
+            el.hidden = false;
+            document.getElementById('mpLoading').hidden = true;
+        }
+        return false;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = mpRefreshLabel;
+    }
 }
 
 document.getElementById('mpRefresh').addEventListener('click', () => loadMarketPulse(true));
+document.querySelectorAll('#mpWindow [data-window]').forEach(function (button) {
+    button.addEventListener('click', function () {
+        mpWindow = button.dataset.window;
+        document.querySelectorAll('#mpWindow [data-window]').forEach(function (item) {
+            item.classList.toggle('active', item === button);
+        });
+        renderMoverTables();
+    });
+});
 
-// Stale-while-revalidate init sequence
 (async function initMarketPulse() {
     let hasCached = false;
     try {
         const entry = ppCache.getEntry('marketpulse:data');
         if (entry && entry.v && !entry.v.error) {
-            const d = entry.v;
-            renderBreadthMovers(d.market_breadth_movers || null);
-            renderCorporateReference(d.corporate_reference || null);
-            const ts = (d.market_breadth_movers || {}).timestamp || (d.corporate_reference || {}).timestamp || '';
+            const data = entry.v;
+            mpData = data;
+            renderBreadthMovers(data.market_breadth_movers || null);
+            renderCorporateReference(data.corporate_reference || null);
+            const ts = (data.market_breadth_movers || {}).timestamp || (data.corporate_reference || {}).timestamp || '';
             document.getElementById('mpAsOf').textContent = ts ? ('As of ' + ts + ' · cached ' + ppCache.ago(Date.now() - entry.t)) : '';
             document.getElementById('mpContent').hidden = false;
             document.getElementById('mpLoading').hidden = true;
             hasCached = true;
+            loadSparks(data.market_breadth_movers || null);
         }
-    } catch (e) {}
+    } catch (error) {}
     const snapshotLoaded = await loadMarketPulse(false, { snapshotOnly: true, silent: hasCached, suppressErrors: true });
     await loadMarketPulse(false, { silent: hasCached || snapshotLoaded, suppressErrors: hasCached || snapshotLoaded });
 })();
 
-setInterval(() => { if (!document.hidden) loadMarketPulse(false, {silent: true, suppressErrors: true}); }, 90_000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMarketPulse(false, {silent: true, suppressErrors: true}); });
+setInterval(() => { if (!document.hidden) loadMarketPulse(false, { silent: true, suppressErrors: true }); }, 90000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMarketPulse(false, { silent: true, suppressErrors: true }); });
 </script>
 {% endblock %}

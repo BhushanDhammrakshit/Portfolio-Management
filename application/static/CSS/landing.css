@@ -1,0 +1,188 @@
+/* =========================================================================
+   Public landing page — light fintech skin.
+   Loaded after tokens.css/ui.css and the page's own <style> block.
+   ========================================================================= */
+
+:root {
+    --bg: var(--bg-app);
+    --bg-2: var(--bg-subtle);
+    --panel: var(--bg-surface);
+    --panel-2: var(--bg-subtle);
+    --ink: var(--text-primary);
+    --muted: var(--text-muted);
+    --primary: var(--brand);
+    --primary-2: var(--brand-hover);
+    --accent: var(--brand);
+    --green: var(--positive);
+    --amber: var(--warning);
+    --pink: var(--brand);
+    --cyan: var(--brand);
+}
+
+html, body { background: var(--bg-app) !important; color: var(--text-primary) !important; }
+body { font-family: var(--font-sans) !important; }
+a { color: var(--brand) !important; }
+a:hover { color: var(--brand-hover) !important; }
+
+.pp-nav {
+    background: var(--bg-surface) !important;
+    border-bottom: 1px solid var(--border) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.pp-brand { color: var(--text-primary) !important; font-size: 18px !important; font-weight: 700 !important; }
+.pp-brand-icon {
+    width: 28px !important; height: 28px !important; border-radius: 6px !important;
+    background: var(--brand-soft) !important; background-image: none !important;
+    border: 1px solid var(--border); box-shadow: none !important;
+}
+.pp-brand-icon img { display: none; }
+.pp-brand-accent { color: var(--brand) !important; }
+.pp-nav-links a { color: var(--text-secondary) !important; font-size: 13px !important; }
+.pp-nav-links a:hover { color: var(--text-primary) !important; }
+
+.pp-btn,
+.pp-btn-lg {
+    height: 40px !important;
+    padding: 0 16px !important;
+    border-radius: var(--radius) !important;
+    font-size: 14px !important;
+    font-weight: var(--fw-medium) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.pp-btn-primary { background: var(--brand) !important; background-image: none !important; color: var(--on-brand) !important; border: 1px solid var(--brand) !important; }
+.pp-btn-primary:hover { background: var(--brand-hover) !important; color: var(--on-brand) !important; box-shadow: none !important; }
+.pp-btn-ghost { background: var(--bg-surface) !important; color: var(--text-primary) !important; border: 1px solid var(--border-strong) !important; }
+.pp-btn-ghost:hover { background: var(--bg-subtle) !important; color: var(--text-primary) !important; border-color: var(--border-strong) !important; }
+
+section { padding: 64px 0 !important; }
+.pp-hero { padding: 56px 0 48px !important; }
+.pp-hero-bg { display: none !important; }
+.pp-hero-grid::before { opacity: .45 !important; }
+.pp-hero-inner { text-align: left !important; }
+.pp-hero .container-x { max-width: 1240px; }
+.pp-h1 {
+    font-size: 40px !important; line-height: 48px !important;
+    font-weight: var(--fw-semibold) !important; letter-spacing: -0.02em !important;
+    color: var(--text-primary) !important;
+}
+.pp-h1 .grad, .pp-h2 .grad, .grad {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: currentColor !important;
+    color: var(--brand) !important;
+}
+.pp-hero-sub, .pp-section-sub {
+    color: var(--text-secondary) !important;
+    font-size: 15px !important;
+    line-height: 24px !important;
+}
+.pp-hero-actions { justify-content: flex-start !important; }
+.pp-hero-trust { color: var(--text-muted) !important; font-size: 12px !important; }
+.pp-hero-trust i { color: var(--positive) !important; }
+.pp-eyebrow, .pp-section-eb {
+    background: var(--bg-subtle) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-secondary) !important;
+    border-radius: var(--radius-tag) !important;
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    letter-spacing: 0 !important;
+}
+.pp-eyebrow i { color: var(--brand) !important; }
+
+.pp-hero-mockup,
+.pp-mockup-main,
+.pp-mockup-side,
+.pp-mockup-kpi,
+.pp-bento-card,
+.pp-stat,
+.pp-step,
+.pp-price-card,
+.pp-test-card,
+.pp-faq-item,
+.pp-cta {
+    background: var(--bg-surface) !important;
+    background-image: none !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: none !important;
+    color: var(--text-primary) !important;
+}
+.pp-hero-mockup { overflow: hidden; }
+.pp-mockup-bar { background: var(--bg-subtle) !important; border-bottom: 1px solid var(--border) !important; }
+.pp-mockup-body { background: var(--bg-surface) !important; }
+.pp-mockup-side { border-left: 1px solid var(--border) !important; }
+.pp-mockup-kpi { border-radius: var(--radius-sm) !important; }
+
+.pp-h2 { font-size: 24px !important; line-height: 32px !important; font-weight: var(--fw-semibold) !important; color: var(--text-primary) !important; }
+.pp-section-head { text-align: left !important; }
+.pp-stats { background: var(--bg-surface) !important; border-top: 1px solid var(--border) !important; border-bottom: 1px solid var(--border) !important; }
+.pp-stat-num { color: var(--text-primary) !important; font-family: var(--font-mono) !important; font-size: 24px !important; }
+.pp-stat-lbl { color: var(--text-muted) !important; font-size: 12px !important; }
+.pp-logo { filter: grayscale(1); opacity: .55; }
+
+.pp-bento-card { padding: 20px !important; }
+.pp-bento-card h3, .pp-step h3, .pp-price-name { color: var(--text-primary) !important; }
+.pp-bento-card p, .pp-step p, .pp-price-desc, .pp-test-quote, .pp-faq-a { color: var(--text-secondary) !important; }
+
+.pp-step-num {
+    background: var(--brand-soft) !important;
+    color: var(--brand) !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: none !important;
+}
+
+.pp-price-card { padding: 24px !important; }
+.pp-price-card.featured,
+.pp-price-card.is-featured { border-color: var(--brand) !important; }
+.pp-price-amount { color: var(--text-primary) !important; font-family: var(--font-mono) !important; }
+.pp-price-period { color: var(--text-muted) !important; }
+.pp-price-features li { color: var(--text-secondary) !important; }
+.pp-price-features i { color: var(--positive) !important; }
+
+.pp-test-stars i { color: var(--warning) !important; }
+.pp-test-avatar {
+    background: var(--brand-soft) !important;
+    color: var(--brand) !important;
+    border: 1px solid var(--border);
+    box-shadow: none !important;
+}
+.pp-test-author { color: var(--text-primary) !important; }
+
+.pp-faq-item { overflow: hidden; }
+.pp-faq-q { color: var(--text-primary) !important; }
+.pp-faq-q:hover { background: var(--bg-subtle) !important; }
+.pp-faq-a { background: var(--bg-surface) !important; }
+
+.pp-cta {
+    background: var(--brand-soft) !important;
+    border: 1px solid var(--brand-border) !important;
+    text-align: left !important;
+}
+.pp-cta-h { color: var(--text-primary) !important; }
+.pp-cta-sub { color: var(--text-secondary) !important; }
+
+.pp-foot,
+.pp-foot-grid,
+footer {
+    background: var(--bg-surface) !important;
+    border-top: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+}
+.pp-foot a { color: var(--text-secondary) !important; }
+.pp-foot a:hover { color: var(--text-primary) !important; }
+.pp-disclaimer { color: var(--text-muted) !important; background: var(--bg-subtle) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; }
+
+.reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+
+@media (max-width: 768px) {
+    .pp-h1 { font-size: 28px !important; line-height: 36px !important; }
+    .pp-h2 { font-size: 20px !important; line-height: 28px !important; }
+    .pp-hero { padding: 32px 0 24px !important; }
+    section { padding: 40px 0 !important; }
+    .pp-hero-inner { text-align: left !important; }
+}

@@ -27,7 +27,7 @@
     transition:width .4s ease;
 }
 .token-bar-fill.warn{background:linear-gradient(90deg,#d97706,#f59e0b)}
-.token-bar-fill.danger{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.token-bar-fill.danger{background:var(--negative)}
 .token-bar-label{
     font-size:.78rem;font-weight:800;color:var(--text);
     min-width:90px;text-align:right;white-space:nowrap;
@@ -37,15 +37,66 @@
     white-space:nowrap;
 }
 </style>
-<header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+<style>
+.algo-page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-4)}
+.algo-page-header h1{margin:0;color:var(--text-primary);font-size:var(--fs-page-title);line-height:var(--lh-page-title);font-weight:var(--fw-semibold)}
+.algo-page-header p{margin:var(--space-1) 0 0;color:var(--text-secondary);font-size:var(--fs-body)}
+.algo-chat-layout{grid-template-columns:minmax(0,2fr) minmax(var(--analysis-context-width),1fr);gap:var(--space-4)}
+.algo-chat-card,.algo-side-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface);box-shadow:none}
+.algo-chat-card{height:var(--chat-card-height);min-height:var(--chat-card-min-height)}
+.algo-chat-header{min-height:var(--card-head-height);padding:var(--space-2) var(--space-4);color:var(--text-primary)}
+.algo-chat-header .live-dot{width:var(--status-dot-size);height:var(--status-dot-size);background:var(--positive);box-shadow:none}
+.token-bar{gap:var(--space-2);padding:var(--space-2) var(--space-4);background:var(--bg-subtle);color:var(--text-secondary);font-size:var(--fs-caption)}
+.token-bar-icon{width:var(--badge-height);height:var(--badge-height);border-radius:var(--radius-tag);background:var(--brand-soft);color:var(--brand)}
+[data-theme="dark"] .algo-chat-card .token-bar-icon{background:var(--brand-soft);color:var(--brand)}
+.token-bar-track{height:var(--space-1);background:var(--border);border-radius:var(--radius-tag)}
+.token-bar-fill,.token-bar-fill.warn,.token-bar-fill.danger{background:var(--brand);transition:width var(--transition)}
+.token-bar-fill.warn{background:var(--warning)}
+.token-bar-fill.danger{background:var(--negative)}
+.token-bar-label{color:var(--text-primary);font-family:var(--font-mono);font-size:var(--fs-label);font-weight:var(--fw-medium)}
+.token-bar-sub{color:var(--text-muted);font-size:var(--fs-caption)}
+.algo-chat-messages{gap:var(--space-3);padding:var(--space-4);background:var(--bg-app)}
+.algo-msg{max-width:88%;gap:0;flex-direction:column;align-items:flex-start}
+.algo-msg-avatar{display:none}
+.algo-msg-user{align-self:flex-end;align-items:flex-end}
+.algo-msg-bubble{padding:var(--space-3);border-radius:var(--radius);font-size:var(--fs-body);line-height:var(--lh-body);font-variant-numeric:tabular-nums}
+.algo-msg-bot .algo-msg-bubble{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-surface);color:var(--text-primary)}
+.algo-msg-user .algo-msg-bubble{border:1px solid var(--brand-border);border-radius:var(--radius);background:var(--brand-soft);color:var(--text-primary)}
+.algo-msg-bubble strong,.algo-msg-user .algo-msg-bubble strong{color:var(--text-primary)}
+.algo-msg-bubble h5,.algo-msg-bubble h6{font-size:var(--fs-body);font-weight:var(--fw-semibold)}
+.algo-finance-number{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.algo-msg-references{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2)}
+.algo-reference-chip{display:inline-flex;align-items:center;min-height:var(--badge-height);padding:var(--space-1) var(--space-2);border:1px solid var(--border);border-radius:var(--radius-tag);color:var(--text-secondary);background:var(--bg-subtle);font-size:var(--fs-kpi-label);line-height:var(--lh-label)}
+.algo-chat-input{position:sticky;bottom:0;z-index:1;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-top:1px solid var(--border);background:var(--bg-surface)}
+.algo-chat-input .form-control{min-height:var(--chat-composer-height);padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fs-body)}
+.algo-chat-input .form-control:focus{border-color:var(--brand);box-shadow:var(--focus-ring)}
+.algo-chat-input .btn{width:var(--chat-composer-height);height:var(--chat-composer-height);border-radius:var(--radius);background:var(--brand);color:var(--on-brand)}
+.algo-chat-disclaimer{padding:0 var(--space-4) var(--space-2);color:var(--text-muted);font-size:var(--fs-kpi-label);background:var(--bg-surface)}
+.algo-side{gap:var(--space-3)}
+.algo-side-card{padding:var(--space-4)}
+.algo-side-card h5{margin-bottom:var(--space-3);color:var(--text-primary);font-size:var(--fs-card-title);font-weight:var(--fw-semibold)}
+.algo-side-card h5 i{display:none}
+.algo-quick-btn{display:inline-flex;width:auto;min-height:var(--control-height-small);align-items:center;padding:var(--space-1) var(--space-2);margin:0 var(--space-1) var(--space-2) 0;border:1px solid var(--border);border-radius:var(--radius-tag);background:var(--bg-surface);color:var(--text-secondary);font-size:var(--fs-label);font-weight:var(--fw-medium)}
+.algo-quick-btn:hover{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+.algo-quick-btn i{display:none}
+.algo-side-card p{margin:0;color:var(--text-secondary);font-size:var(--fs-caption);line-height:var(--lh-caption)}
+.algo-typing span{animation:none;transform:none}
+@media(max-width:767px){
+    .algo-chat-layout{grid-template-columns:1fr}
+    .algo-chat-card{height:var(--chat-mobile-card-height);min-height:var(--chat-mobile-card-min-height)}
+    .algo-msg{max-width:96%}
+    .algo-chat-input{padding:var(--space-2)}
+}
+</style>
+<header class="page-header algo-page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
     <div>
-        <h1><i class="fa-solid fa-robot me-2"></i>AI Assistant</h1>
-        <p>AI-powered stock insights, strategy suggestions, and portfolio advice.</p>
+        <h1>AI Assistant</h1>
+        <p>Portfolio and market analysis workspace.</p>
     </div>
     {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings in context</span>{% endif %}
 </header>
 
-<div class="algo-grid">
+<div class="algo-grid algo-chat-layout">
     <div class="algo-chat-card">
         <div class="algo-chat-header">
             <span class="live-dot"></span>
@@ -62,38 +113,40 @@
             <div class="algo-msg algo-msg-bot">
                 <div class="algo-msg-avatar"><i class="fa-solid fa-robot"></i></div>
                 <div class="algo-msg-bubble">
-                    Hi! I'm your AI portfolio assistant. {% if stocks %}I can see your <strong>{{ stocks|length }}</strong> holdings.{% endif %} Ask me anything about stocks, sectors, or trading strategies.
+                    Portfolio analysis is available. {% if stocks %}<strong>{{ stocks|length }}</strong> holdings are included as context.{% endif %}
                 </div>
+                <div class="algo-msg-references"><span class="algo-reference-chip">{% if stocks %}Portfolio holdings{% else %}No portfolio context{% endif %}</span></div>
             </div>
         </div>
         <form id="aiInsightForm" class="algo-chat-input" onsubmit="event.preventDefault(); getAIInsight();">
-            <input type="text" class="form-control" id="aiQuery" placeholder="e.g. How is my portfolio diversified? Best sector for 2025?" autocomplete="off">
-            <button type="submit" class="btn btn-primary" id="aiSendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+            <input type="text" class="form-control" id="aiQuery" placeholder="Ask about portfolio composition or market concepts" autocomplete="off">
+            <button type="submit" class="btn btn-primary" id="aiSendBtn" aria-label="Send message"><i class="fa-solid fa-paper-plane"></i></button>
         </form>
+        <div class="algo-chat-disclaimer">AI-generated analysis is informational and not investment advice.</div>
     </div>
 
     <aside class="algo-side">
         <div class="algo-side-card">
-            <h5><i class="fa-solid fa-bolt"></i>Quick prompts</h5>
+            <h5>Suggested Prompts</h5>
             <button class="algo-quick-btn" onclick="quickPrompt('Analyze my current portfolio. What is the diversification and risk level?')">
-                <i class="fa-solid fa-chart-pie"></i><span>Analyze my portfolio</span>
+                <span>Analyze portfolio diversification</span>
             </button>
             <button class="algo-quick-btn" onclick="quickPrompt('Which of my holdings should I consider trimming and why?')">
-                <i class="fa-solid fa-scissors"></i><span>What should I trim?</span>
+                <span>Review portfolio concentration</span>
             </button>
             <button class="algo-quick-btn" onclick="quickPrompt('Suggest 3 stocks to add for better diversification given my current holdings.')">
-                <i class="fa-solid fa-plus"></i><span>Suggest additions</span>
+                <span>Explore diversification factors</span>
             </button>
             <button class="algo-quick-btn" onclick="quickPrompt('What are the best sectors to invest in for the next 12 months?')">
-                <i class="fa-solid fa-chart-line"></i><span>Best sectors now</span>
+                <span>Review sector performance</span>
             </button>
             <button class="algo-quick-btn" onclick="quickPrompt('Explain swing trading strategy for Indian markets in simple terms.')">
-                <i class="fa-solid fa-arrows-rotate"></i><span>Swing trading basics</span>
+                <span>Summarize swing trading concepts</span>
             </button>
         </div>
         <div class="algo-side-card">
-            <h5><i class="fa-solid fa-shield-halved"></i>Disclaimer</h5>
-            <p class="text-muted small mb-0">AI-generated insights are educational and not financial advice. Always do your own research and consult a SEBI-registered advisor before investing.</p>
+            <h5>Analysis Context</h5>
+            <p>{% if stocks %}Responses may use {{ stocks|length }} portfolio holdings supplied to the analysis service.{% else %}No portfolio holdings are available in this session.{% endif %}</p>
         </div>
     </aside>
 </div>
@@ -145,8 +198,12 @@ function appendMessage(role, text) {
         .replace(/^### (.*)$/gm, '<h6 class="mt-2 mb-1">$1</h6>')
         .replace(/^## (.*)$/gm, '<h5 class="mt-2 mb-1">$1</h5>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/([+-]?₹\s?\d[\d,]*(?:\.\d+)?|[+-]?\d[\d,]*(?:\.\d+)?%)/g, '<span class="algo-finance-number">$1</span>')
         .replace(/\n/g, '<br>');
-    msgDiv.innerHTML = avatar + '<div class="algo-msg-bubble">' + formatted + '</div>';
+    const references = role === 'bot'
+        ? '<div class="algo-msg-references"><span class="algo-reference-chip">AI-generated response</span><span class="algo-reference-chip">' + (portfolioStocks.length ? 'Portfolio holdings context' : 'User question context') + '</span></div>'
+        : '';
+    msgDiv.innerHTML = avatar + '<div class="algo-msg-bubble">' + formatted + '</div>' + references;
     container.appendChild(msgDiv);
     container.scrollTop = container.scrollHeight;
 }
@@ -180,7 +237,7 @@ async function getAIInsight() {
         if (response.status === 429 || data.error === 'monthly_limit_reached' || data.error === 'daily_limit_reached') {
             updateTokenMeter(data.used, data.limit);
             appendMessage('bot',
-                '⚠️ **Monthly AI limit reached**\n\n' +
+                '**Monthly AI limit reached**\n\n' +
                 (data.message || `You’ve used your ${data.limit||10000} token allowance for this month. It resets on the 1st, or upgrade your plan for more.`)
             );
             document.getElementById('aiSendBtn').disabled = false;
