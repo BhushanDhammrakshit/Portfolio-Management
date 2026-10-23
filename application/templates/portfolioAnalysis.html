@@ -140,7 +140,7 @@
 [data-theme="dark"] .pa-src-badge.news{background:#1e3a8a;color:#bfdbfe}
 [data-theme="dark"] .pa-src-badge.filing{background:#78350f;color:#fde68a}
 .pa-overview{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--card-gap);margin:var(--space-4) 0 var(--space-5)}
-.pa-overview-kpis,.pa-overview-holdings{grid-column:1/-1}
+.pa-overview-kpis{grid-column:1/-1}
 .pa-overview-card{min-width:0;overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
 .pa-overview-card h2{margin:0;padding:var(--space-3) var(--space-4);border-bottom:var(--border-width) solid var(--border);font-size:var(--fs-card-title);font-weight:600;color:var(--text-primary)}
 .pa-overview-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
@@ -428,20 +428,6 @@ async function paExternalPick(item) {
         <h2>Performance vs NIFTY 50</h2>
         <div class="pa-overview-empty" role="status">Historical portfolio and benchmark series are unavailable for this view. No performance chart is shown.</div>
     </article>
-    <article class="pa-overview-card pa-overview-holdings">
-        <h2>Holdings</h2>
-        <div class="pa-overview-table-toolbar">
-            <input type="search" id="paHoldingsSearch" aria-label="Search portfolio holdings" placeholder="Search holdings">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="paHoldingsExport">Export CSV</button>
-        </div>
-        <div class="pa-overview-table-wrap">
-            <table class="pa-overview-table">
-                <thead><tr><th>Stock</th><th>Sector</th><th>Quantity</th><th>Average Cost</th><th>Price</th><th>Market Value</th><th>P&amp;L</th></tr></thead>
-                <tbody id="paOverviewHoldings"></tbody>
-                <tfoot id="paOverviewTotals"></tfoot>
-            </table>
-        </div>
-    </article>
 </section>
 
 <!-- Toolbar: search, select-all, primary action button -->
@@ -518,37 +504,6 @@ function renderPortfolioOverview() {
         const color = sectorPalette[index % sectorPalette.length];
         return `<div class="pa-sector-row"><span>${escapeHtml(name)}</span><div class="pa-sector-track" aria-label="${share.toFixed(2)}%"><span style="--sector-share:${Math.min(100, Math.max(0, share))}%;--sector-color:${color}"></span></div><strong>${share.toFixed(2)}%</strong></div>`;
     }).join('') || '<div class="pa-overview-empty">Sector allocation is unavailable because portfolio values are incomplete.</div>';
-
-    function renderTable() {
-        const query = document.getElementById('paHoldingsSearch').value.trim().toLowerCase();
-        document.getElementById('paOverviewHoldings').innerHTML = values
-            .filter(row => `${row.stock.StockName || ''} ${row.stock.Symbol || ''} ${row.stock.Sector || ''}`.toLowerCase().includes(query))
-            .map(row => `<tr><td>${escapeHtml(row.stock.StockName || 'N/A')}<br><small class="text-muted">${escapeHtml(row.stock.Symbol || 'N/A')}</small></td><td>${escapeHtml(row.stock.Sector || 'Other')}</td><td class="numeric">${row.quantity}</td><td class="numeric">${Number.isFinite(row.purchase) ? money(row.purchase) : 'N/A'}</td><td class="numeric">${Number.isFinite(row.price) ? money(row.price) : 'N/A'}</td><td class="numeric">${row.value != null ? money(row.value) : 'N/A'}</td><td class="numeric ${row.gain > 0 ? 'gain-positive' : row.gain < 0 ? 'gain-negative' : ''}">${row.gain == null ? 'N/A' : (row.gain >= 0 ? '+' : '-') + money(Math.abs(row.gain))}</td></tr>`)
-            .join('');
-        document.getElementById('paOverviewTotals').innerHTML = `<tr><td>Total</td><td></td><td class="numeric">${values.reduce((sum, row) => sum + row.quantity, 0)}</td><td></td><td></td><td class="numeric">${completeValuation ? money(totalValue) : 'N/A'}</td><td class="numeric">${completeValuation ? (totalGain >= 0 ? '+' : '-') + money(Math.abs(totalGain)) : 'N/A'}</td></tr>`;
-    }
-    renderTable();
-    document.getElementById('paHoldingsSearch').addEventListener('input', renderTable);
-    document.getElementById('paHoldingsExport').addEventListener('click', () => {
-        const rows = [['Stock', 'Symbol', 'Sector', 'Quantity', 'Average Cost', 'Price', 'Market Value', 'P&L']];
-        values.forEach(row => rows.push([
-            row.stock.StockName || '', row.stock.Symbol || '', row.stock.Sector || 'Other', row.quantity,
-            Number.isFinite(row.purchase) ? row.purchase : 'N/A',
-            Number.isFinite(row.price) ? row.price : 'N/A',
-            row.value == null ? 'N/A' : row.value,
-            row.gain == null ? 'N/A' : row.gain
-        ]));
-        const csv = rows.map(row => row.map(value => {
-            const cell = String(value ?? '');
-            return /[",\n]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
-        }).join(',')).join('\n');
-        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'portfolio-holdings.csv';
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
 }
 
 function renderCardBody(stock, data) {

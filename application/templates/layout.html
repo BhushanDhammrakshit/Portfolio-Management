@@ -32,7 +32,7 @@
     <script src="{{ url_for('static', filename='Scripts/design-system/formatters.js') }}"></script>
     {% block head_extra %}{% endblock %}
 </head>
-<body class="app-body">
+<body class="app-body{% if title == 'Market Radar' %} market-radar-body{% endif %}">
 <script>
 // Resolve the saved theme before first paint so there is no flash.
 (function(){
@@ -56,7 +56,7 @@
 {% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation', 'Market Radar'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
 {% elif title in ['Fundamentals', 'Stock Screener', 'Volume Alerts', 'Market Pulse', 'Investing Tools'] or (title == 'Intraday Tools' and request.args.get('tool')) %}{% set nav_section = 'scans' %}
 {% elif title in ['Options Analytics', 'F&O Gap Forecast', 'F&O Forecast Summary'] %}{% set nav_section = 'options' %}
-{% elif title in ['Portfolio', 'AI & Tools', 'AI Assistant', 'Add Stock', 'My Account', 'Plans & Billing', 'Settings', 'Admin Portal', 'Mutual Funds'] %}{% set nav_section = 'my-space' %}{% endif %}
+{% elif title in ['Portfolio', 'Watchlist', 'AI & Tools', 'AI Assistant', 'Add Stock', 'My Account', 'Plans & Billing', 'Settings', 'Admin Portal', 'Mutual Funds'] %}{% set nav_section = 'my-space' %}{% endif %}
 <aside class="app-sidebar" id="appSidebar">
     <nav class="app-sidebar-nav" aria-label="Legacy navigation">
 
@@ -84,9 +84,6 @@
         {% if 'intraday' in persona_groups %}
         <a href="{{ url_for('intraday_api.intraday_page', mode='intraday') }}" class="nav-item {% if title == 'Intraday Scanner' and request.args.get('mode') != 'swing' %}active{% endif %}">
             {{ icon('zap') }}<span>Intraday RSI/MACD</span>
-        </a>
-        <a href="{{ url_for('intraday_api.intraday_page', mode='swing') }}" class="nav-item {% if title == 'Intraday Scanner' and request.args.get('mode') == 'swing' %}active{% endif %}">
-            {{ icon('trending-up') }}<span>Swing 10–15%</span>
         </a>
         <a href="{{ url_for('intraday_tools_api.intraday_tools_page') }}" class="nav-item {% if title == 'Intraday Tools' and not request.args.get('tool') %}active{% endif %}">
             {{ icon('candlestick') }}<span>Technical Analysis</span>
@@ -217,7 +214,6 @@
             {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page'), 'candlestick', 'Technical Analysis', title == 'Intraday Tools' and not request.args.get('tool')) }}
             {{ analytics.NavRow(url_for('intraday_tools_api.market_radar_page'), 'radio', 'Market Radar', title == 'Market Radar') }}
             {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='intraday'), 'zap', 'Day Trading Scanner', title == 'Intraday Scanner' and request.args.get('mode') != 'swing') }}
-            {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='swing'), 'trending-up', 'Swing Scanner', title == 'Intraday Scanner' and request.args.get('mode') == 'swing') }}
             {{ analytics.NavRow(url_for('swing_tools_api.swing_tools_page'), 'trending-up', 'Swing Trading', title == 'Swing Tools') }}
             {{ analytics.NavRow(url_for('swing_tools_api.rrg_page'), 'rotate', 'RRG Rotation', title == 'RRG Rotation') }}
             {{ analytics.NavRow(url_for('advanced_dashboard'), 'line-chart', 'Advanced Metrics', title == 'Advanced Metrics') }}
@@ -382,20 +378,23 @@
 <div class="fc-ticker" aria-label="Index ticker">
     <div class="ticker-item" data-ticker-symbol="^NSEI">
         <span class="ticker-name">NIFTY 50</span>
-        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
-        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+        <span class="ticker-val" title="Index quote is unavailable">—</span>
+        <span class="ticker-chg" title="Index quote is unavailable">Quote unavailable</span>
+        <span class="ticker-state" aria-live="polite" hidden></span>
     </div>
     <span class="ticker-divider" aria-hidden="true"></span>
     <div class="ticker-item" data-ticker-symbol="^BSESN">
         <span class="ticker-name">SENSEX</span>
-        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
-        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+        <span class="ticker-val" title="Index quote is unavailable">—</span>
+        <span class="ticker-chg" title="Index quote is unavailable">Quote unavailable</span>
+        <span class="ticker-state" aria-live="polite" hidden></span>
     </div>
     <span class="ticker-divider" aria-hidden="true"></span>
     <div class="ticker-item" data-ticker-symbol="^NSEBANK">
         <span class="ticker-name">BANK NIFTY</span>
-        <span class="ticker-val" title="Index quote is unavailable">N/A</span>
-        <span class="ticker-chg" title="Index change is unavailable">N/A</span>
+        <span class="ticker-val" title="Index quote is unavailable">—</span>
+        <span class="ticker-chg" title="Index quote is unavailable">Quote unavailable</span>
+        <span class="ticker-state" aria-live="polite" hidden></span>
     </div>
 </div>
 
@@ -409,7 +408,6 @@ window.FC_SEARCH = {
         { title: 'Global Markets', sub: 'Markets', url: {{ url_for('global_markets_api.global_markets_page')|tojson }}, icon: 'globe' },
         { title: 'News & Events', sub: 'Markets', url: {{ url_for('tendor_api.show_stock_news')|tojson }}, icon: 'newspaper' },
         { title: 'Intraday RSI/MACD', sub: 'Analysis', url: {{ url_for('intraday_api.intraday_page', mode='intraday')|tojson }}, icon: 'zap' },
-        { title: 'Swing 10–15%', sub: 'Analysis', url: {{ url_for('intraday_api.intraday_page', mode='swing')|tojson }}, icon: 'trending-up' },
         { title: 'ORB Scanner', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='orb')|tojson }}, icon: 'scan-search' },
         { title: 'Momentum Burst', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='momentum')|tojson }}, icon: 'zap' },
         { title: 'Advanced Sector Rotation', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='arrg')|tojson }}, icon: 'rotate' },
@@ -428,7 +426,6 @@ window.FC_SEARCH = {
         { title: 'AI Assistant', sub: 'AI', url: {{ url_for('algoHelper')|tojson }}, icon: 'robot' },
         { title: 'AI & Tools', sub: 'AI', url: {{ url_for('ai_tools_api.ai_tools_page', view='tools')|tojson }}, icon: 'sparkles' },
         { title: 'Portfolio', sub: 'My Space', url: {{ url_for('portfolioMaker')|tojson }}, icon: 'briefcase' },
-        { title: 'Swing Tools', sub: 'Analysis', url: {{ url_for('swing_tools_api.swing_tools_page')|tojson }}, icon: 'trending-up' },
         { title: 'Investing Tools', sub: 'Scans', url: {{ url_for('investing_tools_api.investing_tools_page')|tojson }}, icon: 'factory' },
         { title: 'Mutual Funds', sub: 'My Space', url: {{ url_for('mutual_funds_api.mutual_funds_page')|tojson }}, icon: 'piggy-bank' },
         { title: 'F&O Forecast Summary', sub: 'Options', url: {{ url_for('fno_gap_api.fno_gap_summary_page')|tojson }}, icon: 'list' },
@@ -1338,36 +1335,99 @@ window.appPlanRank = {free:0, pro:1, elite:2};
     function number(value, reason){
         return window.FCFormat.number(value, 2, reason);
     }
+    const tickerCacheKey = 'fcIndexTickerQuotes:v1';
+    function readTickerCache(){
+        try {
+            const cache = JSON.parse(localStorage.getItem(tickerCacheKey) || '{}');
+            return cache && typeof cache === 'object' ? cache : {};
+        } catch (e) { return {}; }
+    }
+    function formatTickerTime(timestamp){
+        const value = typeof timestamp === 'number' && timestamp > 0 && timestamp < 1e12
+            ? timestamp * 1000 : timestamp;
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return 'time unavailable';
+        return new Intl.DateTimeFormat('en-IN', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+            hourCycle: 'h23', timeZone: 'Asia/Kolkata'
+        }).format(date) + ' IST';
+    }
+    function paintTickerQuote(node, quote, timestamp, cached){
+        const valueEl = node.querySelector('.ticker-val');
+        const changeEl = node.querySelector('.ticker-chg');
+        const stateEl = node.querySelector('.ticker-state');
+        const price = Number(quote.price);
+        const previousClose = Number(quote.prev_close);
+        const hasPrice = quote.price !== null && quote.price !== undefined &&
+            quote.price !== '' && Number.isFinite(price);
+        const hasPreviousClose = quote.prev_close !== null && quote.prev_close !== undefined &&
+            quote.prev_close !== '' && Number.isFinite(previousClose);
+        const usePreviousClose = cached || quote.is_open === false || (!hasPrice && hasPreviousClose);
+        const shownPrice = usePreviousClose && hasPreviousClose ? previousClose : hasPrice ? price : null;
+        const pct = Number(quote.change_pct);
+        const change = Number(quote.change);
+        const hasChange = !usePreviousClose && quote.change_pct !== null && quote.change_pct !== undefined &&
+            quote.change_pct !== '' && quote.change !== null && quote.change !== undefined &&
+            quote.change !== '' && Number.isFinite(pct) && Number.isFinite(change);
+        if (valueEl) {
+            valueEl.textContent = shownPrice === null ? '—' : number(shownPrice, 'Index quote is unavailable');
+            valueEl.title = usePreviousClose ? 'Previous session closing price' : 'Latest index quote';
+        }
+        if (changeEl) {
+            changeEl.textContent = hasChange
+                ? window.FCFormat.percent(pct, true)
+                : usePreviousClose ? 'Prev close' : 'Quote unavailable';
+            changeEl.title = hasChange ? 'Change from previous close' : usePreviousClose ? 'Previous session close' : 'Index change is unavailable';
+            changeEl.classList.remove('pos', 'neg');
+            if (hasChange && pct > 0) changeEl.classList.add('pos');
+            else if (hasChange && pct < 0) changeEl.classList.add('neg');
+        }
+        if (stateEl) {
+            const showState = document.body.classList.contains('market-radar-body') && shownPrice !== null;
+            stateEl.hidden = !showState;
+            stateEl.textContent = showState
+                ? (cached ? 'Cached close · feed checked ' : usePreviousClose ? 'Prev close · feed checked ' : 'Updated · ') + formatTickerTime(timestamp)
+                : '';
+        }
+        return shownPrice !== null;
+    }
     function paintTicker(){
         fetch('/api/global-markets', { credentials: 'same-origin' })
             .then(function(r){ return r.ok ? r.json() : null; })
             .then(function(data){
-                if (!data) return;
+                const cached = readTickerCache();
+                if (!data) {
+                    document.querySelectorAll('[data-ticker-symbol]').forEach(function(node){
+                        const quote = cached[node.getAttribute('data-ticker-symbol')];
+                        if (quote) paintTickerQuote(node, quote, quote.timestamp, true);
+                    });
+                    return;
+                }
                 const items = [];
                 (data.regions || []).forEach(function(region){ (region.items || []).forEach(function(i){ items.push(i); }); });
-                if (!items.length) return;
+                const fetchedAt = data.ts || Date.now();
                 document.querySelectorAll('[data-ticker-symbol]').forEach(function(node){
                     const symbol = node.getAttribute('data-ticker-symbol');
                     const quote = items.find(function(i){ return i.ticker === symbol; });
-                    if (!quote) return;
-                    const valueEl = node.querySelector('.ticker-val');
-                    const changeEl = node.querySelector('.ticker-chg');
-                    const pct = Number(quote.change_pct);
-                    const change = Number(quote.change);
-                    const hasChange = quote.change_pct !== null && quote.change_pct !== undefined &&
-                        quote.change_pct !== '' && quote.change !== null && quote.change !== undefined &&
-                        quote.change !== '' && Number.isFinite(pct) && Number.isFinite(change);
-                    if (valueEl) valueEl.innerHTML = number(quote.price, 'Index quote is unavailable');
-                    if (changeEl) {
-                        changeEl.innerHTML = hasChange
-                            ? (change >= 0 ? '+' : '') + number(change) + ' (' + window.FCFormat.percent(pct, true) + ')'
-                            : window.FCFormat.missing('Index change is unavailable');
-                        changeEl.classList.remove('pos', 'neg');
-                        if (hasChange) changeEl.classList.add(pct >= 0 ? 'pos' : 'neg');
+                    const usableQuote = quote && paintTickerQuote(node, quote, fetchedAt, false);
+                    if (usableQuote) {
+                        cached[symbol] = {
+                            price: quote.price, prev_close: quote.prev_close, change: quote.change,
+                            change_pct: quote.change_pct, is_open: quote.is_open, timestamp: fetchedAt
+                        };
+                    } else if (cached[symbol]) {
+                        paintTickerQuote(node, cached[symbol], cached[symbol].timestamp, true);
                     }
                 });
+                try { localStorage.setItem(tickerCacheKey, JSON.stringify(cached)); } catch (e) {}
             })
-            .catch(function(){});
+            .catch(function(){
+                const cached = readTickerCache();
+                document.querySelectorAll('[data-ticker-symbol]').forEach(function(node){
+                    const quote = cached[node.getAttribute('data-ticker-symbol')];
+                    if (quote) paintTickerQuote(node, quote, quote.timestamp, true);
+                });
+            });
     }
     paintTicker();
     setInterval(paintTicker, 120000);

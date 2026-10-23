@@ -36,12 +36,12 @@
     <div id="analyticsError" hidden></div>
 
     <div id="analyticsContent" hidden>
-        <nav class="analytics-section-nav" aria-label="Advanced metrics sections">
-            <a href="#analyticsOverview" class="active">Overview</a>
-            <a href="#analyticsRisk">Risk</a>
-            <a href="#analyticsPerformance">Performance</a>
-            <a href="#analyticsAllocation">Allocation</a>
-            <a href="#analyticsHoldings">Holdings</a>
+        <nav class="analytics-section-nav" role="tablist" aria-label="Advanced metrics sections">
+            <button type="button" id="analyticsTabOverview" class="active" role="tab" aria-controls="analyticsOverview" aria-selected="true" tabindex="0">Overview</button>
+            <button type="button" id="analyticsTabRisk" role="tab" aria-controls="analyticsRisk" aria-selected="false" tabindex="-1">Risk</button>
+            <button type="button" id="analyticsTabPerformance" role="tab" aria-controls="analyticsPerformance" aria-selected="false" tabindex="-1">Performance</button>
+            <button type="button" id="analyticsTabAllocation" role="tab" aria-controls="analyticsAllocation" aria-selected="false" tabindex="-1">Allocation</button>
+            <button type="button" id="analyticsTabHoldings" role="tab" aria-controls="analyticsHoldings" aria-selected="false" tabindex="-1">Holdings</button>
         </nav>
         <!-- Shown when historical data was unavailable and only basic
              (value/P&L) metrics could be computed. -->
@@ -51,7 +51,7 @@
             <a href="#" id="fallbackRetry">Retry</a>
             <button type="button" class="notice-dismiss" aria-label="Dismiss notice">&times;</button>
         </div>
-        <section id="analyticsOverview" class="analytics-section">
+        <section id="analyticsOverview" class="analytics-section" role="tabpanel" aria-labelledby="analyticsTabOverview" tabindex="0">
         <div class="surface-card health-hero p-3 mb-3" id="healthHero"></div>
 
         <div class="metrics-strip" id="perfStrip"></div>
@@ -59,7 +59,7 @@
         <div class="surface-card p-3 mt-3" id="verdictCard"></div>
         </section>
 
-        <section id="analyticsPerformance" class="analytics-section">
+        <section id="analyticsPerformance" class="analytics-section" role="tabpanel" aria-labelledby="analyticsTabPerformance" tabindex="0" hidden>
         <div class="row g-3 mt-2">
             <div class="col-lg-8">
                 <div class="surface-card analytics-card h-100">
@@ -84,7 +84,7 @@
         </div>
         </section>
 
-        <section id="analyticsRisk" class="analytics-section">
+        <section id="analyticsRisk" class="analytics-section" role="tabpanel" aria-labelledby="analyticsTabRisk" tabindex="0" hidden>
         <div class="row g-3 mt-2">
             <div class="col-lg-8">
                 <div class="surface-card analytics-card h-100">
@@ -110,7 +110,7 @@
         </div>
         </section>
 
-        <section id="analyticsAllocation" class="analytics-section">
+        <section id="analyticsAllocation" class="analytics-section" role="tabpanel" aria-labelledby="analyticsTabAllocation" tabindex="0" hidden>
         <div class="row g-3 mt-2">
             <div class="col-lg-5">
                 <div class="surface-card analytics-card h-100">
@@ -142,7 +142,7 @@
         </div>
         </section>
 
-        <section id="analyticsHoldings" class="analytics-section">
+        <section id="analyticsHoldings" class="analytics-section" role="tabpanel" aria-labelledby="analyticsTabHoldings" tabindex="0" hidden>
         <div class="surface-card analytics-card mt-3">
             <div class="analytics-card-header holdings-card-header">
                 <h2 class="analytics-card-title">Holdings</h2>
@@ -177,7 +177,6 @@
             </div>
             <div class="holdings-pagination" id="holdingsPagination"></div>
         </div>
-        </section>
 
         <!-- Tax summary (only shown when purchase dates are available) -->
         <div class="surface-card p-3 mt-3" id="taxCard" hidden>
@@ -185,6 +184,7 @@
             <p class="text-muted small mb-3">India FY 2025-26 estimates: STCG 20% (held &lt;1 yr), LTCG 12.5% above ₹1.25L exemption (held ≥1 yr).</p>
             <div id="taxBody"></div>
         </div>
+        </section>
     </div>
 </div>
 <!-- _ADV_END_ -->
@@ -447,12 +447,14 @@
     display: flex; gap: 24px; overflow-x: auto; margin: 8px 0 16px;
     padding: 0 12px; background: var(--bg-app); border-bottom: 1px solid var(--border);
 }
-.analytics-section-nav a {
-    flex: 0 0 auto; padding: 11px 0 9px; border-bottom: 2px solid transparent;
-    color: var(--text-secondary); font-size: 13px; font-weight: 500; text-decoration: none;
+.analytics-section-nav [role="tab"] {
+    flex: 0 0 auto; padding: 11px 0 9px; border: 0; border-bottom: 2px solid transparent;
+    appearance: none; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer;
 }
-.analytics-section-nav a:hover, .analytics-section-nav a:focus { color: var(--brand); }
-.analytics-section-nav a.active { border-bottom-color: var(--brand); color: var(--brand); }
+.analytics-section-nav [role="tab"]:hover, .analytics-section-nav [role="tab"]:focus-visible { color: var(--brand); }
+.analytics-section-nav [role="tab"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.analytics-section-nav [role="tab"].active { border-bottom-color: var(--brand); color: var(--brand); }
 .analytics-notice {
     min-height: 36px; display: flex; align-items: center; gap: 10px;
     padding: 6px 10px; border: 1px solid var(--warning-border);
@@ -677,6 +679,32 @@ let holdingsCurrentPage = 1;
 let holdingsSort = { key: 'weight', direction: -1 };
 let currentChartPeriod = 'ALL';
 const holdingsPageSize = 15;
+const analyticsTabs = Array.from(document.querySelectorAll('.analytics-section-nav [role="tab"]'));
+
+function resizeVisibleAnalyticsCharts(panel = document.querySelector('.analytics-section:not([hidden])')) {
+    if (!panel) return;
+    requestAnimationFrame(() => {
+        panel.querySelectorAll('canvas').forEach(canvas => {
+            if (canvas._chart) canvas._chart.resize();
+        });
+    });
+}
+
+function activateAnalyticsTab(tab, focus = false) {
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+    if (!panel) return;
+
+    analyticsTabs.forEach(item => {
+        const selected = item === tab;
+        item.classList.toggle('active', selected);
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        const itemPanel = document.getElementById(item.getAttribute('aria-controls'));
+        if (itemPanel) itemPanel.hidden = !selected;
+    });
+    if (focus) tab.focus();
+    resizeVisibleAnalyticsCharts(panel);
+}
 
 function initTooltips() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
@@ -712,6 +740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (entry && entry.v && entry.v.error !== 'no_stocks') {
             render(entry.v);
             document.getElementById('analyticsContent').hidden = false;
+            resizeVisibleAnalyticsCharts();
             setUpdatedLabel(entry.t);
             const btn = document.getElementById('loadAnalytics');
             if (btn) btn.textContent = 'Refresh';
@@ -728,6 +757,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try { ppCache.set('adv:analytics', data); } catch (e) {}
                 render(data);
                 document.getElementById('analyticsContent').hidden = false;
+                resizeVisibleAnalyticsCharts();
                 setUpdatedLabel(Date.now());
                 const btn = document.getElementById('loadAnalytics');
                 if (btn) btn.textContent = 'Refresh';
@@ -777,13 +807,21 @@ document.querySelectorAll('.period-control button').forEach(button => {
             item.classList.toggle('active', item === button);
             item.setAttribute('aria-pressed', String(item === button));
         });
-        document.querySelectorAll('.analytics-section-nav a').forEach(link => {
-            link.addEventListener('click', () => {
-                document.querySelectorAll('.analytics-section-nav a').forEach(item => item.classList.toggle('active', item === link));
-            });
-        });
         currentChartPeriod = button.dataset.period;
         if (analyticsData) renderCumChart(analyticsData, button.dataset.period);
+    });
+});
+analyticsTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => activateAnalyticsTab(tab));
+    tab.addEventListener('keydown', event => {
+        let nextIndex;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % analyticsTabs.length;
+        else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + analyticsTabs.length) % analyticsTabs.length;
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = analyticsTabs.length - 1;
+        else return;
+        event.preventDefault();
+        activateAnalyticsTab(analyticsTabs[nextIndex], true);
     });
 });
 
@@ -839,6 +877,7 @@ async function loadData() {
         setUpdatedLabel(Date.now());
         loading.hidden = true;
         content.hidden = false;
+        resizeVisibleAnalyticsCharts();
     } catch (e) {
         errorDiv.innerHTML = '<div class="surface-card analytics-card"><div class="analytics-card-header"><h2 class="analytics-card-title">Analytics Unavailable</h2></div><div class="analytics-card-body"><p class="mb-2">Failed to load analytics.</p><button type="button" id="analyticsErrorRetry" class="btn btn-outline-primary btn-sm">Retry</button></div></div>';
         errorDiv.hidden = false;

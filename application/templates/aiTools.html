@@ -57,7 +57,7 @@
 .fc-tools-page .page-header{margin-bottom:var(--space-4)}
 .fc-tools-page .page-header h1{font-size:var(--fs-page-title);line-height:var(--lh-page-title);font-weight:var(--fw-semibold);color:var(--text-primary)}
 .fc-tools-page .page-header p{margin:.25rem 0 0;color:var(--text-secondary);font-size:var(--fs-body)}
-.tool-directory{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--card-gap);margin:0 0 var(--space-5)}
+.tool-directory{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--card-gap);margin:0 0 var(--space-5)}
 .tool-directory-card{min-height:var(--analysis-summary-cell-min-height);padding:var(--space-4);display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);text-align:left;text-decoration:none;cursor:pointer;transition:background-color var(--transition),border-color var(--transition)}
 .tool-directory-card:hover{background:var(--bg-subtle);border-color:var(--border-strong);color:var(--text-primary)}
 .tool-directory-card:focus-visible{outline:0;box-shadow:var(--focus-ring)}
@@ -148,11 +148,6 @@
             <span class="tool-directory-description">Review the available daily market idea.</span>
             <span class="tool-directory-open">Open</span>
         </button>
-        <a class="tool-directory-card" href="{{ url_for('algoHelper') }}">
-            <span class="tool-directory-title">AI Assistant</span>
-            <span class="tool-directory-description">Ask questions using portfolio context.</span>
-            <span class="tool-directory-open">Open</span>
-        </a>
     </div>
 
     <!-- Watchlist -->

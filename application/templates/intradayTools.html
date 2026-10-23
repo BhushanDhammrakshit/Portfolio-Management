@@ -36,9 +36,8 @@
 .arrg-toolbar button.arrg-btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:5px 10px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .arrg-toolbar button.arrg-btn:hover{background:var(--surface)}
 .arrg-toolbar button.arrg-btn.active{background:var(--brand);color:#fff;border-color:transparent}
-.arrg-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}
-@media(max-width:1100px){.arrg-layout{grid-template-columns:1fr}}
-.arrg-chart-wrap{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;min-height:520px}
+.arrg-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:12px;align-items:start}
+.arrg-chart-wrap{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;min-height:0}
 .arrg-chart-wrap svg{display:block;width:100%;height:auto;font-family:inherit;user-select:none;touch-action:none}
 .arrg-q-bg-leading{fill:rgba(22,163,74,.07)}
 .arrg-q-bg-weakening{fill:rgba(245,158,11,.08)}
@@ -72,7 +71,7 @@
 .arrg-legend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px}
 .arrg-legend-head h4{margin:0;font-size:.82rem;font-weight:700}
 .arrg-legend-head .arrg-tiny{font-size:.7rem;color:var(--primary);background:transparent;border:0;cursor:pointer;font-weight:600}
-.arrg-legend-list{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow:auto}
+.arrg-legend-list{display:flex;flex-direction:column;gap:4px;max-height:min(38vh,360px);overflow:auto}
 .arrg-legend-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:.78rem;transition:background .12s}
 .arrg-legend-row:hover{background:var(--surface-2)}
 .arrg-legend-row.off{opacity:.4}
@@ -85,8 +84,7 @@
 .arrg-legend-row .q-improving{background:rgba(14,165,233,.18);color:#0ea5e9}
 .arrg-legend-row .solo{font-size:.62rem;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);padding:1px 6px;border-radius:6px;opacity:0;transition:opacity .12s}
 .arrg-legend-row:hover .solo{opacity:1}
-.arrg-quad-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-@media(max-width:760px){.arrg-quad-strip{grid-template-columns:repeat(2,1fr)}}
+.arrg-quad-strip{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:10px}
 .arrg-quad-card{background:var(--surface);border:1px solid var(--border);border-left-width:4px;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .arrg-quad-card.leading{border-left-color:#16a34a}
 .arrg-quad-card.weakening{border-left-color:#f59e0b}
@@ -94,7 +92,7 @@
 .arrg-quad-card.improving{border-left-color:#0ea5e9}
 .arrg-quad-card .qc-name{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-muted)}
 .arrg-quad-card .qc-count{font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums}
-.arrg-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.arrg-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
 .arrg-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
 .arrg-stat .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600;margin-bottom:4px}
 .arrg-stat .nm{font-weight:700;font-size:.92rem;display:flex;align-items:center;gap:6px}
@@ -110,6 +108,38 @@
 .arrg-playbar .form-range{flex:1;margin:0}
 .arrg-playbar .arrg-period{flex:0 0 auto;font-size:.74rem;font-weight:700;color:var(--text);min-width:130px;text-align:right;font-variant-numeric:tabular-nums}
 .arrg-playbar .arrg-period .lbl{color:var(--text-muted);font-weight:500;font-size:.7rem;margin-right:4px}
+.arrg-side-panel{min-width:0}
+.arrg-side-panel .arrg-quad-card{min-height:52px;padding:8px 10px}
+.arrg-side-panel .arrg-quad-card .qc-count{font-size:1.15rem}
+.arrg-side-panel .arrg-quad-card>div>div:nth-child(2){display:none}
+.arrg-side-panel .arrg-stat{min-width:0;padding:8px}
+.arrg-side-panel .arrg-stat .lbl{font-size:.62rem}
+.arrg-side-panel .arrg-stat .nm{font-size:.78rem}
+.arrg-side-panel .arrg-stat .sub{font-size:.64rem}
+.arrg-side-panel .arrg-legend-card{padding:9px}
+.standalone-arrg{gap:8px}
+.standalone-arrg>.page-header{display:none}
+.standalone-arrg>.ds-info-banner-wrap .info-banner{min-height:0;padding:4px 8px;font-size:.66rem}
+.standalone-arrg #panel-arrg .tool-header{margin-bottom:8px}
+.standalone-arrg #panel-arrg .tool-header h2{font-size:1.05rem}
+.standalone-arrg #panel-arrg .tool-header p{margin:3px 0 0;font-size:.78rem}
+.standalone-arrg #panel-arrg .arrg-toolbar{gap:6px;padding:8px;margin-bottom:8px;border-radius:8px}
+.standalone-arrg #panel-arrg .arrg-toolbar label{margin-left:4px;font-size:.66rem}
+.standalone-arrg #panel-arrg .arrg-toolbar button.arrg-btn{padding:4px 8px;font-size:.72rem}
+.standalone-arrg #panel-arrg .arrg-toolbar select{padding:4px 6px;font-size:.74rem}
+.standalone-arrg #panel-arrg .arrg-layout{grid-template-columns:minmax(0,1fr) minmax(210px,25%);gap:10px}
+.standalone-arrg #panel-arrg .arrg-playbar{gap:6px;margin-top:6px;padding:6px}
+.standalone-arrg #panel-arrg .arrg-playbar .arrg-period{min-width:100px;font-size:.68rem}
+@media(max-width:900px){
+    .arrg-layout,.standalone-arrg #panel-arrg .arrg-layout{grid-template-columns:minmax(0,1fr) minmax(190px,28%)}
+}
+@media(max-width:700px){
+    .arrg-layout,.standalone-arrg #panel-arrg .arrg-layout{grid-template-columns:1fr}
+    .arrg-side-panel{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
+    .arrg-side-panel .arrg-quad-strip,.arrg-side-panel .arrg-stats{margin:0}
+    .arrg-side-panel .arrg-legend-card{grid-column:1/-1}
+    .arrg-side-panel .arrg-legend-list{max-height:220px}
+}
 .ta-workspace{margin-bottom:var(--space-5);overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
 .ta-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border-bottom:var(--border-width) solid var(--border)}
 .ta-workspace-title h2{margin:0;color:var(--text-primary);font-size:var(--fs-section-title);font-weight:600}
@@ -143,7 +173,7 @@
 @media(max-width:767px){.ta-workspace-head{align-items:flex-start;flex-direction:column}.ta-stock-controls{width:100%}.ta-stock-controls input{flex:1}.ta-chart-frame{height:var(--analysis-chart-height-mobile)}}
 </style>
 
-<div class="page-container scans-page">
+<div class="page-container scans-page{% if request.args.get('tool') == 'arrg' %} standalone-arrg{% endif %}">
     {% set standalone_tool = {
         'orb': 'ORB Scanner',
         'momentum': 'Momentum Burst',
@@ -259,17 +289,8 @@
     <!-- Advanced Sector Rotation (RRG) -->
     <section class="tool-panel" id="panel-arrg">
         {% if has_pro %}
-        <div class="tool-header">
-            <div>
-                <h2>Advanced Sector Rotation — Relative Rotation Graph</h2>
-                <p>JdK-style RS-Ratio vs RS-Momentum. Each sector rotates clockwise through Leading → Weakening → Lagging → Improving relative to the benchmark.</p>
-            </div>
-            <div class="tool-controls">
-                <button class="btn btn-primary btn-sm" id="arrgRefresh"><i class="fa-solid fa-arrows-rotate me-1"></i>Refresh</button>
-            </div>
-        </div>
-
         <div class="arrg-toolbar">
+            <button class="btn btn-primary btn-sm" id="arrgRefresh"><i class="fa-solid fa-arrows-rotate me-1"></i>Refresh</button>
             <label>Benchmark</label>
             <select id="arrgBench">
                 <option value="NIFTY 50">NIFTY 50</option>
@@ -308,9 +329,6 @@
             <button type="button" class="arrg-btn active" id="arrgApplyManual">Apply</button>
         </div>
 
-        <div id="arrgQuadStrip" class="arrg-quad-strip"></div>
-        <div id="arrgStats" class="arrg-stats"></div>
-
         <div class="arrg-layout">
             <div class="arrg-chart-wrap" id="arrgChartWrap">
                 <svg id="arrgSvg" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid meet"></svg>
@@ -323,14 +341,18 @@
                     <span class="arrg-period" id="arrgPeriodLabel"><span class="lbl">Period:</span>&mdash;</span>
                 </div>
             </div>
-            <div class="arrg-legend-card">
-                <div class="arrg-legend-head">
-                    <h4><i class="fa-solid fa-layer-group me-1"></i>Sectors</h4>
-                    <button type="button" class="arrg-tiny" id="arrgLegendReset">Reset</button>
-                </div>
-                <div class="arrg-legend-list" id="arrgLegend"></div>
-                <div style="font-size:.7rem;color:var(--text-muted);margin-top:8px;line-height:1.4">
-                    <i class="fa-solid fa-circle-info me-1"></i>Click row to hide/show. Hover then click <em>solo</em> to isolate a sector. Hover the chart for full readings.
+            <div class="arrg-side-panel">
+                <div id="arrgQuadStrip" class="arrg-quad-strip"></div>
+                <div id="arrgStats" class="arrg-stats"></div>
+                <div class="arrg-legend-card">
+                    <div class="arrg-legend-head">
+                        <h4><i class="fa-solid fa-layer-group me-1"></i>Sectors</h4>
+                        <button type="button" class="arrg-tiny" id="arrgLegendReset">Reset</button>
+                    </div>
+                    <div class="arrg-legend-list" id="arrgLegend"></div>
+                    <div style="font-size:.7rem;color:var(--text-muted);margin-top:8px;line-height:1.4">
+                        <i class="fa-solid fa-circle-info me-1"></i>Click row to hide/show. Hover then click <em>solo</em> to isolate a sector. Hover the chart for full readings.
+                    </div>
                 </div>
             </div>
         </div>
