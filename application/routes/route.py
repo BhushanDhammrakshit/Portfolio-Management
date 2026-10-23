@@ -181,7 +181,8 @@ def _fetch_user_stocks(user_id):
 def index():
     if "email" in session:
         return redirect(url_for("home"))
-    return render_template("landing.html")
+    from application.services import plans as subscription_plans
+    return render_template("landing.html", plans=subscription_plans.PLANS)
 
 
 @app.route("/favicon.ico")

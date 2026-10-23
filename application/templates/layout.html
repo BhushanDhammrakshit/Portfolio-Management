@@ -53,7 +53,7 @@
 {% from "_icons.html" import icon %}
 {% import "_analytics_components.html" as analytics with context %}
 {% set nav_section = 'markets' %}
-{% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
+{% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation', 'Market Radar'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
 {% elif title in ['Fundamentals', 'Stock Screener', 'Volume Alerts', 'Market Pulse', 'Investing Tools'] or (title == 'Intraday Tools' and request.args.get('tool')) %}{% set nav_section = 'scans' %}
 {% elif title in ['Options Analytics', 'F&O Gap Forecast', 'F&O Forecast Summary'] %}{% set nav_section = 'options' %}
 {% elif title in ['Portfolio', 'AI & Tools', 'AI Assistant', 'Add Stock', 'My Account', 'Plans & Billing', 'Settings', 'Admin Portal', 'Mutual Funds'] %}{% set nav_section = 'my-space' %}{% endif %}
@@ -90,6 +90,9 @@
         </a>
         <a href="{{ url_for('intraday_tools_api.intraday_tools_page') }}" class="nav-item {% if title == 'Intraday Tools' and not request.args.get('tool') %}active{% endif %}">
             {{ icon('candlestick') }}<span>Technical Analysis</span>
+        </a>
+        <a href="{{ url_for('intraday_tools_api.market_radar_page') }}" class="nav-item {% if title == 'Market Radar' %}active{% endif %}">
+            {{ icon('radio') }}<span>Market Radar</span>
         </a>
         <a href="{{ url_for('intraday_tools_api.intraday_tools_page', tool='orb') }}" class="nav-item {% if title == 'Intraday Tools' and request.args.get('tool') == 'orb' %}active{% endif %}">
             {{ icon('scan-search') }}<span>ORB Scanner</span>
@@ -212,6 +215,7 @@
         <div class="nav-panel-heading" data-panel-heading="analysis" hidden>Analysis</div>
         <div class="nav-panel-pages" data-panel-section="analysis" {% if nav_section != 'analysis' %}hidden{% endif %}>
             {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page'), 'candlestick', 'Technical Analysis', title == 'Intraday Tools' and not request.args.get('tool')) }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.market_radar_page'), 'radio', 'Market Radar', title == 'Market Radar') }}
             {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='intraday'), 'zap', 'Day Trading Scanner', title == 'Intraday Scanner' and request.args.get('mode') != 'swing') }}
             {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='swing'), 'trending-up', 'Swing Scanner', title == 'Intraday Scanner' and request.args.get('mode') == 'swing') }}
             {{ analytics.NavRow(url_for('swing_tools_api.swing_tools_page'), 'trending-up', 'Swing Trading', title == 'Swing Tools') }}
@@ -224,9 +228,9 @@
             {{ analytics.NavRow(url_for('screener_api.stock_screener_page'), 'sliders', 'Stock Screener', title == 'Stock Screener') }}
             {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='orb'), 'scan-search', 'ORB Scanner', title == 'Intraday Tools' and request.args.get('tool') == 'orb') }}
             {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='momentum'), 'zap', 'Momentum Burst', title == 'Intraday Tools' and request.args.get('tool') == 'momentum') }}
-            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='arrg'), 'rotate', 'Sector Rotation', title == 'Intraday Tools' and request.args.get('tool') == 'arrg') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='arrg'), 'rotate', 'Advanced Sector Rotation', title == 'Intraday Tools' and request.args.get('tool') == 'arrg') }}
             {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='oi'), 'layers', 'OI Buildup', title == 'Intraday Tools' and request.args.get('tool') == 'oi') }}
-            {{ analytics.NavRow(url_for('intraday_tools_api.intraday_tools_page', tool='gappers'), 'arrow-up-right', 'Daily Gappers', title == 'Intraday Tools' and request.args.get('tool') == 'gappers') }}
+            {{ analytics.NavRow(url_for('intraday_tools_api.market_radar_page', tool='gappers'), 'arrow-up-right', 'Daily Gappers', title == 'Market Radar' and request.args.get('tool') == 'gappers') }}
             {{ analytics.NavRow(url_for('volume_api.volume_page'), 'bar-chart', 'Volume Shockers', title == 'Volume Alerts') }}
             {{ analytics.NavRow(url_for('market_pulse_api.market_pulse_page'), 'radio', 'Market Pulse', title == 'Market Pulse') }}
             {{ analytics.NavRow(url_for('investing_tools_api.investing_tools_page'), 'factory', 'Investing Tools', title == 'Investing Tools') }}
@@ -411,6 +415,7 @@ window.FC_SEARCH = {
         { title: 'Advanced Sector Rotation', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='arrg')|tojson }}, icon: 'rotate' },
         { title: 'OI Buildup', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='oi')|tojson }}, icon: 'layers' },
         { title: 'Technical Analysis', sub: 'Analysis', url: {{ url_for('intraday_tools_api.intraday_tools_page')|tojson }}, icon: 'flask' },
+        { title: 'Market Radar', sub: 'Analysis', url: {{ url_for('intraday_tools_api.market_radar_page')|tojson }}, icon: 'radio' },
         { title: 'Volume Shockers', sub: 'Scans', url: {{ url_for('volume_api.volume_page')|tojson }}, icon: 'bar-chart' },
         { title: 'Market Pulse', sub: 'Scans', url: {{ url_for('market_pulse_api.market_pulse_page')|tojson }}, icon: 'radio' },
         { title: 'Options Analytics', sub: 'F&O', url: {{ url_for('option_chain_api.option_chain_page')|tojson }}, icon: 'link' },
@@ -443,7 +448,7 @@ window.FC_SEARCH = {
         { title: 'Swing Breakouts', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#breakout')|tojson }} },
         { title: '52-Week High / Low', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#52wh')|tojson }} },
         { title: 'Options-Confirmed', sub: 'Swing setups', url: {{ (url_for('swing_tools_api.swing_tools_page') ~ '#options')|tojson }} },
-        { title: 'Daily Gappers', sub: 'Intraday tools', url: {{ url_for('intraday_tools_api.intraday_tools_page', tool='gappers')|tojson }} }
+        { title: 'Daily Gappers', sub: 'Market Radar', url: {{ url_for('intraday_tools_api.market_radar_page', tool='gappers')|tojson }} }
     ]
 };
 </script>
@@ -1476,7 +1481,8 @@ window.appPlanRank = {free:0, pro:1, elite:2};
 <script>
 (function(){
   var FEATURE_MAP = {
-    '/intraday-tools':'intraday_tools', '/swing-tools':'swing_tools',
+    '/intraday-tools':'intraday_tools', '/market-radar':'intraday_tools',
+    '/swing-tools':'swing_tools',
     '/option-chain':'option_chain', '/investing-tools':'investing_tools',
     '/mutual-funds':'mutual_funds', '/ai-tools':'ai_tools',
     '/home':'dashboard', '/portfolioAnalysis':'portfolio_analysis',

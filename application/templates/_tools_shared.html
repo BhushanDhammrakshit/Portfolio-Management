@@ -1,0 +1,73 @@
+{# Shared tool-page styles used by Technical Analysis and Market Radar. #}
+<style>
+.tools-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;overflow-x:auto;margin-bottom:18px;scrollbar-width:thin}
+.tools-tabs::-webkit-scrollbar{height:6px}
+.tools-tab{flex:0 0 auto;padding:9px 16px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tools-tab:hover{background:var(--surface-2);color:var(--text)}
+.tools-tab.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.25)}
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+.tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.tool-header h2{font-size:1.35rem;font-weight:700;margin:0}
+.tool-header p{font-size:.85rem;color:var(--text-muted);margin:4px 0 0}
+.tool-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tool-controls select,.tool-controls input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:.82rem}
+.tool-table{width:100%;font-size:.82rem;border-collapse:collapse}
+.tool-table th{background:var(--surface-2);text-align:left;padding:10px;font-weight:600;color:var(--text-muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);position:sticky;top:0}
+.tool-table td{padding:10px;border-bottom:1px solid var(--border)}
+.tool-table tr:hover td{background:var(--surface-2)}
+.tool-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.pill-up{background:rgba(22,163,74,.12);color:#16a34a}
+.pill-dn{background:rgba(220,38,38,.12);color:#dc2626}
+.pill-warn{background:rgba(245,158,11,.15);color:#b45309}
+.pill-neutral{background:rgba(100,116,139,.12);color:var(--text-muted)}
+.gain-pos{color:#16a34a;font-weight:600}
+.gain-neg{color:#dc2626;font-weight:600}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.kpi-box .lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.kpi-box .val{font-size:1.3rem;font-weight:700;margin-top:3px;color:var(--text)}
+.rvol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rvol-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.rvol-cell:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.rvol-cell .rv-name{font-weight:700;font-size:.85rem}
+.rvol-cell .rv-sub{font-size:.7rem;color:var(--text-muted)}
+.rvol-cell .rv-val{font-size:1.4rem;font-weight:800;margin-top:6px;font-family:Consolas,monospace}
+.rvol-cell.tier-extreme{background:var(--negative-bg);border-color:#fca5a5}
+.rvol-cell.tier-high{background:var(--warning-bg);border-color:#fdba74}
+.rvol-cell.tier-elevated{background:var(--warning-bg);border-color:#fde68a}
+[data-theme="dark"] .rvol-cell.tier-extreme{background:rgba(127,29,29,.3);border-color:#7f1d1d}
+[data-theme="dark"] .rvol-cell.tier-high{background:rgba(124,45,18,.3);border-color:#7c2d12}
+[data-theme="dark"] .rvol-cell.tier-elevated{background:rgba(113,63,18,.3);border-color:#713f12}
+.pivot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media (max-width:768px){.pivot-grid{grid-template-columns:1fr}}
+.pivot-col h4{font-size:.9rem;font-weight:700;margin:0 0 8px;display:flex;justify-content:space-between}
+.pivot-row{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.82rem;font-family:Consolas,monospace}
+.pivot-row.current{background:rgba(79,70,229,.1);font-weight:700;border-radius:4px}
+.confluence-card{background:var(--brand-soft);border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:8px}
+[data-theme="dark"] .confluence-card{background:rgba(79,70,229,.15);border-color:rgba(99,102,241,.4)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+.spinner-wrap{text-align:center;padding:50px}
+.table-scroll{max-height:580px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.sym-pill{display:inline-block;font-weight:700;color:var(--primary)}
+.score-bar{display:inline-block;width:80px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.score-bar .fill{height:100%;background:var(--positive)}
+.score-bar.neg .fill{background:var(--negative)}
+.tools-tabs{gap:var(--space-5);padding:0;border:0;border-bottom:var(--border-width) solid var(--border);border-radius:0;background:transparent}
+.tools-tab{padding:var(--space-2) 0;border-radius:0;color:var(--text-secondary);font-size:var(--fs-card-title);font-weight:500}
+.tools-tab:hover{background:transparent;color:var(--brand)}
+.tools-tab.active{border-bottom:2px solid var(--brand);background:transparent;color:var(--brand);box-shadow:none}
+.tool-header h2{font-size:var(--fs-section-title);font-weight:600}
+.tool-header p{font-size:var(--fs-table-cell)}
+.tool-card,.oi-card,.table-scroll,.arrg-toolbar{border-radius:var(--radius);box-shadow:none}
+.tool-card{padding:var(--space-4)}
+.tool-table{font-size:var(--fs-table-cell)}
+.tool-table th{background:var(--bg-subtle);font-size:var(--fs-kpi-label);font-weight:500}
+.tool-table td{padding:var(--space-2) var(--space-3)}
+.pill{border-radius:var(--radius-tag);font-size:var(--fs-kpi-label)}
+.rvol-cell{border-radius:var(--radius);box-shadow:none!important}
+.rvol-cell:hover{transform:none}
+</style>
