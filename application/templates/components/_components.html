@@ -1,0 +1,149 @@
+{% from "_icons.html" import icon %}
+
+{% macro Card(title='', actions='', flush=false, compact=false) -%}
+<section class="ds-card">
+    {% if title or actions %}
+    <header class="ds-card-header">
+        <h2 class="ds-card-title">{{ title }}</h2>
+        <div class="ds-card-actions">{{ actions }}</div>
+    </header>
+    {% endif %}
+    <div class="ds-card-body{% if flush %} is-flush{% elif compact %} is-compact{% endif %}">{{ caller() }}</div>
+</section>
+{%- endmacro %}
+
+{% macro Button(label, variant='secondary', size='normal', type='button', disabled=false) -%}
+<button class="ds-button ds-button-{{ variant }}{% if size == 'small' %} ds-button-small{% elif size == 'large' %} ds-button-large{% endif %}"
+        type="{{ type }}"{% if disabled %} disabled{% endif %}>{{ label }}</button>
+{%- endmacro %}
+
+{% macro Input(id, label, placeholder='', type='text', value='', help='') -%}
+<label class="ds-field" for="{{ id }}">
+    <span class="ds-field-label">{{ label }}</span>
+    <input class="ds-input" id="{{ id }}" name="{{ id }}" type="{{ type }}"
+           placeholder="{{ placeholder }}" value="{{ value }}">
+    {% if help %}<span class="ds-field-help">{{ help }}</span>{% endif %}
+</label>
+{%- endmacro %}
+
+{% macro Tabs(items, label='Page tabs') -%}
+<nav class="ds-tabs" role="tablist" aria-label="{{ label }}">
+    {% for item in items %}
+    <a class="ds-tab{% if item.active %} is-active{% endif %}" href="{{ item.href }}"
+       role="tab"{% if item.active %} aria-selected="true"{% else %} aria-selected="false"{% endif %}>{{ item.label }}</a>
+    {% endfor %}
+</nav>
+{%- endmacro %}
+
+{% macro Chip(label, active=false) -%}
+<button class="ds-chip{% if active %} is-active{% endif %}" type="button"
+        {% if active %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>{{ label }}</button>
+{%- endmacro %}
+
+{% macro Badge(label, tone='neutral') -%}
+<span class="ds-badge ds-badge-{{ tone }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro Tooltip(label, content) -%}
+<span class="ds-tooltip" tabindex="0" aria-label="{{ label }}" data-tooltip="{{ content }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro InfoTooltip(content, label='More information') -%}
+<span class="ds-info-tooltip" tabindex="0" aria-label="{{ label }}" data-tooltip="{{ content }}">i</span>
+{%- endmacro %}
+
+{% macro DataTable(headers, rows, compact=false, label='Data table') -%}
+<section class="ds-table-component" data-ds-table data-page-size="20">
+    <div class="ds-table-toolbar">
+        <label class="ds-table-search">
+            <span class="ds-visually-hidden">Search {{ label }}</span>
+            <input class="ds-input" type="search" data-table-search placeholder="Search table">
+        </label>
+        <details class="ds-column-picker">
+            <summary>Columns</summary>
+            <div class="ds-column-options">
+                {% for header in headers %}
+                <label><input type="checkbox" data-column-index="{{ loop.index0 }}" checked> {{ header.label }}</label>
+                {% endfor %}
+            </div>
+        </details>
+        <button class="ds-button ds-button-secondary ds-button-small" type="button" data-table-density aria-pressed="{{ 'true' if compact else 'false' }}">Compact</button>
+        <button class="ds-button ds-button-secondary ds-button-small" type="button" data-table-export>Export CSV</button>
+    </div>
+    <div class="ds-table-scroll">
+    <table class="ds-table{% if compact %} is-compact{% endif %}" aria-label="{{ label }}">
+        <thead><tr>
+            {% for header in headers %}
+            <th scope="col" aria-sort="none"{% if header.numeric|default(false) %} class="is-numeric"{% endif %}>
+                {% if header.sortable|default(true) %}
+                <button class="ds-table-sort" type="button" data-table-sort="{{ loop.index0 }}" aria-label="Sort by {{ header.label }}">{{ header.label }}{{ icon('arrow-up-down', 12) }}</button>
+                {% else %}{{ header.label }}{% endif %}
+            </th>
+            {% endfor %}
+        </tr></thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                {% for header in headers %}
+                <td{% if header.numeric|default(false) %} class="is-numeric"{% endif %}>{{ row[header.key] }}</td>
+                {% endfor %}
+            </tr>
+            {% else %}
+            <tr><td class="ds-table-empty" colspan="{{ headers|length }}">No data available.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <div class="ds-table-pagination" aria-label="Table pagination">
+        <span data-table-page-info></span>
+        <div>
+            <button class="ds-button ds-button-secondary ds-button-small" type="button" data-table-prev aria-label="Previous page">Previous</button>
+            <button class="ds-button ds-button-secondary ds-button-small" type="button" data-table-next aria-label="Next page">Next</button>
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro KpiStrip(items) -%}
+<section class="ds-kpi-strip" style="--ds-kpi-columns: {{ items|length }}" aria-label="Key metrics">
+    {% for item in items %}
+    <div class="ds-kpi">
+    <div class="ds-kpi-label-row">
+        <span class="ds-kpi-label">{{ item.label }}</span>
+        {% if item.help %}<span class="ds-kpi-info" tabindex="0" aria-label="About {{ item.label }}" data-tooltip="{{ item.help }}">i</span>{% endif %}
+    </div>
+        <div class="ds-kpi-value{% if item.numeric|default(true) %} is-numeric{% endif %}">{{ item.value }}</div>
+        {% if item.detail %}<div class="ds-kpi-detail">{{ item.detail }}</div>{% endif %}
+    </div>
+    {% endfor %}
+</section>
+{%- endmacro %}
+
+{% macro ChartCard(title, legend='') -%}
+<section class="ds-card ds-chart-card">
+    <header class="ds-card-header">
+        <h2 class="ds-card-title">{{ title }}</h2>
+        {% if legend %}<div class="ds-chart-legend">{{ legend }}</div>{% endif %}
+    </header>
+    <div class="ds-chart-body">{{ caller() }}</div>
+</section>
+{%- endmacro %}
+
+{% macro Skeleton(lines=3) -%}
+<div class="ds-skeleton" aria-label="Loading" role="status">
+    {% for _ in range(lines) %}<span class="ds-skeleton-line"></span>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro EmptyState(title, message) -%}
+<div class="ds-state ds-empty-state">
+    <h3>{{ title }}</h3><p>{{ message }}</p>
+</div>
+{%- endmacro %}
+
+{% macro ErrorState(title, message, retry_href='') -%}
+<div class="ds-state ds-error-state" role="alert">
+    <h3>{{ title }}</h3><p>{{ message }}</p>
+    {% if retry_href %}<a class="ds-button ds-button-secondary" href="{{ retry_href }}">Retry</a>{% endif %}
+</div>
+{%- endmacro %}

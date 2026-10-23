@@ -91,6 +91,7 @@
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>Save profile</button>
+                                <button type="reset" class="btn btn-outline-secondary">Cancel</button>
                             </div>
                         </form>
                     </div>
@@ -117,6 +118,16 @@
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="settingCompactSidebar" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-label">Compact tables</div>
+                                <div class="setting-desc">Reduce table row spacing for denser data views.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingCompactTables" />
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
@@ -228,6 +239,7 @@
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-shield-halved me-1"></i>Update password</button>
+                                <button type="reset" class="btn btn-outline-secondary">Cancel</button>
                             </div>
                         </form>
                     </div>
@@ -284,7 +296,7 @@
 
     // --- Preferences store (localStorage) ---
     const DEFAULTS = {
-        ppTheme: 'light',
+        fcTheme: 'light',
         ppCompactSidebar: false,
         ppPriceAlerts: true,
         ppNewsHighlights: true,
@@ -293,7 +305,8 @@
         ppNumberFormat: 'indian',
         ppChartType: 'line',
         ppSectorTags: true,
-        ppAutoLogout: '0'
+        ppAutoLogout: '0',
+        fcCompactTables: false
     };
 
     function getPref(key) {
@@ -327,13 +340,13 @@
     }
 
     // Dark mode
-    bindToggle('settingDarkMode', 'ppTheme', on => {
+    bindToggle('settingDarkMode', 'fcTheme', on => {
         document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
-        setPref('ppTheme', on ? 'dark' : 'light');
+        setPref('fcTheme', on ? 'dark' : 'light');
     });
     // Init checkbox from current theme state
     const dmEl = document.getElementById('settingDarkMode');
-    if (dmEl) dmEl.checked = (getPref('ppTheme') === 'dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+    if (dmEl) dmEl.checked = (getPref('fcTheme') === 'dark') || document.documentElement.getAttribute('data-theme') === 'dark';
 
     // Compact sidebar
     bindToggle('settingCompactSidebar', 'ppCompactSidebar', on => {
@@ -347,10 +360,14 @@
     bindToggle('settingNewsHighlights', 'ppNewsHighlights');
     bindToggle('settingInsightReminders', 'ppInsightReminders');
     bindToggle('settingSectorTags', 'ppSectorTags');
+    bindToggle('settingCompactTables', 'fcCompactTables', on => {
+        document.body.dataset.density = on ? 'compact' : 'comfortable';
+    });
     bindSelect('settingCurrency', 'ppCurrency');
     bindSelect('settingNumberFormat', 'ppNumberFormat');
     bindSelect('settingChartType', 'ppChartType');
     bindSelect('settingAutoLogout', 'ppAutoLogout');
+    document.body.dataset.density = getPref('fcCompactTables') ? 'compact' : 'comfortable';
 
     // Reset
     document.getElementById('resetPrefsBtn')?.addEventListener('click', () => {

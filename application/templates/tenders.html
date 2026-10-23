@@ -1,31 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
-<style>
-.signal-section-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;font-size:1.05rem;font-weight:700;color:var(--text)}
-.signal-section-title .pill{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.3px}
-.signal-section-title .pill.hot{background:linear-gradient(135deg,#fee2e2,#fed7aa);color:#9a3412;border:1px solid #fdba74}
-.signal-section-title .pill.regular{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)}
-.signal-section-title .count-chip{font-size:.72rem;font-weight:600;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:8px}
-.signal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);margin:8px 0 16px}
-.tender-card.high-conviction{position:relative;border-width:2px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
-.tender-card.high-conviction.tender-bullish{border-color:#16a34a;background:linear-gradient(135deg,rgba(22,163,74,.04),rgba(22,163,74,.01))}
-.tender-card.high-conviction.tender-bearish{border-color:#dc2626;background:linear-gradient(135deg,rgba(220,38,38,.04),rgba(220,38,38,.01))}
-.tender-card .high-flag{position:absolute;top:-9px;right:12px;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:6px;text-transform:uppercase}
-.tender-card .high-flag.bull{background:#16a34a;color:#fff}
-.tender-card .high-flag.bear{background:#dc2626;color:#fff}
-.tender-card .catalyst-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-.tender-card .catalyst-chip{font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--text-muted);text-transform:capitalize}
-.tender-card.high-conviction.tender-bullish .catalyst-chip{background:#dcfce7;color:#14532d}
-.tender-card.high-conviction.tender-bearish .catalyst-chip{background:#fee2e2;color:#7f1d1d}
-[data-theme="dark"] .signal-section-title .pill.hot{background:#3f1d11;color:#fed7aa;border-color:#7c2d12}
-[data-theme="dark"] .tender-card.high-conviction.tender-bullish .catalyst-chip{background:#064e3b;color:#a7f3d0}
-[data-theme="dark"] .tender-card.high-conviction.tender-bearish .catalyst-chip{background:#450a0a;color:#fecaca}
-.disclaimer-tip{font-size:.75rem;color:var(--text-muted);margin-top:6px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid #f59e0b}
-</style>
-<div class="tenders-page">
+<div class="tenders-page markets-page">
     <header class="page-header">
-        <h1><i class="fa-solid fa-newspaper me-2"></i>News & Trends</h1>
-        <p>AI-classified Indian stock news. {% if last_updated %}Updated {{ last_updated }}.{% endif %}</p>
+        <div>
+            <h1>News &amp; Events</h1>
+            <p>Indian market headlines and upcoming corporate events. {% if last_updated %}Updated {{ last_updated }}.{% endif %}</p>
+        </div>
+        <button id="refreshTendersBtn" class="btn btn-secondary btn-sm" type="button">Refresh</button>
     </header>
 
     {% set high_items = stocks | selectattr('conviction', 'equalto', 'high') | list %}
@@ -33,15 +14,10 @@
 
     <div class="tenders-header-row">
         <div class="tenders-stats">
-            <span class="tender-stat"><i class="fa-solid fa-fire" style="color:#f97316"></i>&nbsp;High conviction: {{ high_items | length }}</span>
-            <span class="tender-stat"><span class="pip up"></span>Bullish: {{ stocks | selectattr('sentiment', 'equalto', 'bullish') | list | length }}</span>
-            <span class="tender-stat"><span class="pip down"></span>Bearish: {{ stocks | selectattr('sentiment', 'equalto', 'bearish') | list | length }}</span>
+            <span class="tender-stat">High conviction: {{ high_items | length }}</span>
+            <span class="tender-stat">Bullish: {{ stocks | selectattr('sentiment', 'equalto', 'bullish') | list | length }}</span>
+            <span class="tender-stat">Bearish: {{ stocks | selectattr('sentiment', 'equalto', 'bearish') | list | length }}</span>
             <span class="tender-stat">Total: {{ stocks | length }}</span>
-        </div>
-        <div class="d-flex gap-2">
-            <button id="refreshTendersBtn" class="btn btn-outline-primary btn-sm">
-                <i class="fa-solid fa-arrows-rotate me-1"></i>Refresh
-            </button>
         </div>
     </div>
 
@@ -52,26 +28,25 @@
         <button class="tender-filter-btn" data-filter="bearish">Bearish</button>
     </div>
 
+    <div class="news-content-grid">
+      <main class="news-feed" aria-label="Market news">
     {% if stocks %}
 
     {# ── HIGH CONVICTION SECTION ─────────────────────────────────────── #}
     {% if high_items %}
     <div class="signal-section-title" data-section="high">
-        <i class="fa-solid fa-fire" style="color:#f97316"></i>
-        Sure-shot signals
+        High-impact headlines
         <span class="pill hot">High conviction</span>
         <span class="count-chip">{{ high_items | length }}</span>
     </div>
     <div class="disclaimer-tip">
-        <i class="fa-solid fa-circle-info me-1"></i>
-        These headlines contain strong catalysts (buyback, order win, downgrade, fraud probe, etc.) that historically move the price the same day.
-        <strong>Always verify on the source before trading — this is signal, not advice.</strong>
+        Headlines are classified by detected catalysts and sentiment. Classification is informational and does not indicate a trade recommendation.
     </div>
     <div class="tenders-grid" id="highConvictionGrid">
         {% for stock in high_items %}
         <div class="tender-card high-conviction {% if stock.sentiment == 'bullish' %}tender-bullish{% elif stock.sentiment == 'bearish' %}tender-bearish{% else %}tender-neutral{% endif %}" data-sentiment="{{ stock.sentiment }}" data-conviction="high" data-stock="{{ stock.stock }}" data-summary="{{ stock.summary }}" data-time="{{ stock.time | default('Recently') }}">
             <span class="high-flag {% if stock.sentiment == 'bullish' %}bull{% else %}bear{% endif %}">
-                <i class="fa-solid fa-fire me-1"></i>{% if stock.sentiment == 'bullish' %}Strong buy signal{% else %}Strong sell signal{% endif %}
+                {% if stock.sentiment == 'bullish' %}Bullish catalyst{% else %}Bearish catalyst{% endif %}
             </span>
             <div class="tender-card-header">
                 <span class="tender-stock-name">{{ stock.stock }}</span>
@@ -80,7 +55,7 @@
                 {% elif stock.sentiment == "bearish" %}
                     <span class="badge-soft badge-soft-danger"><i class="fa-solid fa-arrow-down"></i> Bearish</span>
                 {% else %}
-                    <span class="badge-soft" style="background:var(--surface-2);color:var(--text-muted)"><i class="fa-solid fa-minus"></i> Neutral</span>
+                    <span class="badge-soft news-neutral">Neutral</span>
                 {% endif %}
             </div>
             <div class="tender-card-body">{{ stock.summary }}</div>
@@ -116,7 +91,7 @@
                 {% elif stock.sentiment == "bearish" %}
                     <span class="badge-soft badge-soft-danger"><i class="fa-solid fa-arrow-down"></i> Bearish</span>
                 {% else %}
-                    <span class="badge-soft" style="background:var(--surface-2);color:var(--text-muted)"><i class="fa-solid fa-minus"></i> Neutral</span>
+                    <span class="badge-soft news-neutral">Neutral</span>
                 {% endif %}
             </div>
             <div class="tender-card-body">{{ stock.summary }}</div>
@@ -142,6 +117,19 @@
         </div>
     </div>
     {% endif %}
+      </main>
+      <aside aria-label="Market calendars">
+        <section class="news-calendar-card">
+          <h2>Earnings Calendar</h2>
+          <div class="news-calendar-meta">Upcoming reports from the available company calendar feed</div>
+          <div id="newsEarningsCalendar"><div class="market-widget-empty">Loading earnings calendar…</div></div>
+        </section>
+        <section class="news-calendar-card">
+          <h2>Economic Calendar</h2>
+          <div class="market-widget-empty">Economic event data is not provided by the current application feeds.</div>
+        </section>
+      </aside>
+    </div>
 </div>
 
 <script>
@@ -187,5 +175,40 @@ async function refreshTenders(e) {
         btn.disabled = false; btn.innerHTML = original; appAlert('Network error.', 'danger');
     }
 }
+
+async function loadNewsEarningsCalendar() {
+    const target = document.getElementById('newsEarningsCalendar');
+    try {
+        const response = await fetch('/api/investing-tools/earnings', { credentials: 'same-origin' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const events = (payload.events || []).slice(0, 12);
+        if (!events.length) {
+            target.innerHTML = '<div class="market-widget-empty">No upcoming earnings dates are available.</div>';
+            return;
+        }
+        const rows = events.map(event => {
+            const date = event.earnings_date
+                ? window.FCFormat.date(event.earnings_date)
+                : '<span class="market-na" title="Earnings date is unavailable">N/A</span>';
+            const days = event.days_until !== null && event.days_until !== undefined && Number.isFinite(Number(event.days_until))
+                ? window.FCFormat.number(Number(event.days_until), 0)
+                : '<span class="market-na" title="Days until event are unavailable">N/A</span>';
+            return `<tr><td>${escapeCalendarText(event.symbol || 'N/A')}</td><td>${date}</td><td class="num">${days}</td></tr>`;
+        }).join('');
+        target.innerHTML = `<div class="table-responsive"><table class="news-calendar-table"><thead><tr><th>Symbol</th><th>Date</th><th>Days</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    } catch (error) {
+        target.innerHTML = `<div class="market-widget-empty market-widget-error">Earnings calendar could not be loaded (${escapeCalendarText(error.message)}).<div><button type="button" class="market-retry-btn" id="newsCalendarRetry">Retry</button></div></div>`;
+        document.getElementById('newsCalendarRetry').addEventListener('click', loadNewsEarningsCalendar);
+    }
+}
+
+function escapeCalendarText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+}
+
+loadNewsEarningsCalendar();
 </script>
 {% endblock %}

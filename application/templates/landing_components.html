@@ -1,0 +1,460 @@
+{% from "_icons.html" import icon %}
+{% from "components/_components.html" import Card, Button, Badge, Tabs, DataTable %}
+
+{% macro LandingNav(signup_url, login_url) -%}
+<header class="landing-header">
+    <nav class="landing-nav container-x" aria-label="Main navigation">
+        <a class="brand-wordmark" href="#top" aria-label="financeCandle home"><span>finance</span><span>Candle</span></a>
+        <button class="nav-menu-button" type="button" aria-label="Open navigation menu" aria-controls="primary-navigation" aria-expanded="false" data-menu-toggle>{{ icon('menu', 20) }}</button>
+        <div class="nav-links" id="primary-navigation">
+            <a href="#features">Features</a>
+            <a href="#markets">Markets</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#learn">Learn</a>
+            <a href="#contact">Contact</a>
+            <div class="nav-mobile-actions">
+                <a class="ds-button ds-button-ghost" href="{{ login_url }}">Log in</a>
+                <form action="{{ signup_url }}" method="get">{{ Button('Get started free', 'primary', 'normal', 'submit') }}</form>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <a class="ds-button ds-button-ghost" href="{{ login_url }}">Log in</a>
+            <a class="ds-button ds-button-primary" href="{{ signup_url }}">Get started free</a>
+        </div>
+    </nav>
+</header>
+{%- endmacro %}
+
+{% macro MarketTicker() -%}
+<div class="market-ticker" aria-label="Market ticker, sample values">
+    <div class="container-x ticker-inner">
+        <span class="ticker-caption">Sample values</span>
+        <div class="ticker-item"><span class="ticker-name">NIFTY 50</span><span class="ticker-value" data-fc-format="number" data-value="22530.15">22,530.15</span><span class="market-positive">▲ <span data-fc-format="percent" data-value="0.42">+0.42%</span></span></div>
+        <div class="ticker-item"><span class="ticker-name">SENSEX</span><span class="ticker-value" data-fc-format="number" data-value="74119.39">74,119.39</span><span class="market-positive">▲ <span data-fc-format="percent" data-value="0.31">+0.31%</span></span></div>
+        <div class="ticker-item"><span class="ticker-name">BANK NIFTY</span><span class="ticker-value" data-fc-format="number" data-value="48170.55">48,170.55</span><span class="market-negative">▼ <span data-fc-format="percent" data-value="-0.18">−0.18%</span></span></div>
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro Hero(signup_url) -%}
+<section class="hero-section section-pad" id="top" aria-labelledby="hero-title">
+    <div class="container-x hero-grid">
+        <div class="hero-copy">
+            <p class="eyebrow">Market analytics for Indian traders</p>
+            <h1 id="hero-title">Market analysis built for day and swing traders</h1>
+            <p class="hero-subtitle">Use market scanners, technical analysis, options analytics and portfolio risk metrics in one workspace.</p>
+            <div class="hero-actions">
+            <form action="{{ signup_url }}" method="get">{{ Button('Get started free', 'primary', 'large', 'submit') }}</form>
+                <a class="ds-button ds-button-secondary ds-button-large" href="#features">See features</a>
+            </div>
+        </div>
+        <div class="product-frame" role="img" aria-label="Placeholder for a financeCandle dashboard screenshot; add a real product capture before launch">
+            <div class="browser-bar" aria-hidden="true"><span></span><span></span><span></span><b>Dashboard preview</b></div>
+            <div class="screenshot-placeholder">
+                <span class="placeholder-label">Product screenshot required</span>
+                <strong>Dashboard / Advanced Metrics</strong>
+                <span>Replace this frame with an application screenshot.</span>
+            </div>
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro StatStrip() -%}
+<section class="stat-strip-wrap" aria-label="Product coverage">
+    <div class="container-x">
+        <div class="stat-strip">
+            <div class="stat-item"><strong>504</strong><span>NSE stocks at the widest scan tier</span></div>
+            <div class="stat-item"><strong>26</strong><span>Scans and screeners</span></div>
+            <div class="stat-item"><strong>14</strong><span>Technical indicators</span></div>
+            <div class="stat-item"><strong>15s</strong><span>Quote refresh in market hours</span></div>
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro MarketSnapshot(dashboard_url) -%}
+<section class="content-section section-pad section-bordered" id="markets" aria-labelledby="markets-title">
+    <div class="container-x">
+        <div class="section-heading section-heading-row">
+            <div>
+                <h2 id="markets-title">Market snapshot</h2>
+                <p class="section-subtitle">Illustrative market table and index summaries.</p>
+            </div>
+            <a class="text-link" href="{{ dashboard_url }}">Open dashboard {{ icon('arrow-up-right', 14) }}</a>
+        </div>
+        <div class="market-layout">
+            <div class="market-table-panel">
+                <p class="sample-note">{{ Badge('Sample data', 'info') }}</p>
+                <div class="ds-tabs market-tabs" role="tablist" aria-label="Market movers" data-tablist>
+                    <button class="ds-tab is-active" type="button" role="tab" id="gainers-tab" aria-controls="gainers-panel" aria-selected="true">Top gainers</button>
+                    <button class="ds-tab" type="button" role="tab" id="losers-tab" aria-controls="losers-panel" aria-selected="false" tabindex="-1">Top losers</button>
+                </div>
+                <div id="gainers-panel" class="market-gainers" role="tabpanel" aria-labelledby="gainers-tab">
+                    {% set headers = [{'key': 'name', 'label': 'Company'}, {'key': 'price', 'label': 'LTP', 'numeric': true}, {'key': 'change', 'label': 'Change', 'numeric': true}] %}
+                    {% set rows = [
+                        {'name': 'Reliance Industries · RELIANCE', 'price': '₹1,245.60', 'change': '+1.85%'},
+                        {'name': 'Tata Motors · TATAMOTORS', 'price': '₹812.30', 'change': '+1.42%'},
+                        {'name': 'Infosys · INFY', 'price': '₹1,538.20', 'change': '+1.16%'},
+                        {'name': 'ICICI Bank · ICICIBANK', 'price': '₹1,092.75', 'change': '+0.92%'},
+                        {'name': 'Larsen & Toubro · LT', 'price': '₹3,412.00', 'change': '+0.68%'}
+                    ] %}
+                    {{ DataTable(headers, rows, true, 'Sample top gainers') }}
+                </div>
+                <div id="losers-panel" class="market-losers" role="tabpanel" aria-labelledby="losers-tab" hidden>
+                    {% set rows = [
+                        {'name': 'Hindustan Unilever · HINDUNILVR', 'price': '₹2,436.50', 'change': '−1.32%'},
+                        {'name': 'TCS · TCS', 'price': '₹3,812.40', 'change': '−1.08%'},
+                        {'name': 'Wipro · WIPRO', 'price': '₹492.15', 'change': '−0.86%'},
+                        {'name': 'Asian Paints · ASIANPAINT', 'price': '₹2,782.60', 'change': '−0.63%'},
+                        {'name': 'ITC · ITC', 'price': '₹428.80', 'change': '−0.41%'}
+                    ] %}
+                    {{ DataTable(headers, rows, true, 'Sample top losers') }}
+                </div>
+            </div>
+            <div class="index-summary">
+                <p class="sample-note">{{ Badge('Sample data', 'info') }}</p>
+                {% call Card('Index summary') %}
+                {% for item in [
+                    {'name': 'NIFTY 50', 'value': '22,530.15', 'data': '22530.15', 'change': '+0.42%', 'state': 'market-positive', 'points': '0,18 18,16 36,19 54,9 72,12 90,4'},
+                    {'name': 'SENSEX', 'value': '74,119.39', 'data': '74119.39', 'change': '+0.31%', 'state': 'market-positive', 'points': '0,17 18,12 36,15 54,7 72,10 90,5'},
+                    {'name': 'BANK NIFTY', 'value': '48,170.55', 'data': '48170.55', 'change': '−0.18%', 'state': 'market-negative', 'points': '0,5 18,8 36,4 54,13 72,10 90,18'}
+                ] %}
+                <div class="index-row">
+                    <div class="index-row-top"><span>{{ item.name }}</span><strong data-fc-format="number" data-value="{{ item.data }}">{{ item.value }}</strong></div>
+                    <div class="index-row-bottom"><span class="{{ item.state }}">{{ item.change }}</span>
+                        <svg class="sparkline {{ item.state }}" viewBox="0 0 90 22" role="img" aria-label="{{ item.name }} sample trend"><polyline points="{{ item.points }}" /></svg>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endcall %}
+            </div>
+        </div>
+        <p class="market-disclaimer">Delayed data; for information only. The figures above are sample values and are not live market data.</p>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro FeatureTabs(signup_url) -%}
+<section class="content-section section-pad" id="features" aria-labelledby="features-title">
+    <div class="container-x">
+        <div class="section-heading">
+            <h2 id="features-title">Tools for different trading workflows</h2>
+            <p class="section-subtitle">Explore the screens and analytics available in financeCandle.</p>
+        </div>
+        {% set tabs = [
+            {'label': 'Day trading', 'href': '#day-trading', 'active': true},
+            {'label': 'Swing trading', 'href': '#swing-trading', 'active': false},
+            {'label': 'Options', 'href': '#options', 'active': false},
+            {'label': 'Portfolio analytics', 'href': '#portfolio-analytics', 'active': false}
+        ] %}
+        <div data-tablist>{{ Tabs(tabs, 'Trader workflow') }}</div>
+        {% for tab in [
+            {'id': 'day-trading', 'title': 'Intraday Scanner', 'icon': 'scan-search', 'active': true, 'features': [
+                ('Intraday Scanner', 'Scan 25, 50, 100 or all 112 liquid NSE stocks with RSI, MACD, EMA crossover and VWAP on 15-minute bars.'),
+                ('Intraday tool suite', 'ORB, relative-volume heatmap, pre-market gappers, pivot confluence, momentum bursts, index basis and sector rotation.'),
+                ('Market Pulse', 'Market breadth, gainers and losers, plus NSE announcements, corporate actions and board meetings.')
+            ]},
+            {'id': 'swing-trading', 'title': 'Swing Tools', 'icon': 'line-chart', 'active': false, 'features': [
+                ('Swing Tools', 'Breakouts from consolidation, relative strength vs NIFTY, chart patterns, 52-week-high proximity and pocket pivots.'),
+                ('Swing scanner', 'Looks for Stage-2 uptrends, VCP setups, relative-strength leadership and pivot breakouts on volume.'),
+                ('Sector rotation', 'Relative Rotation Graph with Leading, Weakening, Lagging and Improving quadrants.')
+            ]},
+            {'id': 'options', 'title': 'Options Analytics', 'icon': 'bar-chart', 'active': false, 'features': [
+                ('Option chain', 'NIFTY 50 open-interest ladder with PCR and max-pain, plus support and resistance from peak OI.'),
+                ('Pre-open analysis', 'Option-chain bias captured before 09:15 and compared with the actual NIFTY open.'),
+                ('F&O Gap Forecast', 'Per-stock gap forecasts built from OI and price data, each graded against the next session open.')
+            ]},
+            {'id': 'portfolio-analytics', 'title': 'Advanced Metrics', 'icon': 'briefcase', 'active': false, 'features': [
+                ('Portfolio analysis', 'Holdings, P/L, sector allocation and AI commentary on a single position or the whole portfolio.'),
+                ('Advanced Metrics', 'Sharpe, Sortino, Treynor and Calmar ratios, beta vs NIFTY 50, VaR / CVaR, drawdown and stress scenarios.'),
+                ('Watchlist and alerts', 'Grouped watchlists plus price, %-change, volume and RSI alerts evaluated on every refresh.')
+            ]}
+        ] %}
+        <div class="feature-panel" id="{{ tab.id }}" role="tabpanel" aria-label="{{ tab.title }} panel" {% if not tab.active %}hidden{% endif %}>
+            <div class="feature-list">
+                {% for feature in tab.features %}
+                <div class="feature-row">
+                    <span class="feature-icon">{{ icon(tab.icon, 18) }}</span>
+                    <div><h3>{{ feature[0] }}</h3><p>{{ feature[1] }}</p></div>
+                </div>
+                {% endfor %}
+                <a class="text-link" href="{{ signup_url }}">Explore features {{ icon('arrow-up-right', 14) }}</a>
+            </div>
+            <div class="feature-preview" role="img" aria-label="Placeholder for {{ tab.title }} product screenshot">
+                <span class="placeholder-label">Product screenshot required</span>
+                <strong>{{ tab.title }}</strong>
+                <span>Replace this frame with a current application capture.</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro FeatureGrid() -%}
+<section class="content-section section-pad section-tinted" aria-labelledby="feature-grid-title">
+    <div class="container-x">
+        <div class="section-heading">
+            <h2 id="feature-grid-title">More ways to research the market</h2>
+            <p class="section-subtitle">A concise view of additional tools across the workspace.</p>
+        </div>
+        <div class="feature-grid">
+            {% for item in [
+                {
+                    'title': 'Intraday Scanner', 'icon': 'scan-search',
+                    'summary': 'Rank the strongest intraday setups across the tracked NSE universe.',
+                    'detail': 'Pick a scan size of 25, 50, 100 or the full 112-name liquid universe. Each pass ranks 15-minute-bar setups with RSI, MACD, EMA crossover and VWAP, and every result opens a detail view with the signals behind its score.',
+                    'points': ['Tiers: 25 / 50 / 100 / 112 stocks', 'RSI · MACD · EMA crossover · VWAP', 'Per-stock signal detail and past scans'],
+                    'availability': 'Included on every plan'
+                },
+                {
+                    'title': 'Volume Shockers', 'icon': 'bar-chart',
+                    'summary': 'Find the symbols trading far above their normal volume.',
+                    'detail': 'Compares each symbol\'s cumulative volume today with its 10-day average and sorts by the volume multiple, so 3× or more stands out as genuine participation. Signals combine the multiple with price change, and the scan refreshes every 15 seconds while the market is open.',
+                    'points': ['Volume multiple vs the 10-day average', 'Signals weighted by price change', 'Live refresh every 15 seconds'],
+                    'availability': 'Elite plan'
+                },
+                {
+                    'title': 'AI Assistant', 'icon': 'robot',
+                    'summary': 'Ask about a stock, a scan result or your whole portfolio.',
+                    'detail': 'Replies stream in with the analysis context attached, so you can follow up on a single stock or run one pass over every holding. Quotas grow with the plan: 3 stock analyses and 5 chats a day on Free, 100 analyses and 100,000 tokens on Pro, 500 analyses with unlimited tokens on Elite.',
+                    'points': ['Single-stock and bulk portfolio analyses', 'Streaming answers with context attached', 'Monthly token quotas, reset on the 1st'],
+                    'availability': 'Every plan — quotas grow with Pro and Elite'
+                },
+                {
+                    'title': 'Stock Screener', 'icon': 'sliders',
+                    'summary': 'Filter the universe on fundamentals and price action together.',
+                    'detail': 'Narrow NSE stocks on P/E, ROE, debt/equity, revenue growth, market cap, volume multiple and 1M / 3M / 52-week returns, then filter by sector and choose which columns to show. The screening universe is built once and cached, so filters run in the browser without a round-trip.',
+                    'points': ['P/E · ROE · D/E · revenue growth · market cap', 'Volume multiple plus 1M / 3M / 52W returns', 'Sector filters, search and column picker'],
+                    'availability': 'Included on every plan'
+                },
+                {
+                    'title': 'Options Analytics', 'icon': 'line-chart',
+                    'summary': 'Read the NIFTY option chain and open-interest positioning.',
+                    'detail': 'The NIFTY 50 option chain gives you the open-interest ladder, PCR and max-pain, with support and resistance read off the highest put and call OI. The pre-open bias is saved and graded against the actual open, so you can see how the read has performed.',
+                    'points': ['OI ladder, PCR and max pain', 'Support and resistance from peak OI', 'Pre-open bias graded on the real open'],
+                    'availability': 'Elite plan'
+                },
+                {
+                    'title': 'Advanced Metrics', 'icon': 'briefcase',
+                    'summary': 'Measure portfolio risk and return, not just profit and loss.',
+                    'detail': 'Portfolio-level analytics cover Sharpe, Sortino, Treynor and Calmar ratios, beta and cumulative return against NIFTY 50, VaR / CVaR, drawdown, monthly returns, HHI concentration, sector allocation and stress scenarios.',
+                    'points': ['Sharpe · Sortino · Treynor · Calmar', 'Beta and performance vs NIFTY 50', 'VaR / CVaR, drawdown and stress tests'],
+                    'availability': 'Elite plan'
+                }
+            ] %}
+            <article class="feature-cell">
+                <span class="feature-grid-icon">{{ icon(item.icon, 20) }}</span>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.summary }}</p>
+                <button class="text-link feature-more-trigger" type="button" aria-expanded="false" aria-controls="feature-detail-{{ loop.index }}" data-accordion-trigger><span class="feature-more-open">Learn more</span><span class="feature-more-shut">Show less</span>{{ icon('chevron-right', 13) }}</button>
+                <div class="feature-detail" id="feature-detail-{{ loop.index }}" hidden>
+                    <p>{{ item.detail }}</p>
+                    <ul>{% for point in item.points %}<li>{{ point }}</li>{% endfor %}</ul>
+                    <p class="feature-availability">{{ item.availability }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro HowItWorks() -%}
+<section class="content-section section-pad" id="learn" aria-labelledby="how-title">
+    <div class="container-x">
+        <div class="section-heading">
+            <h2 id="how-title">How it works</h2>
+            <p class="section-subtitle">Start with a watchlist, then make analysis part of your routine.</p>
+        </div>
+        <div class="steps-grid">
+            {% for step in [
+                ('01', 'Create a free account', 'Set up an account to access the workspace.'),
+                ('02', 'Add your watchlist and portfolio', 'Organise the stocks and holdings you want to review.'),
+                ('03', 'Run scans and review analytics', 'Use available scanners and portfolio analytics to research.')
+            ] %}
+            <article class="step-item"><span class="step-number">{{ step[0] }}</span><h3>{{ step[1] }}</h3><p>{{ step[2] }}</p></article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro PlanNumber(value, note='') -%}
+{% if value is none %}Unlimited{% else %}{{ "{:,}".format(value) }}{% if note %} <span class="plan-value-note">({{ note }})</span>{% endif %}{% endif %}
+{%- endmacro %}
+
+{% macro PlanIncluded() -%}
+<span class="included-feature"><svg aria-hidden="true" viewBox="0 0 16 16" width="15" height="15" fill="none"><path d="m3 8 3 3 7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg> Included</span>
+{%- endmacro %}
+
+{% macro PlanExcluded() -%}
+<span class="muted-dash" aria-label="Not included">–</span>
+{%- endmacro %}
+
+{% macro PlanFeatureValue(plan_id, plan, feature) -%}
+{% set limits = plan.limits %}
+{% if feature == 'ai_single' %}
+    {{ PlanNumber(limits.ai_single, 'fair use' if plan_id == 'elite' else '') }}
+{% elif feature == 'ai_bulk' %}
+    {% if limits.ai_bulk %}{{ PlanNumber(limits.ai_bulk) }}{% else %}{{ PlanExcluded() }}{% endif %}
+{% elif feature in ('holdings', 'brokers', 'ai_chat_daily', 'ai_tokens_monthly') %}
+    {{ PlanNumber(limits[feature]) }}
+{% elif feature in ('intraday_scan', 'screener', 'alerts', 'exports') %}
+    {{ PlanIncluded() }}
+{% elif feature in ('intraday_tools', 'swing_tools', 'fundamentals') %}
+    {% if plan_id == 'free' %}{{ PlanExcluded() }}{% else %}{{ PlanIncluded() }}{% endif %}
+{% elif feature in ('options', 'volume', 'metrics') %}
+    {% if plan_id == 'elite' %}{{ PlanIncluded() }}{% else %}{{ PlanExcluded() }}{% endif %}
+{% else %}
+    {{ PlanExcluded() }}
+{% endif %}
+{%- endmacro %}
+
+{% macro PricingTable(plans, signup_url) -%}
+<section class="content-section section-pad section-bordered" id="pricing" aria-labelledby="pricing-title">
+    <div class="container-x">
+        <div class="section-heading section-heading-row">
+            <div><h2 id="pricing-title">Plans</h2><p class="section-subtitle">Monthly or yearly pricing in INR. Every new account starts with a 7-day Elite trial, no card required.</p></div>
+            <div class="pricing-toggle" role="group" aria-label="Billing period" data-pricing-toggle>
+                <button type="button" class="is-active" data-cycle="monthly" aria-pressed="true">Monthly</button>
+                <button type="button" data-cycle="annual" aria-pressed="false">Yearly</button>
+            </div>
+        </div>
+        {% set features = [
+            ('Portfolio holdings', 'holdings'),
+            ('Broker connections', 'brokers'),
+            ('AI stock analyses / month', 'ai_single'),
+            ('Bulk portfolio AI runs / month', 'ai_bulk'),
+            ('AI Assistant chat messages / day', 'ai_chat_daily'),
+            ('AI tokens / month', 'ai_tokens_monthly'),
+            ('Intraday scanner (25–112 stocks)', 'intraday_scan'),
+            ('Advanced intraday tools (ORB, RVOL, OI)', 'intraday_tools'),
+            ('Swing scans (breakout, RS, 52W high)', 'swing_tools'),
+            ('Stock screener', 'screener'),
+            ('Fundamentals lookup', 'fundamentals'),
+            ('Options analytics', 'options'),
+            ('Volume shockers', 'volume'),
+            ('Advanced metrics', 'metrics'),
+            ('Alerts (price, %, volume, RSI)', 'alerts'),
+            ('CSV exports', 'exports')
+        ] %}
+        <div class="pricing-scroll">
+            <table class="pricing-table">
+                <thead><tr>
+                    <th scope="col" class="feature-column">Plan features</th>
+                    {% for plan_id, plan in plans.items() %}
+                    <th scope="col" class="plan-column{% if plan.highlight|default(false) %} is-highlighted{% endif %}">
+                        <span class="plan-name">{{ plan.name }}</span>
+                        <span class="plan-tagline">{{ plan.tagline }}</span>
+                        {% if plan.highlight|default(false) %}{{ Badge('Most popular', 'info') }}{% endif %}
+                        <strong class="plan-price" data-monthly-price="{{ plan.price_monthly }}" data-annual-price="{{ plan.price_annual }}">
+                            {% if plan.price_monthly == 0 %}Free{% else %}₹{{ "{:,}".format(plan.price_monthly) }} / month{% endif %}
+                        </strong>
+                        <a href="{{ signup_url }}" class="ds-button {% if plan.highlight|default(false) %}ds-button-primary{% else %}ds-button-secondary{% endif %}">{% if plan.price_monthly == 0 %}Start free{% else %}Choose {{ plan.name }}{% endif %}</a>
+                    </th>
+                    {% endfor %}
+                </tr></thead>
+                <tbody>
+                    {% for feature in features %}
+                    <tr>
+                        <th scope="row" class="feature-column">{{ feature[0] }}</th>
+                        {% for plan_id, plan in plans.items() %}
+                        <td class="plan-column{% if plan.highlight|default(false) %} is-highlighted{% endif %}">
+                            {{ PlanFeatureValue(plan_id, plan, feature[1]) }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="pricing-cards">
+            {% for plan_id, plan in plans.items() %}
+            <article class="plan-card{% if plan.highlight|default(false) %} is-highlighted{% endif %}">
+                <div class="plan-card-heading">
+                    <div><h3>{{ plan.name }}</h3><span class="plan-tagline">{{ plan.tagline }}</span>{% if plan.highlight|default(false) %}{{ Badge('Most popular', 'info') }}{% endif %}</div>
+                    <strong class="plan-price" data-monthly-price="{{ plan.price_monthly }}" data-annual-price="{{ plan.price_annual }}">
+                        {% if plan.price_monthly == 0 %}Free{% else %}₹{{ "{:,}".format(plan.price_monthly) }} / month{% endif %}
+                    </strong>
+                </div>
+                <form action="{{ signup_url }}" method="get">{{ Button('Start free' if plan.price_monthly == 0 else 'Choose ' ~ plan.name, 'primary' if plan.highlight|default(false) else 'secondary', 'normal', 'submit') }}</form>
+                <details class="plan-features">
+                    <summary>View plan features</summary>
+                    <dl>
+                        {% for feature in features %}
+                        <div><dt>{{ feature[0] }}</dt><dd>{{ PlanFeatureValue(plan_id, plan, feature[1]) }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                </details>
+            </article>
+            {% endfor %}
+        </div>
+        <p class="pricing-note">AI quotas reset monthly on the 1st and chat messages reset daily at midnight IST; Elite AI usage is unlimited under fair use. All prices are in INR, and plans can be cancelled any time from the billing page.</p>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro FaqAccordion() -%}
+<section class="content-section section-pad" id="faq" aria-labelledby="faq-title">
+    <div class="container-x faq-layout">
+        <div class="section-heading"><h2 id="faq-title">Frequently asked questions</h2><p class="section-subtitle">A few details about the product and its data.</p></div>
+        <div class="faq-list">
+            {% for question, answer in [
+                ('Which exchanges are covered?', 'Indian data covers NSE cash equities and the NSE F&O segment, with BSE quote lookups where the data provider supports them. The liquidity-checked scan universe starts at 112 curated NSE names and extends to 504 symbols (the NIFTY 500 list plus mid-caps) for deeper swing scans. Options analytics cover the NIFTY 50 chain, and the Global Markets page tracks major US, European and Asian indices.'),
+                ('How frequently is data updated?', 'Quotes are polled every 15 seconds during market hours (09:15–15:30 IST) and cached in between, so every page in the workspace sees the same price. Scans and screeners are recomputed from intraday and daily bars (intraday scan results stay cached for five minutes), and option-chain snapshots are captured through the session. No plan uses exchange tick-by-tick data, and data may be delayed.'),
+                ('Is financeCandle a broker?', 'No. financeCandle provides analytics and portfolio tools; it is not a brokerage platform and never places orders. You connect a broker only to import your holdings.'),
+                ('Do you give investment advice?', 'No. financeCandle is an analytics and education platform, not a SEBI-registered investment adviser or research analyst. Scores, scans, signals and AI commentary are informational only, not recommendations to buy or sell.'),
+                ('Is there a free trial?', 'Yes. Every new account starts on a 7-day Elite trial with no card required, so you can use the options, volume and advanced-metrics tools before choosing a plan. When the trial ends the account moves to Free unless you subscribe.'),
+                ('How do I cancel?', 'Cancel any time from the billing page. The plan drops to Free immediately, nothing is charged for partial months, and your holdings, AI history and broker connections stay intact. Free keeps a 15-holding cap, so holdings beyond 15 stay visible but read-only until you upgrade or remove some.'),
+                ('How is my data stored?', 'Account, portfolio and event data live in Azure Table Storage. Passwords are stored as salted Werkzeug hashes rather than plain text, and broker access tokens are held in memory only — they are never written to storage. Usage counters and option-chain snapshots are kept as files on the application host.')
+            ] %}
+            {% set panel_id = 'faq-answer-' ~ loop.index %}
+            <div class="faq-item">
+                <h3><button class="faq-trigger" type="button" aria-expanded="false" aria-controls="{{ panel_id }}" data-accordion-trigger>{{ question }}{{ icon('chevron-down', 18) }}</button></h3>
+                <div class="faq-answer" id="{{ panel_id }}" hidden><p>{{ answer }}</p></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro CtaBand(signup_url, login_url) -%}
+<section class="cta-band section-pad" id="contact" aria-labelledby="cta-title">
+    <div class="container-x cta-content">
+        <div><h2 id="cta-title">Start analysing the market</h2><p>Explore scanners, market views and portfolio analytics in one workspace.</p></div>
+        <div class="cta-actions">
+            <a class="ds-button ds-button-primary ds-button-large" href="{{ signup_url }}">Get started free</a>
+            <a class="ds-button ds-button-secondary ds-button-large" href="{{ login_url }}">Log in</a>
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro RiskDisclosure() -%}
+<aside class="risk-disclosure" id="risk-disclosure" aria-label="Risk disclosure">
+    <p>financeCandle provides market data and analytical tools for informational and educational purposes only. It does not provide investment advice, and nothing on this site is a recommendation to buy or sell any security. Investments in securities markets are subject to market risks. Data may be delayed or inaccurate. Past performance is not indicative of future results.</p>
+    <p>financeCandle is not a SEBI-registered investment adviser or research analyst, and does not provide personalised advice.</p>
+</aside>
+{%- endmacro %}
+
+{% macro Footer(terms_url) -%}
+<footer class="site-footer">
+    <div class="container-x">
+        {{ RiskDisclosure() }}
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <a class="brand-wordmark" href="#top"><span>finance</span><span>Candle</span></a>
+                <p>Market analytics and portfolio tools for Indian traders.</p>
+            </div>
+            <div class="footer-column"><h2>Product</h2><a href="#features">Features</a><a href="#markets">Markets</a><a href="#pricing">Pricing</a><a href="#learn">How it works</a></div>
+            <div class="footer-column"><h2>Resources</h2><a href="#learn">Learn</a><a href="#faq">FAQs</a><a href="#markets">Market snapshot</a></div>
+            <div class="footer-column"><h2>Company</h2><a href="#contact">Contact</a><a href="#top">About financeCandle</a></div>
+            <div class="footer-column"><h2>Legal</h2><a href="{{ terms_url }}">Terms</a><a href="{{ terms_url }}">Privacy</a><a href="{{ terms_url }}">Refund policy</a><a href="#risk-disclosure">Disclaimer</a></div>
+        </div>
+        <div class="footer-bottom" id="legal-links"><span>© 2026 financeCandle. All rights reserved.</span><span><a href="{{ terms_url }}">Terms</a><a href="{{ terms_url }}">Privacy</a><a href="{{ terms_url }}">Refund policy</a><a href="#risk-disclosure">Disclaimer</a></span></div>
+    </div>
+</footer>
+{%- endmacro %}

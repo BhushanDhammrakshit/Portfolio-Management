@@ -1,270 +1,429 @@
 {% extends "layout.html" %}
 {% from "_upgrade_lock.html" import upgrade_card %}
+{% from "_icons.html" import icon %}
 {% block content %}
 {% if not has_elite %}
-<div class="page-container">
-    <header class="page-header mb-3">
-        <h1><i class="fa-solid fa-chart-column me-2"></i>Volume Shockers</h1>
-        <p>Today's volume vs 10-day average across NIFTY 50, Bank NIFTY, FINNIFTY, SENSEX &amp; NIFTY 200.</p>
+<div class="scans-page">
+    <header class="page-header">
+        <div>
+            <h1>Volume Shockers</h1>
+            <p>Today's volume versus the 10-day average across NIFTY 50, BANK NIFTY, FINNIFTY, SENSEX and NIFTY 200.</p>
+        </div>
     </header>
-    {{ upgrade_card('elite', title='Volume Shockers — Elite feature', message='Live scan of NIFTY 50 / Bank NIFTY / FINNIFTY / SENSEX / NIFTY 200 for stocks trading 2–3× their 10-day average volume. Upgrade to Elite to unlock.') }}
+    {{ upgrade_card('elite', title='Volume Shockers — Elite feature', message='Live scan of NIFTY 50 / BANK NIFTY / FINNIFTY / SENSEX / NIFTY 200 for stocks trading 2–3× their 10-day average volume. Upgrade to Elite to unlock.') }}
 </div>
 {% else %}
+<style>
+.live-toggle{display:inline-flex;height:var(--control-height);align-items:center;gap:var(--space-2);padding:0 var(--space-3);color:var(--text-secondary);background:var(--bg-surface);border:var(--border-width) solid var(--border);border-radius:var(--radius);font-size:var(--fs-label);font-weight:var(--fw-medium);cursor:pointer;}
+.live-toggle input{width:14px;height:14px;margin:0;accent-color:var(--brand);}
+.live-dot{display:inline-block;width:var(--status-dot-size);height:var(--status-dot-size);border-radius:50%;background:var(--border-strong);}
+.live-dot.live-on{background:var(--positive);box-shadow:0 0 0 0 var(--positive-bg);animation:livePulse 1.6s infinite;}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 var(--positive-bg)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.vol-stock{display:flex;flex-direction:column;gap:2px;min-width:132px;}
+.vol-stock .vol-symbol{color:var(--text-primary);font-weight:var(--fw-semibold);}
+.vol-stock .vol-name{overflow:hidden;max-width:190px;color:var(--text-muted);font-size:var(--fs-caption);text-overflow:ellipsis;white-space:nowrap;}
+.vol-indexes{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;}
+.vol-indexes .ds-badge{padding:0 5px;font-size:10px;}
+.vol-change.up{color:var(--positive);}
+.vol-change.down{color:var(--negative);}
+#volTable th[data-sort]{cursor:pointer;user-select:none;}
+#volTable th[data-sort]:hover{color:var(--text-primary);}
+#volTable th .sort-ind{color:var(--text-muted);font-size:10px;margin-left:2px;}
+#volTable td{height:var(--table-row-height);}
+.cell-up{animation:cellFlashUp 1.2s ease-out;}
+.cell-down{animation:cellFlashDn 1.2s ease-out;}
+@keyframes cellFlashUp{0%{background:var(--positive-bg)}100%{background:transparent}}
+@keyframes cellFlashDn{0%{background:var(--negative-bg)}100%{background:transparent}}
+tr.row-stale td{opacity:.55;}
+@media (max-width:640px){.vol-stock .vol-name{max-width:140px;}}
+</style>
 
-<div class="volume-page">
-    <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+<div class="scans-page">
+    <header class="page-header">
         <div>
-            <h1><i class="fa-solid fa-chart-column me-2"></i>Volume Shockers</h1>
-            <p>Today's volume vs 10-day average across NIFTY 50, Bank NIFTY, FINNIFTY, SENSEX & NIFTY 200.
-               <span id="scanTime" class="text-muted"></span></p>
+            <h1>Volume Shockers</h1>
+            <p>Today's volume versus the 10-day average across the major NSE indices. <span id="scanTime" class="scans-asof"></span></p>
         </div>
-        <div class="d-flex align-items-center gap-3">
-            <div class="form-check form-switch m-0" style="padding-left:2.5em">
+        <div class="scans-actions">
+            <label class="live-toggle" for="liveToggle">
                 <input class="form-check-input" type="checkbox" id="liveToggle" checked>
-                <label class="form-check-label" for="liveToggle" style="font-size:.85rem;font-weight:600;cursor:pointer">
-                    <span id="liveStatus" class="live-dot live-off"></span>Live
-                </label>
-            </div>
-            <button id="scanBtn" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-satellite-dish me-1"></i>Scan now
-            </button>
+                <span id="liveStatus" class="live-dot"></span> Live
+            </label>
+            <button id="scanBtn" class="ds-button ds-button-primary ds-button-small">{{ icon('scan-search', 14) }} Scan now</button>
         </div>
     </header>
 
-    <div id="scanLoading" class="text-center py-5" hidden>
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">Loading volume data… The first scan takes ~30s, after that it refreshes every 15s automatically.</p>
+    <div class="ds-info-banner-wrap">
+        <div class="info-banner">Volume multiple compares today's cumulative volume with the 10-day average. Delivery percentage is not part of this feed and is shown as N/A.</div>
+    </div>
+
+    <div id="scanLoading" class="ds-card">
+        <div class="ds-card-body">
+            <div class="ds-skeleton" role="status" aria-label="Loading volume data">
+                <span class="ds-skeleton-line"></span><span class="ds-skeleton-line"></span><span class="ds-skeleton-line"></span>
+            </div>
+            <p class="scans-asof" style="margin-top:var(--space-3)">Loading volume data… The first scan takes ~30 seconds; after that it refreshes every 15 seconds.</p>
+        </div>
     </div>
     <div id="scanError" hidden></div>
 
     <div id="scanContent" hidden>
-        <!-- Summary cards -->
-        <div class="dashboard-cards mb-3">
-            <div class="dash-card" style="--card-accent:#dc2626">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><i class="fa-solid fa-fire"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Volume &gt; 3x</span>
-                    <span class="dash-card-value" id="count3x">0</span>
-                </div>
+        <section class="ds-kpi-strip" style="--ds-kpi-columns:4" aria-label="Volume shockers summary">
+            <div class="ds-kpi">
+                <div class="ds-kpi-label">Volume &gt; 3×</div>
+                <div class="ds-kpi-value is-numeric" id="count3x">0</div>
+                <div class="ds-kpi-detail">Unusual participation</div>
             </div>
-            <div class="dash-card" style="--card-accent:#f59e0b">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fa-solid fa-bolt"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Volume 2x–3x</span>
-                    <span class="dash-card-value" id="count2x">0</span>
-                </div>
+            <div class="ds-kpi">
+                <div class="ds-kpi-label">Volume 2×–3×</div>
+                <div class="ds-kpi-value is-numeric" id="count2x">0</div>
+                <div class="ds-kpi-detail">Above-average activity</div>
             </div>
-            <div class="dash-card" style="--card-accent:#16a34a">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="fa-solid fa-arrow-up"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Volume 1x–2x</span>
-                    <span class="dash-card-value" id="count1x">0</span>
-                </div>
+            <div class="ds-kpi">
+                <div class="ds-kpi-label">Volume 1×–2×</div>
+                <div class="ds-kpi-value is-numeric" id="count1x">0</div>
+                <div class="ds-kpi-detail">Mild uptick</div>
             </div>
-            <div class="dash-card" style="--card-accent:#64748b">
-                <div class="dash-card-icon" style="background:linear-gradient(135deg,#64748b,#475569)"><i class="fa-solid fa-arrow-down"></i></div>
-                <div class="dash-card-info">
-                    <span class="dash-card-label">Below avg</span>
-                    <span class="dash-card-value" id="countBelow">0</span>
-                </div>
+            <div class="ds-kpi">
+                <div class="ds-kpi-label">Below average</div>
+                <div class="ds-kpi-value is-numeric" id="countBelow">0</div>
+                <div class="ds-kpi-detail">No conviction</div>
             </div>
-        </div>
+        </section>
 
-        <!-- Filter bar -->
-        <div class="vol-filter-row mb-3">
-            <div class="tender-filter-bar">
-                <button class="tender-filter-btn active" data-filter="all">All</button>
-                <button class="tender-filter-btn" data-filter="3x">&gt; 3x</button>
-                <button class="tender-filter-btn" data-filter="2x">2x–3x</button>
-                <button class="tender-filter-btn" data-filter="1x">1x–2x</button>
-                <button class="tender-filter-btn" data-filter="below">&lt; 1x</button>
+        <section class="ds-card" aria-label="Volume shockers table">
+            <div class="ds-card-header">
+                <h2 class="ds-card-title">Volume scan</h2>
+                <div class="table-chip-row">
+                    <span class="window-label">Trend window</span>
+                    <div class="table-segmented" id="volWindow" role="group" aria-label="Sparkline window">
+                        <button type="button" data-window="1d">1D</button>
+                        <button type="button" data-window="1w">1W</button>
+                        <button type="button" data-window="1m" class="active">1M</button>
+                    </div>
+                </div>
             </div>
-            <div class="vol-index-filter">
-                <select id="indexFilter" class="form-select form-select-sm" style="width:auto;min-width:150px">
-                    <option value="all">All Indices</option>
-                    <option value="NIFTY 50">NIFTY 50</option>
-                    <option value="BANK NIFTY">BANK NIFTY</option>
-                    <option value="FINNIFTY">FINNIFTY</option>
-                    <option value="SENSEX">SENSEX</option>
-                    <option value="NIFTY 200">NIFTY 200</option>
-                </select>
-            </div>
-        </div>
 
-        <!-- Table -->
-        <div class="surface-card" style="padding:0;overflow:hidden">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="volTable">
+            <div class="table-toolbar-split" style="padding:var(--space-2) var(--space-3);border-bottom:var(--border-width) solid var(--border)">
+                <div class="table-chip-row" id="volFilters">
+                    <button type="button" class="ds-chip is-active" data-filter="all">All</button>
+                    <button type="button" class="ds-chip" data-filter="3x">&gt; 3×</button>
+                    <button type="button" class="ds-chip" data-filter="2x">2×–3×</button>
+                    <button type="button" class="ds-chip" data-filter="1x">1×–2×</button>
+                    <button type="button" class="ds-chip" data-filter="below">&lt; 1×</button>
+                </div>
+                <label class="filter-field" for="indexFilter" style="min-width:160px">
+                    <span>Index</span>
+                    <select id="indexFilter" class="ds-input">
+                        <option value="all">All indices</option>
+                        <option value="NIFTY 50">NIFTY 50</option>
+                        <option value="BANK NIFTY">BANK NIFTY</option>
+                        <option value="FINNIFTY">FINNIFTY</option>
+                        <option value="SENSEX">SENSEX</option>
+                        <option value="NIFTY 200">NIFTY 200</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="ds-table-scroll">
+                <table class="ds-table" id="volTable" aria-label="Volume shockers">
                     <thead>
                         <tr>
-                            <th class="vol-th" data-sort="name">Stock <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-end" data-sort="price">Price <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-end" data-sort="change_pct">Change% <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-end" data-sort="today_vol">Today Vol <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-end" data-sort="avg_10d_vol">10D Avg Vol <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-center" data-sort="vol_ratio">Volume Ratio <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th text-center" data-sort="signal">Signal <i class="fa-solid fa-sort"></i></th>
-                            <th class="vol-th">Indices</th>
+                            <th scope="col" data-sort="name">Stock <span class="sort-ind">↕</span></th>
+                            <th scope="col" data-sort="price" class="is-numeric">Price <span class="sort-ind">↕</span></th>
+                            <th scope="col" data-sort="change_pct" class="is-numeric">Change <span class="sort-ind">↕</span></th>
+                            <th scope="col" data-sort="vol_ratio" class="is-numeric">Volume multiple <span class="sort-ind">↕</span></th>
+                            <th scope="col" data-sort="today_vol" class="is-numeric">Today vol <span class="sort-ind">↕</span></th>
+                            <th scope="col" data-sort="avg_10d_vol" class="is-numeric">10D avg <span class="sort-ind">↕</span></th>
+                            <th scope="col" class="is-numeric">Delivery %</th>
+                            <th scope="col">Trend</th>
+                            <th scope="col" data-sort="signal">Signal <span class="sort-ind">↕</span></th>
                         </tr>
                     </thead>
                     <tbody id="volBody"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 
-    <!-- Empty state -->
-    <div id="emptyState" class="surface-card">
-        <div class="empty-state">
-            <div class="empty-icon"><i class="fa-solid fa-chart-column"></i></div>
-            <h4>Volume Scanner</h4>
-            <p>Click <strong>Scan now</strong> to compare today's volume against the 10-day average for ~120 stocks across major indices.</p>
-            <button class="btn btn-primary" id="emptyStartBtn"><i class="fa-solid fa-satellite-dish me-1"></i>Start scan</button>
+    <div id="emptyState" class="ds-card">
+        <div class="ds-card-body">
+            <div class="ds-state">
+                <h3>Volume scanner</h3>
+                <p>Run a scan to compare today's volume against the 10-day average for roughly 200 stocks across the major indices.</p>
+                <button class="ds-button ds-button-primary" id="emptyStartBtn">Start scan</button>
+            </div>
         </div>
     </div>
 </div>
 
-
-
-<style>
-.vol-filter-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-.vol-th{cursor:pointer;user-select:none;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);padding:12px 16px !important;white-space:nowrap;border-bottom:2px solid var(--border) !important}
-.vol-th:hover{color:var(--primary)}
-.vol-th i{font-size:.6rem;margin-left:3px;opacity:.5}
-#volTable tbody td{padding:10px 16px;font-size:.88rem;vertical-align:middle;border-bottom:1px solid var(--border)}
-#volTable tbody tr:hover{background:var(--primary-light)}
-
-.vol-bar-cell{min-width:180px}
-.vol-bar-wrap{display:flex;align-items:center;gap:8px}
-.vol-bar-track{flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;position:relative}
-.vol-bar-fill{height:100%;border-radius:4px;transition:width .3s}
-.vol-ratio-label{font-size:.85rem;font-weight:800;min-width:48px;text-align:right}
-
-.vol-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;margin:1px 2px}
-.vol-badge-nifty50{background:#eef2ff;color:#4f46e5}
-.vol-badge-banknifty{background:#fef3c7;color:#92400e}
-.vol-badge-finnifty{background:#dcfce7;color:#166534}
-.vol-badge-sensex{background:#fee2e2;color:#991b1b}
-.vol-badge-nifty200{background:#f1f5f9;color:#475569}
-
-/* Signal badges */
-.sig-badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:help}
-.sig-strong-bullish{background:#15803d;color:#fff}
-.sig-bullish{background:#dcfce7;color:#15803d;border:1px solid #86efac}
-.sig-watch-bullish{background:#ecfccb;color:#3f6212}
-.sig-strong-bearish{background:#991b1b;color:#fff}
-.sig-bearish{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
-.sig-watch-bearish{background:#fef3c7;color:#92400e}
-.sig-neutral{background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1}
-
-/* Live indicator */
-.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.live-off{background:#cbd5e1}
-.live-on{background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.7);animation:livePulse 1.6s infinite}
-@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
-/* Per-cell flash on tick (green = up, red = down). Used by the diff renderer. */
-.cell-up{animation:cellFlashUp 1.2s ease-out}
-.cell-down{animation:cellFlashDn 1.2s ease-out}
-@keyframes cellFlashUp{0%{background:#bbf7d0}100%{background:transparent}}
-@keyframes cellFlashDn{0%{background:#fecaca}100%{background:transparent}}
-/* Row whose data hasn't refreshed in a while — fade so user knows it's not live. */
-tr.row-stale td{opacity:.55;transition:opacity .25s}
-
-/* ── Candlestick chart (shared with intraday) ───────── */
-#volTable tbody tr{cursor:default}
-.detail-chart-wrap{margin:0 0 14px;background:var(--surface-2);border-radius:8px;padding:12px;border:1px solid var(--border);position:relative}
-.detail-chart-wrap canvas{display:block;width:100%;height:240px;cursor:crosshair}
-.detail-chart-meta{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:8px}
-.detail-chart-meta span:first-child{font-weight:600;color:var(--text)}
-.candle-toolbar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
-.candle-toolbar .ct-btn{font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;transition:all .12s}
-.candle-toolbar .ct-btn:hover{background:var(--surface-2);color:var(--text)}
-.candle-toolbar .ct-btn.active{background:#2563eb;border-color:#2563eb;color:#fff}
-.candle-toolbar .ct-spacer{flex:1}
-.candle-toolbar .ct-readout{font-size:.72rem;color:var(--text-muted);font-family:Consolas,monospace}
-.candle-tooltip{position:absolute;pointer-events:none;background:rgba(17,24,39,.96);color:#fff;border-radius:6px;padding:8px 11px;font-size:.72rem;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.3);min-width:135px;display:none;z-index:5;white-space:nowrap}
-.candle-tooltip .ct-row{display:flex;justify-content:space-between;gap:14px}
-.candle-tooltip .ct-row b{font-weight:500;color:#9ca3af}
-.candle-tooltip .ct-up{color:#22c55e;font-weight:700}
-.candle-tooltip .ct-dn{color:#f87171;font-weight:700}
-.candle-tooltip .ct-head{font-weight:700;margin-bottom:4px;font-size:.74rem;border-bottom:1px solid #374151;padding-bottom:3px}
-[data-theme="dark"] .detail-chart-wrap{background:#0f172a}
-
-/* ── Volume page – dark mode overrides ──────────────────────── */
-[data-theme="dark"] .vol-bar-track{background:var(--border-strong)}
-[data-theme="dark"] .vol-badge-nifty50{background:rgba(79,70,229,.15);color:#818cf8}
-[data-theme="dark"] .vol-badge-banknifty{background:rgba(217,119,6,.15);color:#fbbf24}
-[data-theme="dark"] .vol-badge-finnifty{background:rgba(22,163,74,.15);color:#4ade80}
-[data-theme="dark"] .vol-badge-sensex{background:rgba(220,38,38,.15);color:#f87171}
-[data-theme="dark"] .vol-badge-nifty200{background:rgba(100,116,139,.15);color:#94a3b8}
-[data-theme="dark"] .sig-bullish{background:rgba(22,163,74,.15);color:#4ade80;border-color:rgba(34,197,94,.3)}
-[data-theme="dark"] .sig-watch-bullish{background:rgba(132,204,22,.12);color:#a3e635}
-[data-theme="dark"] .sig-bearish{background:rgba(220,38,38,.15);color:#f87171;border-color:rgba(248,113,113,.3)}
-[data-theme="dark"] .sig-watch-bearish{background:rgba(245,158,11,.15);color:#fbbf24}
-[data-theme="dark"] .sig-neutral{background:var(--surface-2);color:var(--text-muted);border-color:var(--border)}
-[data-theme="dark"] .live-off{background:var(--text-muted)}
-[data-theme="dark"] @keyframes cellFlashUp{0%{background:rgba(34,197,94,.22)}100%{background:transparent}}
-[data-theme="dark"] @keyframes cellFlashDn{0%{background:rgba(248,113,113,.22)}100%{background:transparent}}
-</style>
-
 <script>
 const fmtVol = v => {
+    if (!Number.isFinite(Number(v))) return '—';
+    v = Number(v);
     if (v >= 1e7) return (v/1e7).toFixed(2) + ' Cr';
     if (v >= 1e5) return (v/1e5).toFixed(2) + ' L';
     if (v >= 1e3) return (v/1e3).toFixed(1) + ' K';
     return v.toLocaleString('en-IN');
 };
 
-// Keyed source of truth: merging new payloads into this map (instead of
-// replacing _volData wholesale) means a stock that's missing from a single
-// API response — e.g. due to a transient upstream blip — does NOT vanish
-// from the UI. We just keep showing its last-known values until they get
-// refreshed, with a faded "stale" style after STALE_AFTER_MS.
-const _volMap = {};       // symbol -> latest stock payload
-const _rowEls = {};       // symbol -> cached <tr> element (reused on every render)
-const _prevTickValues = {}; // symbol -> last rendered numeric values, for flash diffing
+const _volMap = {};
+const _rowEls = {};
+const _prevTickValues = {};
 let _sortCol = 'vol_ratio', _sortAsc = false;
 let _liveTimer = null;
-const LIVE_INTERVAL_MS = 15_000; // refresh every 15s while market is open
-const STALE_AFTER_MS = 60_000;   // mark rows stale if not updated in 60s
+let _window = '1m';
+const LIVE_INTERVAL_MS = 15000;
+const STALE_AFTER_MS = 60000;
+const WINDOW_POINTS = { '1d': 2, '1w': 6, '1m': 22 };
 
 function isMarketOpen() {
     const now = new Date();
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000;
-    const ist = new Date(utcMs + 5.5 * 3600_000);
+    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+    const ist = new Date(utcMs + 5.5 * 3600000);
     const day = ist.getDay();
     if (day === 0 || day === 6) return false;
     const mins = ist.getHours() * 60 + ist.getMinutes();
-    return mins >= 555 && mins <= 930; // 09:15 .. 15:30 IST
+    return mins >= 555 && mins <= 930;
 }
-
-document.getElementById('scanBtn').addEventListener('click', () => runScan(false));
-document.getElementById('emptyStartBtn').addEventListener('click', () => runScan(false));
-document.getElementById('liveToggle').addEventListener('change', toggleLive);
 
 function setLiveDot(on) {
     const dot = document.getElementById('liveStatus');
-    if (on) { dot.classList.remove('live-off'); dot.classList.add('live-on'); }
-    else    { dot.classList.remove('live-on'); dot.classList.add('live-off'); }
+    dot.classList.toggle('live-on', !!on);
 }
 
-function toggleLive(e) {
-    const on = e.target.checked;
+function sparkline(values) {
+    if (!Array.isArray(values) || values.length < 2 || !values.some(function (value) { return Number(value) > 0; })) {
+        return '<span class="fc-na" title="Price history is unavailable for this window.">N/A</span>';
+    }
+    const width = 84, height = 24;
+    const min = Math.min.apply(null, values);
+    const max = Math.max.apply(null, values);
+    const span = (max - min) || 1;
+    const points = values.map(function (value, index) {
+        const x = values.length === 1 ? width / 2 : index / (values.length - 1) * width;
+        const y = height - ((value - min) / span) * (height - 4) - 2;
+        return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }).join(' ');
+    const up = values[values.length - 1] >= values[0];
+    return '<svg class="sparkline" viewBox="0 0 84 24" role="img" aria-label="Price trend">' +
+        '<path class="sparkline-line ' + (up ? 'is-up' : 'is-down') + '" d="' + points + '"/></svg>';
+}
+
+function windowedSpark(stock) {
+    const points = WINDOW_POINTS[_window] || 22;
+    return (stock.spark || []).slice(-points);
+}
+
+function signalTone(signal) {
+    const value = String(signal || '').toUpperCase();
+    if (value.indexOf('BULLISH') !== -1) return 'positive';
+    if (value.indexOf('BEARISH') !== -1) return 'negative';
+    if (value.indexOf('WATCH') !== -1) return 'warning';
+    return 'neutral';
+}
+
+function category(ratio) {
+    if (ratio >= 3) return '3x';
+    if (ratio >= 2) return '2x';
+    if (ratio >= 1) return '1x';
+    return 'below';
+}
+function ratioClass(cat) {
+    return cat === '3x' ? 'is-hot' : (cat === '2x' ? 'is-warm' : (cat === '1x' ? 'is-calm' : ''));
+}
+
+function _flash(td, direction) {
+    if (!td || !direction) return;
+    const cls = direction > 0 ? 'cell-up' : 'cell-down';
+    td.classList.remove('cell-up', 'cell-down');
+    void td.offsetWidth;
+    td.classList.add(cls);
+    setTimeout(function () { td.classList.remove(cls); }, 1200);
+}
+
+function _buildRow(stock) {
+    const tr = document.createElement('tr');
+    tr.dataset.symbol = stock.symbol;
+    const cat = category(stock.vol_ratio);
+    tr.innerHTML =
+        '<td data-cell="name"><div class="vol-stock"><span class="vol-symbol"></span><span class="vol-name"></span>' +
+            '<span class="vol-indexes"></span></div></td>' +
+        '<td data-cell="price" class="is-numeric"></td>' +
+        '<td data-cell="change_pct" class="is-numeric vol-change"></td>' +
+        '<td data-cell="vol_ratio" class="is-numeric"><span class="vol-multiple ' + ratioClass(cat) + '">' +
+            '<span class="vol-meter"><span class="vol-meter-fill ' + ratioClass(cat) + '"></span></span>' +
+            '<span class="vol-ratio-text"></span></span></td>' +
+        '<td data-cell="today_vol" class="is-numeric"></td>' +
+        '<td data-cell="avg_10d_vol" class="is-numeric"></td>' +
+        '<td data-cell="delivery" class="is-numeric"></td>' +
+        '<td data-cell="spark"></td>' +
+        '<td data-cell="signal"><span class="ds-badge"></span></td>';
+    _updateRow(tr, stock, true);
+    return tr;
+}
+
+function _updateRow(tr, stock, isNew) {
+    const cells = {};
+    tr.querySelectorAll('td[data-cell]').forEach(function (td) { cells[td.dataset.cell] = td; });
+    tr.dataset.name = stock.name || stock.symbol;
+    const cat = category(stock.vol_ratio);
+    tr.classList.toggle('row-stale', (Date.now() - (stock._updated || 0)) > STALE_AFTER_MS);
+    const prev = _prevTickValues[stock.symbol] || {};
+
+    if (cells.name) {
+        const symbol = cells.name.querySelector('.vol-symbol');
+        const name = cells.name.querySelector('.vol-name');
+        const indexes = cells.name.querySelector('.vol-indexes');
+        if (symbol.textContent !== stock.symbol) symbol.textContent = stock.symbol;
+        if (name.textContent !== (stock.name || '')) name.textContent = stock.name || '';
+        const desired = (stock.indices || []).join('|');
+        if (indexes.dataset.idx !== desired) {
+            indexes.dataset.idx = desired;
+            indexes.innerHTML = (stock.indices || []).map(function (index) {
+                return '<span class="ds-badge">' + index + '</span>';
+            }).join('');
+        }
+    }
+
+    if (cells.price) {
+        const value = '₹' + Number(stock.price || 0).toLocaleString('en-IN');
+        if (cells.price.textContent !== value) {
+            cells.price.textContent = value;
+            if (!isNew && prev.price !== undefined && prev.price !== stock.price) _flash(cells.price, stock.price - prev.price);
+        }
+    }
+
+    if (cells.change_pct) {
+        const value = (stock.change_pct >= 0 ? '+' : '') + Number(stock.change_pct || 0).toFixed(2) + '%';
+        if (cells.change_pct.textContent !== value) {
+            cells.change_pct.textContent = value;
+            if (!isNew && prev.change_pct !== undefined && prev.change_pct !== stock.change_pct) _flash(cells.change_pct, stock.change_pct - prev.change_pct);
+        }
+        cells.change_pct.classList.toggle('up', stock.change_pct >= 0);
+        cells.change_pct.classList.toggle('down', stock.change_pct < 0);
+    }
+
+    if (cells.vol_ratio) {
+        const text = cells.vol_ratio.querySelector('.vol-ratio-text');
+        const fill = cells.vol_ratio.querySelector('.vol-meter-fill');
+        const value = Number(stock.vol_ratio || 0);
+        if (text && text.textContent !== value.toFixed(2) + '×') {
+            text.textContent = value.toFixed(2) + '×';
+            if (!isNew && prev.vol_ratio !== undefined && prev.vol_ratio !== stock.vol_ratio) _flash(cells.vol_ratio, stock.vol_ratio - prev.vol_ratio);
+        }
+        if (fill) fill.style.width = Math.max(4, Math.min(100, value / 4 * 100)).toFixed(0) + '%';
+        cells.vol_ratio.querySelector('.vol-multiple').className = 'vol-multiple ' + ratioClass(category(value));
+        if (fill) fill.className = 'vol-meter-fill ' + ratioClass(category(value));
+    }
+
+    if (cells.today_vol) {
+        const value = fmtVol(stock.today_vol);
+        if (cells.today_vol.textContent !== value) {
+            cells.today_vol.textContent = value;
+            if (!isNew && prev.today_vol !== undefined && prev.today_vol !== stock.today_vol) _flash(cells.today_vol, stock.today_vol - prev.today_vol);
+        }
+    }
+    if (cells.avg_10d_vol && cells.avg_10d_vol.textContent !== fmtVol(stock.avg_10d_vol)) {
+        cells.avg_10d_vol.textContent = fmtVol(stock.avg_10d_vol);
+    }
+
+    if (cells.delivery) {
+        cells.delivery.innerHTML = stock.delivery_pct == null
+            ? '<span class="fc-na" title="Delivery percentage is not available from the live quote feed.">N/A</span>'
+            : Number(stock.delivery_pct).toFixed(1) + '%';
+    }
+
+    if (cells.spark) cells.spark.innerHTML = sparkline(windowedSpark(stock));
+
+    if (cells.signal) {
+        const badge = cells.signal.querySelector('.ds-badge');
+        const tone = signalTone(stock.signal);
+        if (badge.textContent !== (stock.signal || '—')) badge.textContent = stock.signal || '—';
+        badge.className = 'ds-badge ds-badge-' + tone;
+        badge.title = stock.signal_reason || '';
+    }
+
+    _prevTickValues[stock.symbol] = {
+        price: stock.price,
+        change_pct: stock.change_pct,
+        today_vol: stock.today_vol,
+        vol_ratio: stock.vol_ratio
+    };
+}
+
+function renderTable() {
+    const filter = document.querySelector('#volFilters .ds-chip.is-active');
+    const active = filter ? filter.dataset.filter : 'all';
+    const index = document.getElementById('indexFilter').value;
+    const filtered = Object.values(_volMap).filter(function (stock) {
+        if (active !== 'all' && category(stock.vol_ratio) !== active) return false;
+        if (index !== 'all' && (stock.indices || []).indexOf(index) === -1) return false;
+        return true;
+    });
+    filtered.sort(function (left, right) {
+        let a = left[_sortCol], b = right[_sortCol];
+        if (_sortCol === 'name') { a = (a || '').toLowerCase(); b = (b || '').toLowerCase(); }
+        if (a < b) return _sortAsc ? -1 : 1;
+        if (a > b) return _sortAsc ? 1 : -1;
+        return 0;
+    });
+
+    const body = document.getElementById('volBody');
+    body.querySelectorAll('.ds-table-empty').forEach(function (cell) { cell.parentElement.remove(); });
+    const visible = new Set();
+    let cursor = null;
+    filtered.forEach(function (stock) {
+        visible.add(stock.symbol);
+        let tr = _rowEls[stock.symbol];
+        if (!tr) {
+            tr = _buildRow(stock);
+            _rowEls[stock.symbol] = tr;
+        } else {
+            _updateRow(tr, stock, false);
+        }
+        const expected = cursor ? cursor.nextSibling : body.firstChild;
+        if (expected !== tr) body.insertBefore(tr, expected);
+        cursor = tr;
+    });
+    Array.from(body.children).forEach(function (tr) {
+        if (!visible.has(tr.dataset.symbol)) body.removeChild(tr);
+    });
+    if (!filtered.length) {
+        body.innerHTML = '<tr><td colspan="9" class="ds-table-empty">No stocks match this view.</td></tr>';
+    }
+}
+
+function renderAll() {
+    let c3 = 0, c2 = 0, c1 = 0, below = 0;
+    Object.values(_volMap).forEach(function (stock) {
+        const cat = category(stock.vol_ratio);
+        if (cat === '3x') c3 += 1;
+        else if (cat === '2x') c2 += 1;
+        else if (cat === '1x') c1 += 1;
+        else below += 1;
+    });
+    document.getElementById('count3x').textContent = c3;
+    document.getElementById('count2x').textContent = c2;
+    document.getElementById('count1x').textContent = c1;
+    document.getElementById('countBelow').textContent = below;
+    renderTable();
+}
+
+function toggleLive(event) {
+    const on = event.target.checked;
+    setLiveDot(on && isMarketOpen());
+    if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
     if (on) {
-        setLiveDot(isMarketOpen());
-        if (_liveTimer) clearInterval(_liveTimer);
         _liveTimer = setInterval(tick, LIVE_INTERVAL_MS);
-        if (_volData.length === 0) runScan(false);
-    } else {
-        setLiveDot(false);
-        if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
+        if (!Object.keys(_volMap).length) runScan(false);
     }
 }
 
 function tick() {
     if (document.hidden) return;
     if (!document.getElementById('liveToggle').checked) return;
-    if (!isMarketOpen()) { setLiveDot(false); return; } // market closed — skip refresh
+    if (!isMarketOpen()) { setLiveDot(false); return; }
     setLiveDot(true);
     runScan(true);
 }
@@ -273,97 +432,107 @@ async function runScan(silent) {
     const btn = document.getElementById('scanBtn');
     if (!silent) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Scanning…';
+        btn.textContent = 'Scanning…';
         document.getElementById('scanLoading').hidden = false;
         document.getElementById('scanContent').hidden = true;
         document.getElementById('scanError').hidden = true;
         document.getElementById('emptyState').hidden = true;
     }
-
     try {
-        const r = await fetch('/api/volume/scan?force=1');
-        const data = await r.json();
-        if (window.PlanGate && window.PlanGate.handle(r, data)) {
+        const response = await fetch('/api/volume/scan?force=1');
+        const data = await response.json();
+        if (window.PlanGate && window.PlanGate.handle(response, data)) {
             const plan = (data && data.required_plan) || 'elite';
-            const planNice = plan.charAt(0).toUpperCase() + plan.slice(1);
             document.getElementById('scanError').innerHTML =
-                `<div class="alert alert-warning d-flex align-items-center gap-3">
-                   <i class="fa-solid fa-lock fa-lg"></i>
-                   <div class="flex-grow-1">
-                     <strong>${planNice} feature.</strong>
-                     ${(data && data.message) || 'Upgrade your plan to unlock real-time volume alerts.'}
-                   </div>
-                   <a href="${(data && data.upgrade_url) || '/billing'}" class="btn btn-primary btn-sm">
-                     <i class="fa-solid fa-rocket me-1"></i>Upgrade to ${planNice}
-                   </a>
-                 </div>`;
+                '<div class="ds-state ds-error-state" role="alert"><h3>' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' feature</h3>' +
+                '<p>' + ((data && data.message) || 'Upgrade your plan to unlock real-time volume alerts.') + '</p>' +
+                '<a class="ds-button ds-button-primary" href="' + ((data && data.upgrade_url) || '/billing') + '">Upgrade to ' + plan + '</a></div>';
             document.getElementById('scanError').hidden = false;
             document.getElementById('scanLoading').hidden = true;
-            if (!silent) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again'; }
             return;
         }
         if (data.error) throw new Error(data.error);
-        // MERGE — never replace. Symbols absent from this payload keep their
-        // last-known values (renderer will fade them as stale after a minute).
         const ts = Date.now();
-        (data.stocks || []).forEach(s => {
-            s._updated = ts;
-            _volMap[s.symbol] = s;
+        (data.stocks || []).forEach(function (stock) {
+            stock._updated = ts;
+            _volMap[stock.symbol] = stock;
         });
-        try { ppCache.set('volume:map', _volMap); } catch (e) {}
+        try { ppCache.set('volume:map', _volMap); } catch (error) {}
         renderAll();
         document.getElementById('scanLoading').hidden = true;
         document.getElementById('scanContent').hidden = false;
         document.getElementById('emptyState').hidden = true;
         const open = isMarketOpen();
         const live = document.getElementById('liveToggle').checked;
-        const prefix = live ? (open ? '🔴 LIVE · ' : '⏸ Market closed · ') : '';
-        document.getElementById('scanTime').textContent = prefix + 'Updated at ' + new Date().toLocaleTimeString('en-IN');
-    } catch (e) {
+        document.getElementById('scanTime').textContent = (live ? (open ? 'LIVE · ' : 'Market closed · ') : '') +
+            'Updated at ' + new Date().toLocaleTimeString('en-IN');
+    } catch (error) {
         if (!silent) {
-            document.getElementById('scanError').innerHTML = '<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>Scan failed. Please try again.</div>';
+            document.getElementById('scanError').innerHTML = '<div class="ds-state ds-error-state" role="alert"><h3>Scan failed</h3><p>Please try again in a moment.</p></div>';
             document.getElementById('scanError').hidden = false;
             document.getElementById('scanLoading').hidden = true;
         }
-    }
-    if (!silent) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-satellite-dish me-1"></i>Scan again';
+    } finally {
+        if (!silent) {
+            btn.disabled = false;
+            btn.innerHTML = 'Scan again';
+        }
     }
 }
 
-// Pause polling when tab hidden, resume on focus
-document.addEventListener('visibilitychange', () => {
-    if (!document.getElementById('liveToggle').checked) return;
-    if (!document.hidden && isMarketOpen()) {
+document.getElementById('scanBtn').addEventListener('click', function () { runScan(false); });
+document.getElementById('emptyStartBtn').addEventListener('click', function () { runScan(false); });
+document.getElementById('liveToggle').addEventListener('change', toggleLive);
+document.getElementById('indexFilter').addEventListener('change', renderTable);
+document.querySelectorAll('#volFilters .ds-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+        document.querySelectorAll('#volFilters .ds-chip').forEach(function (item) { item.classList.remove('is-active'); });
+        chip.classList.add('is-active');
+        renderTable();
+    });
+});
+document.querySelectorAll('#volWindow [data-window]').forEach(function (button) {
+    button.addEventListener('click', function () {
+        _window = button.dataset.window;
+        document.querySelectorAll('#volWindow [data-window]').forEach(function (item) { item.classList.toggle('active', item === button); });
+        renderTable();
+    });
+});
+document.querySelectorAll('#volTable th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+        const column = th.dataset.sort;
+        if (_sortCol === column) _sortAsc = !_sortAsc;
+        else { _sortCol = column; _sortAsc = column === 'name'; }
+        document.querySelectorAll('#volTable th[data-sort]').forEach(function (item) {
+            item.setAttribute('aria-sort', item === th ? (_sortAsc ? 'ascending' : 'descending') : 'none');
+        });
+        renderTable();
+    });
+});
+
+document.addEventListener('visibilitychange', function () {
+    if (document.getElementById('liveToggle').checked && !document.hidden && isMarketOpen()) {
         setLiveDot(true);
         runScan(true);
     }
 });
 
-// Auto-load on page open + start live polling. If we have any prior
-// cached scan, render it immediately and refresh silently in the
-// background so switching to this tab doesn't blank the screen with a
-// loading spinner. The timestamp line shows how stale the data is.
 (async function init() {
     let entry = null;
-    try { entry = ppCache.getEntry('volume:map'); } catch (e) {}
+    try { entry = ppCache.getEntry('volume:map'); } catch (error) {}
     let hasCache = entry && entry.v && typeof entry.v === 'object' && Object.keys(entry.v).length > 0;
-
-    // Fallback: try Azure snapshot if browser cache is empty
     if (!hasCache) {
         try {
-            const r = await fetch('/api/volume/scan?snapshot=1');
-            const data = await r.json().catch(() => ({}));
+            const response = await fetch('/api/volume/scan?snapshot=1');
+            const data = await response.json().catch(function () { return {}; });
             if (data && data.stocks && data.stocks.length) {
                 const ts = Date.now();
-                (data.stocks || []).forEach(s => { s._updated = ts; _volMap[s.symbol] = s; });
-                try { ppCache.set('volume:map', _volMap); } catch (e) {}
+                data.stocks.forEach(function (stock) { stock._updated = ts; _volMap[stock.symbol] = stock; });
+                try { ppCache.set('volume:map', _volMap); } catch (error) {}
                 hasCache = true;
             }
-        } catch (e) { /* ignore */ }
+        } catch (error) {}
     }
-
     if (hasCache) {
         if (entry && entry.v) Object.assign(_volMap, entry.v);
         renderAll();
@@ -371,289 +540,19 @@ document.addEventListener('visibilitychange', () => {
         document.getElementById('scanContent').hidden = false;
         document.getElementById('emptyState').hidden = true;
         const when = new Date((entry && entry.t) || Date.now()).toLocaleTimeString('en-IN');
-        document.getElementById('scanTime').textContent =
-            'Cached · last refresh ' + when + ' (' + ppCache.ago(Date.now() - ((entry && entry.t) || Date.now())) + ') — refreshing…';
-        const startLive = () => {
-            if (document.getElementById('liveToggle').checked) {
-                setLiveDot(isMarketOpen());
-                if (_liveTimer) clearInterval(_liveTimer);
-                _liveTimer = setInterval(tick, LIVE_INTERVAL_MS);
-            }
-        };
+        document.getElementById('scanTime').textContent = 'Cached · last refresh ' + when + ' — refreshing…';
         runScan(true).then(startLive, startLive);
     } else {
-        runScan(false).then(() => {
-            if (document.getElementById('liveToggle').checked) {
-                setLiveDot(isMarketOpen());
-                if (_liveTimer) clearInterval(_liveTimer);
-                _liveTimer = setInterval(tick, LIVE_INTERVAL_MS);
-            }
-        });
+        runScan(false).then(startLive, startLive);
+    }
+    function startLive() {
+        if (document.getElementById('liveToggle').checked) {
+            setLiveDot(isMarketOpen());
+            if (_liveTimer) clearInterval(_liveTimer);
+            _liveTimer = setInterval(tick, LIVE_INTERVAL_MS);
+        }
     }
 })();
-
-function getCategory(r) {
-    if (r >= 3) return '3x';
-    if (r >= 2) return '2x';
-    if (r >= 1) return '1x';
-    return 'below';
-}
-
-function _allStocks() { return Object.values(_volMap); }
-
-function renderAll() {
-    // Summary counts (always over the full universe, not the current filter)
-    let c3 = 0, c2 = 0, c1 = 0, cb = 0;
-    _allStocks().forEach(s => {
-        const cat = getCategory(s.vol_ratio);
-        if (cat === '3x') c3++;
-        else if (cat === '2x') c2++;
-        else if (cat === '1x') c1++;
-        else cb++;
-    });
-    document.getElementById('count3x').textContent = c3;
-    document.getElementById('count2x').textContent = c2;
-    document.getElementById('count1x').textContent = c1;
-    document.getElementById('countBelow').textContent = cb;
-
-    renderTable();
-}
-
-// ── Helpers for the diff renderer ────────────────────────────────────────
-function _ratioColors(cat) {
-    if (cat === '3x')  return { bar: '#dc2626', label: '#dc2626' };
-    if (cat === '2x')  return { bar: '#f59e0b', label: '#d97706' };
-    if (cat === '1x')  return { bar: '#16a34a', label: '#16a34a' };
-    return                  { bar: '#94a3b8', label: '#64748b' };
-}
-
-function _badgeClass(idx) {
-    return idx === 'NIFTY 50'   ? 'vol-badge-nifty50'
-         : idx === 'BANK NIFTY' ? 'vol-badge-banknifty'
-         : idx === 'FINNIFTY'   ? 'vol-badge-finnifty'
-         : idx === 'SENSEX'     ? 'vol-badge-sensex'
-         :                        'vol-badge-nifty200';
-}
-
-function _flash(td, dir) {
-    if (!td || !dir) return;
-    const cls = dir > 0 ? 'cell-up' : 'cell-down';
-    td.classList.remove('cell-up', 'cell-down');
-    // Force reflow so the animation restarts even if the same direction repeats.
-    void td.offsetWidth;
-    td.classList.add(cls);
-    setTimeout(() => td.classList.remove(cls), 1200);
-}
-
-// Initial row HTML — built once per symbol, then mutated in place forever.
-function _buildRow(s, maxRatio) {
-    const tr = document.createElement('tr');
-    tr.dataset.symbol = s.symbol;
-    const cat = getCategory(s.vol_ratio);
-    const col = _ratioColors(cat);
-    const barPct = Math.min((s.vol_ratio / maxRatio) * 100, 100);
-    const chgCls = s.change_pct >= 0 ? 'gain-positive' : 'gain-negative';
-    const badges = (s.indices || []).map(i => `<span class="vol-badge ${_badgeClass(i)}">${i}</span>`).join('');
-    tr.innerHTML = `
-        <td data-cell="name"><strong>${s.symbol}</strong><br><span class="text-muted" style="font-size:.75rem"></span></td>
-        <td data-cell="price" class="text-end"></td>
-        <td data-cell="change_pct" class="text-end ${chgCls}" style="font-weight:700"></td>
-        <td data-cell="today_vol" class="text-end" style="font-weight:600"></td>
-        <td data-cell="avg_10d_vol" class="text-end" style="color:var(--text-muted)"></td>
-        <td data-cell="vol_ratio" class="vol-bar-cell">
-            <div class="vol-bar-wrap">
-                <div class="vol-bar-track"><div class="vol-bar-fill" style="width:${barPct}%;background:${col.bar}"></div></div>
-                <span class="vol-ratio-label" style="color:${col.label}"></span>
-            </div>
-        </td>
-        <td data-cell="signal" class="text-center"><span class="sig-badge" title=""></span></td>
-        <td data-cell="indices">${badges}</td>`;
-    // Set the dynamic fields once via the diff path (this also seeds prev values).
-    _updateRow(tr, s, maxRatio, /*isNew=*/true);
-    return tr;
-}
-
-// Surgical update: only touch cells whose value changed; flash on numeric changes.
-function _updateRow(tr, s, maxRatio, isNew) {
-    const cells = {};
-    tr.querySelectorAll('td[data-cell]').forEach(td => cells[td.dataset.cell] = td);
-
-    // dataset (used by the chart modal click handler)
-    tr.dataset.name = s.name || s.symbol;
-    tr.dataset.price = s.price;
-    tr.dataset.change = s.change_pct;
-    const cat = getCategory(s.vol_ratio);
-    tr.dataset.cat = cat;
-
-    // Stale marker — fades the row if data hasn't refreshed recently.
-    const stale = (Date.now() - (s._updated || 0)) > STALE_AFTER_MS;
-    tr.classList.toggle('row-stale', stale);
-
-    const prev = _prevTickValues[s.symbol] || {};
-
-    // Name (only sub-text — symbol is fixed)
-    const nameSub = cells.name && cells.name.querySelector('span');
-    if (nameSub && nameSub.textContent !== (s.name || '')) nameSub.textContent = s.name || '';
-
-    // Price
-    const priceTxt = '₹' + Number(s.price || 0).toLocaleString('en-IN');
-    if (cells.price && cells.price.textContent !== priceTxt) {
-        cells.price.textContent = priceTxt;
-        if (!isNew && prev.price !== undefined && prev.price !== s.price) {
-            _flash(cells.price, s.price - prev.price);
-        }
-    }
-
-    // Change %
-    const chgTxt = (s.change_pct >= 0 ? '+' : '') + s.change_pct + '%';
-    if (cells.change_pct) {
-        if (cells.change_pct.textContent !== chgTxt) {
-            cells.change_pct.textContent = chgTxt;
-            if (!isNew && prev.change_pct !== undefined && prev.change_pct !== s.change_pct) {
-                _flash(cells.change_pct, s.change_pct - prev.change_pct);
-            }
-        }
-        cells.change_pct.classList.toggle('gain-positive', s.change_pct >= 0);
-        cells.change_pct.classList.toggle('gain-negative', s.change_pct < 0);
-    }
-
-    // Today volume
-    const tvTxt = fmtVol(s.today_vol);
-    if (cells.today_vol && cells.today_vol.textContent !== tvTxt) {
-        cells.today_vol.textContent = tvTxt;
-        if (!isNew && prev.today_vol !== undefined && prev.today_vol !== s.today_vol) {
-            _flash(cells.today_vol, s.today_vol - prev.today_vol);
-        }
-    }
-
-    // 10D avg vol (rarely changes intraday but cheap to keep in sync)
-    const avgTxt = fmtVol(s.avg_10d_vol);
-    if (cells.avg_10d_vol && cells.avg_10d_vol.textContent !== avgTxt) {
-        cells.avg_10d_vol.textContent = avgTxt;
-    }
-
-    // Volume ratio bar + label
-    if (cells.vol_ratio) {
-        const col = _ratioColors(cat);
-        const fill = cells.vol_ratio.querySelector('.vol-bar-fill');
-        const label = cells.vol_ratio.querySelector('.vol-ratio-label');
-        const barPct = Math.min((s.vol_ratio / maxRatio) * 100, 100);
-        if (fill) {
-            fill.style.width = barPct + '%';
-            fill.style.background = col.bar;
-        }
-        if (label) {
-            const newTxt = s.vol_ratio + 'x';
-            if (label.textContent !== newTxt) {
-                label.textContent = newTxt;
-                if (!isNew && prev.vol_ratio !== undefined && prev.vol_ratio !== s.vol_ratio) {
-                    _flash(cells.vol_ratio, s.vol_ratio - prev.vol_ratio);
-                }
-            }
-            label.style.color = col.label;
-        }
-    }
-
-    // Signal badge — full rebuild only when the signal text actually changes
-    if (cells.signal) {
-        const span = cells.signal.querySelector('.sig-badge');
-        if (span && span.textContent !== s.signal) {
-            span.textContent = s.signal;
-            span.className = 'sig-badge sig-' + String(s.signal || '').toLowerCase().replace(/ /g, '-');
-            span.title = s.signal_reason || '';
-        }
-    }
-
-    // Indices (rarely change; cheap string compare to skip rebuild)
-    if (cells.indices) {
-        const desired = (s.indices || []).join('|');
-        if (cells.indices.dataset.idx !== desired) {
-            cells.indices.dataset.idx = desired;
-            cells.indices.innerHTML = (s.indices || [])
-                .map(i => `<span class="vol-badge ${_badgeClass(i)}">${i}</span>`).join('');
-        }
-    }
-
-    _prevTickValues[s.symbol] = {
-        price:      s.price,
-        change_pct: s.change_pct,
-        today_vol:  s.today_vol,
-        vol_ratio:  s.vol_ratio,
-    };
-}
-
-function renderTable() {
-    const filter = document.querySelector('.tender-filter-btn.active')?.dataset.filter || 'all';
-    const idxFilter = document.getElementById('indexFilter').value;
-
-    const filtered = _allStocks().filter(s => {
-        if (filter !== 'all' && getCategory(s.vol_ratio) !== filter) return false;
-        if (idxFilter !== 'all' && !(s.indices || []).includes(idxFilter)) return false;
-        return true;
-    });
-
-    filtered.sort((a, b) => {
-        let va = a[_sortCol], vb = b[_sortCol];
-        if (_sortCol === 'name') { va = (va || '').toLowerCase(); vb = (vb || '').toLowerCase(); }
-        if (va < vb) return _sortAsc ? -1 : 1;
-        if (va > vb) return _sortAsc ? 1 : -1;
-        return 0;
-    });
-
-    const maxRatio = Math.max(5, ...filtered.map(s => s.vol_ratio || 0));
-    const tbody = document.getElementById('volBody');
-    const visible = new Set();
-
-    // Walk the desired order: reuse the cached <tr> if we have one (just
-    // patch its cells), otherwise build a new one. Reorder by *moving*
-    // existing nodes — appendChild on an attached node is a move, not a copy.
-    let cursor = null;
-    filtered.forEach(s => {
-        visible.add(s.symbol);
-        let tr = _rowEls[s.symbol];
-        if (!tr) {
-            tr = _buildRow(s, maxRatio);
-            _rowEls[s.symbol] = tr;
-        } else {
-            _updateRow(tr, s, maxRatio, /*isNew=*/false);
-        }
-        const expectedNext = cursor ? cursor.nextSibling : tbody.firstChild;
-        if (expectedNext !== tr) {
-            tbody.insertBefore(tr, expectedNext);
-        }
-        cursor = tr;
-    });
-
-    // Detach rows that don't belong in the current view (filtered out, or
-    // dropped from the universe). Keep the element cached so a later filter
-    // change can reattach it without rebuilding.
-    Array.from(tbody.children).forEach(tr => {
-        if (!visible.has(tr.dataset.symbol)) tbody.removeChild(tr);
-    });
-}
-
-// Column sorting
-document.querySelectorAll('.vol-th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
-        const col = th.dataset.sort;
-        if (_sortCol === col) _sortAsc = !_sortAsc;
-        else { _sortCol = col; _sortAsc = col === 'name'; }
-        renderTable();
-    });
-});
-
-// Filter buttons
-document.querySelectorAll('.tender-filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tender-filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderTable();
-    });
-});
-
-// Index filter
-document.getElementById('indexFilter').addEventListener('change', renderTable);
-
 </script>
 {% endif %}
 {% endblock %}

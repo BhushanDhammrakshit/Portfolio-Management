@@ -1,0 +1,141 @@
+{% extends "layout.html" %}
+{% import "components/_components.html" as ds %}
+
+{% block content %}
+<section class="ds-component-stack">
+    <header class="page-header">
+        <div>
+            <h1>Design System</h1>
+            <p>Shared interface components and theme reference.</p>
+        </div>
+    </header>
+
+    <div class="ds-component-grid">
+        <section class="ds-showcase-theme" data-theme="light">
+            <h2>Light Theme</h2>
+            <div class="ds-component-stack">
+                <div class="ds-showcase-controls">
+                    {{ ds.Button('Primary', 'primary') }}
+                    {{ ds.Button('Secondary', 'secondary') }}
+                    {{ ds.Button('Ghost', 'ghost') }}
+                    {{ ds.Button('Danger', 'danger') }}
+                    {{ ds.Chip('1D', true) }}
+                    {{ ds.Chip('1W') }}
+                    {{ ds.Badge('Positive', 'positive') }}
+                    {{ ds.Badge('Negative', 'negative') }}
+                    {{ ds.Badge('Warning', 'warning') }}
+                    {{ ds.Badge('Information', 'info') }}
+                    {{ ds.Tooltip('Tooltip', 'Explanatory detail is available on focus or hover.') }}
+                    {{ ds.InfoTooltip('Detailed context appears here.', 'Metric information') }}
+                </div>
+
+                {{ ds.Input('ds-light-search', 'Search', 'Search stocks, indices, scans') }}
+                {{ ds.Tabs([
+                    {'label': 'Overview', 'href': '#light-overview', 'active': true},
+                    {'label': 'Performance', 'href': '#light-performance', 'active': false},
+                    {'label': 'Holdings', 'href': '#light-holdings', 'active': false}
+                ]) }}
+                {{ ds.KpiStrip([
+                    {'label': 'Portfolio Value', 'value': '₹1,04,238.85', 'detail': '+₹1,125.40 today', 'help': 'Current market value of all listed holdings.'},
+                    {'label': 'Day Change', 'value': '+1.08%', 'detail': 'As of 15:30 IST'},
+                    {'label': 'Invested', 'value': '₹98,500.00', 'detail': '12 holdings'},
+                    {'label': 'Available Cash', 'value': 'N/A', 'detail': 'Not provided'}
+                ]) }}
+
+                {% call ds.Card('Table') %}
+                    {{ ds.DataTable(
+                        [
+                            {'key': 'stock', 'label': 'Stock'},
+                            {'key': 'price', 'label': 'Last Price', 'numeric': true},
+                            {'key': 'change', 'label': 'Change', 'numeric': true}
+                        ],
+                        [
+                            {'stock': 'RELIANCE', 'price': '₹1,428.50', 'change': '+0.84%'},
+                            {'stock': 'INFY', 'price': '₹1,562.20', 'change': '-0.32%'}
+                        ],
+                        label='Example market table'
+                    ) }}
+                {% endcall %}
+
+                {% call ds.ChartCard('Price History', 'NIFTY 50') %}
+                    <div class="ds-chart-placeholder">Chart preview</div>
+                {% endcall %}
+
+                {% call ds.Card('Loading State') %}
+                    {{ ds.Skeleton(3) }}
+                {% endcall %}
+
+                {% call ds.Card('Empty and Error States') %}
+                    <div class="ds-component-grid">
+                        {{ ds.EmptyState('No results', 'No records match the selected filters.') }}
+                        {{ ds.ErrorState('Data unavailable', 'The request could not be completed.', '#') }}
+                    </div>
+                {% endcall %}
+            </div>
+        </section>
+
+        <section class="ds-showcase-theme" data-theme="dark">
+            <h2>Dark Theme</h2>
+            <div class="ds-component-stack">
+                <div class="ds-showcase-controls">
+                    {{ ds.Button('Primary', 'primary') }}
+                    {{ ds.Button('Secondary', 'secondary') }}
+                    {{ ds.Button('Ghost', 'ghost') }}
+                    {{ ds.Button('Danger', 'danger') }}
+                    {{ ds.Chip('1D', true) }}
+                    {{ ds.Chip('1W') }}
+                    {{ ds.Badge('Positive', 'positive') }}
+                    {{ ds.Badge('Negative', 'negative') }}
+                    {{ ds.Badge('Warning', 'warning') }}
+                    {{ ds.Badge('Information', 'info') }}
+                    {{ ds.Tooltip('Tooltip', 'Explanatory detail is available on focus or hover.') }}
+                    {{ ds.InfoTooltip('Detailed context appears here.', 'Metric information') }}
+                </div>
+
+                {{ ds.Input('ds-dark-search', 'Search', 'Search stocks, indices, scans') }}
+                {{ ds.Tabs([
+                    {'label': 'Overview', 'href': '#dark-overview', 'active': true},
+                    {'label': 'Performance', 'href': '#dark-performance', 'active': false},
+                    {'label': 'Holdings', 'href': '#dark-holdings', 'active': false}
+                ]) }}
+                {{ ds.KpiStrip([
+                    {'label': 'Portfolio Value', 'value': '₹1,04,238.85', 'detail': '+₹1,125.40 today', 'help': 'Current market value of all listed holdings.'},
+                    {'label': 'Day Change', 'value': '+1.08%', 'detail': 'As of 15:30 IST'},
+                    {'label': 'Invested', 'value': '₹98,500.00', 'detail': '12 holdings'},
+                    {'label': 'Available Cash', 'value': 'N/A', 'detail': 'Not provided'}
+                ]) }}
+
+                {% call ds.Card('Table') %}
+                    {{ ds.DataTable(
+                        [
+                            {'key': 'stock', 'label': 'Stock'},
+                            {'key': 'price', 'label': 'Last Price', 'numeric': true},
+                            {'key': 'change', 'label': 'Change', 'numeric': true}
+                        ],
+                        [
+                            {'stock': 'RELIANCE', 'price': '₹1,428.50', 'change': '+0.84%'},
+                            {'stock': 'INFY', 'price': '₹1,562.20', 'change': '-0.32%'}
+                        ],
+                        label='Example market table'
+                    ) }}
+                {% endcall %}
+
+                {% call ds.ChartCard('Price History', 'NIFTY 50') %}
+                    <div class="ds-chart-placeholder">Chart preview</div>
+                {% endcall %}
+
+                {% call ds.Card('Loading State') %}
+                    {{ ds.Skeleton(3) }}
+                {% endcall %}
+
+                {% call ds.Card('Empty and Error States') %}
+                    <div class="ds-component-grid">
+                        {{ ds.EmptyState('No results', 'No records match the selected filters.') }}
+                        {{ ds.ErrorState('Data unavailable', 'The request could not be completed.', '#') }}
+                    </div>
+                {% endcall %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

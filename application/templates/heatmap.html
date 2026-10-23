@@ -2,7 +2,10 @@
 {% block content %}
 <div class="scope-wrapper">
   <header class="scope-header">
-    <h1 class="scope-title"><i class="fa-solid fa-table-cells-large me-2"></i>Sector Heatmap</h1>
+    <div>
+      <h1 class="scope-title">Market Overview</h1>
+      <p class="scope-subtitle">Indian market indices, breadth and sector performance.</p>
+    </div>
     <div class="scope-header-tools">
       <span id="scopeUpdated" class="scope-updated"></span>
       <label class="scope-live-toggle" title="Auto-refresh every 10s">
@@ -15,6 +18,35 @@
     </div>
   </header>
 
+  <nav class="market-nav-tabs" role="tablist" aria-label="Market overview sections">
+    <button type="button" role="tab" id="overview-tab-indices" aria-selected="false" aria-controls="overview-panel-indices" data-overview-tab="indices">Indices</button>
+    <button type="button" role="tab" id="overview-tab-sectors" aria-selected="false" aria-controls="overview-panel-sectors" data-overview-tab="sectors">Sectors</button>
+    <button type="button" role="tab" id="overview-tab-breadth" aria-selected="false" aria-controls="overview-panel-breadth" data-overview-tab="breadth">Breadth</button>
+    <button type="button" role="tab" id="overview-tab-heatmap" aria-selected="true" aria-controls="overview-panel-heatmap" data-overview-tab="heatmap">Heatmap</button>
+  </nav>
+
+  <section class="market-tab-panel" id="overview-panel-indices" role="tabpanel" aria-labelledby="overview-tab-indices" data-overview-panel="indices" hidden>
+    <article class="market-overview-card">
+      <header class="market-overview-card-header">Major Indices</header>
+      <div class="market-widget-body flush" id="overviewIndices"><div class="market-widget-empty">Loading index data…</div></div>
+    </article>
+  </section>
+
+  <section class="market-tab-panel" id="overview-panel-sectors" role="tabpanel" aria-labelledby="overview-tab-sectors" data-overview-panel="sectors" hidden>
+    <article class="market-overview-card">
+      <header class="market-overview-card-header">Sector Performance</header>
+      <div class="market-overview-content" id="overviewSectors"><div class="market-widget-empty">Loading sector data…</div></div>
+    </article>
+  </section>
+
+  <section class="market-tab-panel" id="overview-panel-breadth" role="tabpanel" aria-labelledby="overview-tab-breadth" data-overview-panel="breadth" hidden>
+    <article class="market-overview-card">
+      <header class="market-overview-card-header">Market Breadth</header>
+      <div class="market-overview-content" id="overviewBreadth"><div class="market-widget-empty">Loading breadth data…</div></div>
+    </article>
+  </section>
+
+  <section class="market-tab-panel" id="overview-panel-heatmap" role="tabpanel" aria-labelledby="overview-tab-heatmap" data-overview-panel="heatmap">
   <div id="treemapLoading" class="scope-loading">
     <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
     <p>Loading sector data…</p>
@@ -29,126 +61,25 @@
     <div class="scope-bars-header">
       <span class="scope-bars-title"><i class="fa-solid fa-chart-simple me-2"></i>Sector Performance — Avg % Change</span>
       <span class="scope-bars-legend">
-        <span><span class="legend-sw" style="background:#22c55e"></span>Net Buying</span>
-        <span><span class="legend-sw" style="background:#dc2626"></span>Net Selling</span>
+        <span><span class="legend-sw positive"></span>Positive</span>
+        <span><span class="legend-sw negative"></span>Negative</span>
       </span>
     </div>
     <div id="sectorBars" class="scope-bars"></div>
   </div>
+  </section>
 </div>
 
 <!-- Floating tooltip -->
 <div id="stockTooltip" class="scope-tooltip" hidden></div>
 
-<style>
-/* ── Sector Scope – light full-page treemap ──────────────────── */
-.scope-wrapper{background:var(--surface);border-radius:12px;padding:0;display:flex;flex-direction:column;min-height:calc(100vh - 90px);border:1px solid var(--border);box-shadow:0 1px 3px rgba(15,23,42,.06)}
-.scope-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e2e8f0;flex-shrink:0}
-
-/* Override app-content constraints so treemap fills the full page width */
-.app-content:has(.scope-wrapper) { max-width: 100%; padding: 0; margin: 0; }
-.scope-wrapper { border-radius: 0; border: none; height: auto; min-height: calc(100vh - var(--topbar-height) - 20px); box-shadow: none; margin-bottom: 20px }
-.scope-title{color:#0f172a;font-size:2.5rem;font-weight:800;margin:0}
-.scope-refresh-btn{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;width:34px;height:34px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
-.scope-refresh-btn:hover{background:#e2e8f0;color:#0f172a}
-.scope-header-tools{display:flex;align-items:center;gap:14px}
-.scope-updated{font-size:.72rem;color:#94a3b8;font-weight:500;white-space:nowrap}
-.scope-live-toggle{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:#475569;cursor:pointer;user-select:none;margin:0}
-.scope-live-toggle input{margin:0 4px 0 0;cursor:pointer}
-.scope-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;transition:background .2s}
-.scope-live-dot.on{background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.7);animation:scopeLivePulse 1.6s infinite}
-@keyframes scopeLivePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
-[data-theme="dark"] .scope-updated{color:var(--text-muted)}
-[data-theme="dark"] .scope-live-toggle{color:var(--text)}
-[data-theme="dark"] .scope-live-dot{background:var(--text-muted)}
-.scope-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#64748b;gap:12px;min-height:600px}
-.scope-treemap{position:relative;flex:1 1 auto;min-height:calc(100vh - var(--topbar-height) - 80px);overflow:hidden;border-radius:0 0 12px 12px}
-
-/* Sector bar chart */
-.scope-bars-wrap{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:18px 24px 22px}
-.scope-bars-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.scope-bars-title{font-size:1.05rem;font-weight:800;color:#0f172a}
-.scope-bars-legend{display:flex;gap:16px;font-size:.82rem;color:#64748b;font-weight:600}
-.legend-sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:middle}
-.scope-bars{position:relative;display:flex;align-items:stretch;justify-content:space-around;gap:10px;height:60vh;min-height:360px;max-height:900px;padding:8px 4px 0;overflow-x:auto;overflow-y:hidden}
-.scope-bar-col{flex:1 1 0;min-width:80px;max-width:140px;display:flex;flex-direction:column;align-items:center;position:relative}
-.scope-bar-track{position:relative;width:100%;flex:1 1 auto;min-height:0;overflow:hidden}
-.scope-bar-axis{position:absolute;left:0;right:0;top:50%;border-top:1px dashed #cbd5e1}
-.scope-bar{width:60%;max-width:64px;border-radius:6px 6px 0 0;position:absolute;left:50%;transform:translateX(-50%);transition:height .3s ease;box-shadow:0 -2px 6px rgba(0,0,0,.05)}
-.scope-bar.neg{border-radius:0 0 6px 6px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-.scope-bar-label{flex:0 0 auto;height:26px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;text-align:center;line-height:1.15;padding:6px 2px 0}
-.scope-bar-val{position:absolute;left:50%;transform:translateX(-50%);font-size:.78rem;font-weight:800;color:#0f172a;white-space:nowrap;pointer-events:none}
-
-/* Sector block */
-.scope-sector{position:absolute;overflow:hidden;border:2px solid rgba(255,255,255,.7);transition:left .35s ease,top .35s ease,width .35s ease,height .35s ease}
-.scope-sector-label{position:absolute;top:0;left:0;padding:4px 10px;font-size:.82rem;font-weight:900;color:#fff;z-index:5;pointer-events:none;text-transform:uppercase;letter-spacing:.05em;background:rgba(0,0,0,.55);border-radius:0 0 6px 0;line-height:1.3;white-space:nowrap}
-
-/* Stock cell */
-.scope-cell{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;border:1px solid rgba(255,255,255,.25);transition:left .35s ease,top .35s ease,width .35s ease,height .35s ease,background-color .4s ease,filter .12s}
-.scope-cell.cell-tick-up{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);animation:cellTickUp .9s ease-out}
-.scope-cell.cell-tick-dn{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);animation:cellTickDn .9s ease-out}
-@keyframes cellTickUp{0%{box-shadow:inset 0 0 0 3px #bbf7d0}100%{box-shadow:inset 0 0 0 0 transparent}}
-@keyframes cellTickDn{0%{box-shadow:inset 0 0 0 3px #fecaca}100%{box-shadow:inset 0 0 0 0 transparent}}
-.scope-cell:hover{filter:brightness(1.18);z-index:10}
-.scope-cell-name{color:#fff;font-size:.78rem;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92%;text-align:center;line-height:1.2}
-.scope-cell-name-sm{font-size:.62rem}
-.scope-cell-change{color:rgba(255,255,255,.88);font-size:.65rem;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.6);margin-top:1px}
-
-/* Floating tooltip */
-.scope-tooltip{position:fixed;background:var(--surface);color:var(--text);padding:12px 16px;border-radius:10px;border:1px solid var(--border-strong);font-size:.84rem;pointer-events:none;z-index:9999;box-shadow:0 8px 30px rgba(15,23,42,.35);max-width:250px}
-.scope-tooltip b{display:block;font-size:.9rem;margin-bottom:5px;color:#4f46e5}
-.scope-tooltip .tt-row{display:flex;justify-content:space-between;gap:18px;margin:3px 0}
-.scope-tooltip .tt-label{color:#64748b}
-.scope-tooltip .tt-val{font-weight:700}
-.scope-tooltip .tt-pos{color:#16a34a}
-.scope-tooltip .tt-neg{color:#dc2626}
-
-/* ── Sector Scope – dark mode overrides ──────────────────────── */
-[data-theme="dark"] .scope-wrapper{background:var(--surface);border-color:var(--border)}
-[data-theme="dark"] .scope-header{border-color:var(--border)}
-[data-theme="dark"] .scope-title{color:var(--text)}
-[data-theme="dark"] .scope-refresh-btn{background:var(--surface-2);color:var(--text-muted);border-color:var(--border)}
-[data-theme="dark"] .scope-refresh-btn:hover{background:var(--border);color:var(--text)}
-[data-theme="dark"] .scope-loading{color:var(--text-muted)}
-[data-theme="dark"] .scope-bars-wrap{background:var(--surface);border-color:var(--border)}
-[data-theme="dark"] .scope-bars-title{color:var(--text)}
-[data-theme="dark"] .scope-bars-legend{color:var(--text-muted)}
-[data-theme="dark"] .scope-bars{border-color:var(--border-strong)}
-[data-theme="dark"] .scope-bar-axis{border-color:var(--border-strong)}
-[data-theme="dark"] .scope-bar-label{color:var(--text-muted)}
-[data-theme="dark"] .scope-bar-val{color:var(--text)}
-[data-theme="dark"] .scope-tooltip{background:var(--surface);color:var(--text);border-color:var(--border-strong);box-shadow:0 8px 30px rgba(0,0,0,.35)}
-[data-theme="dark"] .scope-tooltip b{color:var(--primary)}
-[data-theme="dark"] .scope-tooltip .tt-label{color:var(--text-muted)}
-[data-theme="dark"] .scope-tooltip .tt-pos{color:var(--success)}
-[data-theme="dark"] .scope-tooltip .tt-neg{color:var(--danger)}
-[data-theme="dark"] .scope-sector{border-color:rgba(0,0,0,.4)}
-[data-theme="dark"] .scope-cell{border-color:rgba(0,0,0,.3)}
-
-/* ── Responsive: keep the header title readable on phones ──────── */
-@media (max-width: 560px){
-  .scope-header{flex-wrap:wrap;gap:8px;padding:10px 12px}
-  .scope-title{white-space:nowrap;font-size:1.75rem;flex:1 1 100%}
-  .scope-header-tools{gap:10px;flex-wrap:wrap;width:100%;justify-content:flex-start}
-  .scope-updated{white-space:normal}
-  .scope-bars-wrap{padding:14px 12px 18px}
-}
-</style>
 
 <script>
 /* ── colour scale ──────────────────────────────────────────────── */
 function getColor(c) {
-    if (c >= 3)   return '#22c55e';
-    if (c >= 2)   return '#2da84d';
-    if (c >= 1)   return '#2d8a44';
-    if (c >= 0.5) return '#3a7d46';
-    if (c > 0)    return '#4a7a4f';
-    if (c === 0)  return '#9ca3af';
-    if (c > -0.5) return '#b35555';
-    if (c > -1)   return '#c04040';
-    if (c > -2)   return '#c93535';
-    if (c > -3)   return '#d42828';
-    return '#e01b1b';
+    if (c > 0.25) return 'var(--positive-bg)';
+    if (c < -0.25) return 'var(--negative-bg)';
+    return 'var(--bg-subtle)';
 }
 
 /* ── squarified treemap layout ────────────────────────────────── */
@@ -389,7 +320,7 @@ function renderSectorBars(sectors) {
     bars.innerHTML = data.map(d => {
         const pct = Math.max(0.5, (Math.abs(d.avg) / maxAbs) * BAR_MAX_PCT);
         const isPos = d.avg >= 0;
-        const color = isPos ? '#22c55e' : '#dc2626';
+        const color = isPos ? 'var(--positive)' : 'var(--negative)';
         const sign = isPos ? '+' : '';
         // bar positioned from center axis upward (pos) or downward (neg)
         const barStyle = isPos
@@ -440,7 +371,7 @@ function setUpdatedLabel(ts) {
     const when = ts ? new Date(ts) : new Date();
     const t = when.toLocaleTimeString('en-IN');
     const live = document.getElementById('liveToggle').checked;
-    const prefix = live ? (isMarketOpen() ? '🔴 LIVE · ' : '⏸ Market closed · ') : '';
+    const prefix = live ? (isMarketOpen() ? 'LIVE · ' : 'Market closed · ') : '';
     const suffix = ts ? ' (' + ppCache.ago(Date.now() - ts) + ')' : '';
     el.textContent = prefix + 'Updated ' + t + suffix;
 }
@@ -448,18 +379,40 @@ function setUpdatedLabel(ts) {
 function fetchFresh(showLoader) {
     if (showLoader) {
         document.getElementById('treemapLoading').style.display = 'flex';
+        document.getElementById('treemapLoading').innerHTML = '<div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div><p>Loading sector data…</p>';
         document.getElementById('treemapContainer').hidden = true;
     }
-    return fetch('/heatmap-data').then(r => r.json()).then(d => {
-        if (d && d.sectors) {
+    return fetch('/heatmap-data').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    }).then(d => {
+        if (d && Array.isArray(d.sectors)) {
             _lastData = d;
             try { ppCache.set('heatmap:data', d); } catch (e) {}
-            document.getElementById('treemapLoading').style.display = 'none';
-            renderTreemap(d);
-            setUpdatedLabel();
+            if (d.sectors.length) {
+                document.getElementById('treemapLoading').style.display = 'none';
+                renderTreemap(d);
+                setUpdatedLabel();
+            } else {
+                document.getElementById('treemapContainer').hidden = true;
+                document.getElementById('sectorBarsWrap').hidden = true;
+                document.getElementById('treemapLoading').style.display = 'flex';
+                document.getElementById('treemapLoading').innerHTML = '<p role="status">No sector data is available.</p>';
+            }
+        } else throw new Error('Invalid sector payload');
+        updateLiveDot();
+    }).catch(() => {
+        if (showLoader || !_lastData) {
+            const loading = document.getElementById('treemapLoading');
+            loading.style.display = 'flex';
+            loading.innerHTML = '<p role="alert">Sector data could not be loaded.</p><button type="button" class="btn btn-secondary" id="scopeRetryBtn">Retry</button>';
+            document.getElementById('scopeRetryBtn').addEventListener('click', () => fetchFresh(true));
+        } else {
+            document.getElementById('scopeUpdated').textContent = 'Refresh failed; displaying the previous snapshot.';
         }
         updateLiveDot();
-    }).catch(() => updateLiveDot());
+        return false;
+    });
 }
 
 function startLive() {
@@ -479,12 +432,33 @@ function stopLive() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
-    fetch('/heatmap-data?force_refresh=1').then(r => r.json()).then(d => {
+    const button = document.getElementById('refreshBtn');
+    button.disabled = true;
+    fetch('/heatmap-data?force_refresh=1').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    }).then(d => {
+        if (!d || !Array.isArray(d.sectors)) throw new Error('No sector data returned');
         _lastData = d;
         try { ppCache.set('heatmap:data', d); } catch (e) {}
-        renderTreemap(d);
+        if (d.sectors.length) renderTreemap(d);
+        else {
+            document.getElementById('treemapContainer').hidden = true;
+            document.getElementById('sectorBarsWrap').hidden = true;
+            document.getElementById('treemapLoading').style.display = 'flex';
+            document.getElementById('treemapLoading').innerHTML = '<p role="status">No sector data is available.</p>';
+        }
         setUpdatedLabel();
-    });
+    }).catch(() => {
+        if (_lastData) {
+            document.getElementById('scopeUpdated').textContent = 'Refresh failed; displaying the previous snapshot.';
+        } else {
+            const loading = document.getElementById('treemapLoading');
+            loading.style.display = 'flex';
+            loading.innerHTML = '<p role="alert">Sector data could not be loaded.</p><button type="button" class="btn btn-secondary" id="scopeRetryBtn">Retry</button>';
+            document.getElementById('scopeRetryBtn').addEventListener('click', () => fetchFresh(true));
+        }
+    }).finally(() => { button.disabled = false; });
 });
 
 document.getElementById('liveToggle').addEventListener('change', startLive);
@@ -519,6 +493,150 @@ window.addEventListener('resize', () => {
     } else {
         fetchFresh(true).then(startLive);
     }
+})();
+</script>
+<script>
+(function () {
+  const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+  const formatNumber = value => {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0
+      ? window.FCFormat.number(number, 2)
+      : null;
+  };
+  const formatChange = value => {
+    const number = Number(value);
+    return Number.isFinite(number) ? window.FCFormat.percent(number, true) : null;
+  };
+  const setUnavailable = (id, message) => {
+    const target = document.getElementById(id);
+    if (target) target.innerHTML = `<div class="market-widget-empty">${escapeHTML(message)}</div>`;
+  };
+  const tableMarkup = rows => `<div class="table-responsive"><table class="market-overview-table"><thead><tr><th>Index</th><th>Value</th><th>Change</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  document.querySelectorAll('[data-overview-tab]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const active = tab.dataset.overviewTab;
+      document.querySelectorAll('[data-overview-tab]').forEach(item => {
+        item.setAttribute('aria-selected', String(item === tab));
+        item.tabIndex = item === tab ? 0 : -1;
+      });
+      document.querySelectorAll('[data-overview-panel]').forEach(panel => {
+        panel.hidden = panel.dataset.overviewPanel !== active;
+      });
+    });
+    tab.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      const tabs = Array.from(document.querySelectorAll('[data-overview-tab]'));
+      const index = tabs.indexOf(tab);
+      const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      event.preventDefault();
+      next.focus();
+      next.click();
+    });
+  });
+
+  fetch('/api/global-markets', { credentials: 'same-origin' }).then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }).then(data => {
+    const india = (data.regions || []).flatMap(region => region.items || [])
+      .filter(item => item.country === 'India');
+    if (!india.length) return setUnavailable('overviewIndices', 'Indian index data is unavailable from the current feed.');
+    const rows = india.map(item => {
+      const price = formatNumber(item.price);
+      const change = formatChange(item.change_pct);
+      const cls = Number(item.change_pct) >= 0 ? 'market-change-positive' : 'market-change-negative';
+      return `<tr><td>${escapeHTML(item.index || 'N/A')}</td><td class="num">${price || '<span class="market-na" title="Index value unavailable">N/A</span>'}</td><td class="num ${cls}">${escapeHTML(change || 'N/A')}</td><td>${item.is_open ? 'Open' : 'Closed'}</td></tr>`;
+    }).join('');
+    document.getElementById('overviewIndices').innerHTML = tableMarkup(rows);
+    const sortable = document.querySelector('#overviewIndices table');
+    if (sortable) {
+      const headings = sortable.querySelectorAll('th');
+      headings.forEach((heading, column) => {
+        heading.tabIndex = 0;
+        heading.setAttribute('role', 'button');
+        heading.setAttribute('aria-label', `Sort by ${heading.textContent}`);
+        const sort = () => {
+          const tbody = sortable.tBodies[0];
+          const ascending = heading.dataset.direction !== 'ascending';
+          headings.forEach(item => delete item.dataset.direction);
+          heading.dataset.direction = ascending ? 'ascending' : 'descending';
+          Array.from(tbody.rows).sort((a, b) => {
+            const left = a.cells[column].textContent.trim();
+            const right = b.cells[column].textContent.trim();
+            const leftNum = Number(left.replace(/[,+%]/g, ''));
+            const rightNum = Number(right.replace(/[,+%]/g, ''));
+            return Number.isFinite(leftNum) && Number.isFinite(rightNum)
+              ? (leftNum - rightNum) * (ascending ? 1 : -1)
+              : left.localeCompare(right, undefined, { numeric: true }) * (ascending ? 1 : -1);
+          }).forEach(row => tbody.appendChild(row));
+        };
+        heading.addEventListener('click', sort);
+        heading.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sort(); }
+        });
+      });
+    }
+  }).catch(error => setUnavailable('overviewIndices', `Index data could not be loaded (${error.message}).`));
+
+  fetch('/heatmap-data', { credentials: 'same-origin' }).then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }).then(data => {
+    const sectorRows = (data.sectors || []).map(sector => {
+      const changes = (sector.stocks || []).map(stock => Number(stock.change)).filter(Number.isFinite);
+      if (!changes.length) return null;
+      const average = changes.reduce((sum, value) => sum + value, 0) / changes.length;
+      const cls = average > 0 ? 'positive' : average < 0 ? 'negative' : 'neutral';
+      return { name: sector.name, average, formatted: window.FCFormat.percent(average, true), count: changes.length, cls };
+    }).filter(Boolean);
+    document.getElementById('overviewSectors').innerHTML = sectorRows.length
+      ? `<div class="market-sector-grid">${sectorRows.map(sector => `<div class="market-sector-cell ${sector.cls}"><span>${escapeHTML(sector.name)}</span><strong>${escapeHTML(sector.formatted)}</strong></div>`).join('')}</div><div class="table-responsive"><table class="market-overview-table" id="overviewSectorTable"><thead><tr><th>Sector</th><th>Average change</th><th>Constituents</th></tr></thead><tbody>${sectorRows.map(sector => `<tr><td data-sort-value="${escapeHTML(sector.name)}">${escapeHTML(sector.name)}</td><td class="num ${sector.cls === 'positive' ? 'market-change-positive' : sector.cls === 'negative' ? 'market-change-negative' : ''}" data-sort-value="${sector.average}">${escapeHTML(sector.formatted)}</td><td class="num" data-sort-value="${sector.count}">${sector.count}</td></tr>`).join('')}</tbody></table></div>`
+      : '<div class="market-widget-empty">Sector data is unavailable.</div>';
+    const sectorTable = document.getElementById('overviewSectorTable');
+    if (sectorTable) {
+      sectorTable.querySelectorAll('th').forEach((heading, column) => {
+        heading.tabIndex = 0;
+        heading.setAttribute('role', 'button');
+        heading.setAttribute('aria-label', `Sort by ${heading.textContent}`);
+        const sort = () => {
+          const ascending = heading.dataset.direction !== 'ascending';
+          sectorTable.querySelectorAll('th').forEach(item => delete item.dataset.direction);
+          heading.dataset.direction = ascending ? 'ascending' : 'descending';
+          Array.from(sectorTable.tBodies[0].rows).sort((left, right) => {
+            const a = left.cells[column].dataset.sortValue || left.cells[column].textContent;
+            const b = right.cells[column].dataset.sortValue || right.cells[column].textContent;
+            const an = Number(a);
+            const bn = Number(b);
+            return Number.isFinite(an) && Number.isFinite(bn)
+              ? (an - bn) * (ascending ? 1 : -1)
+              : a.localeCompare(b, undefined, { numeric: true }) * (ascending ? 1 : -1);
+          }).forEach(row => sectorTable.tBodies[0].appendChild(row));
+        };
+        heading.addEventListener('click', sort);
+        heading.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sort(); }
+        });
+      });
+    }
+  }).catch(error => setUnavailable('overviewSectors', `Sector data could not be loaded (${error.message}).`));
+
+  fetch('/api/market-pulse', { credentials: 'same-origin' }).then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }).then(data => {
+    const breadth = data.market_breadth_movers || {};
+    const values = ['advances', 'declines', 'unchanged'].map(key => Number(breadth[key]));
+    if (!values.every(Number.isFinite) || values.reduce((sum, value) => sum + value, 0) <= 0) {
+      return setUnavailable('overviewBreadth', 'Market breadth data is unavailable from the current feed.');
+    }
+    const [advances, declines, unchanged] = values;
+    const total = advances + declines + unchanged;
+    document.getElementById('overviewBreadth').innerHTML = `<div class="market-breadth-summary"><div><span>Advances</span><strong>${advances.toLocaleString('en-IN')}</strong></div><div><span>Declines</span><strong>${declines.toLocaleString('en-IN')}</strong></div><div><span>Unchanged</span><strong>${unchanged.toLocaleString('en-IN')}</strong></div></div><div class="market-bar" role="img" aria-label="Advances ${Math.round(advances / total * 100)} percent, declines ${Math.round(declines / total * 100)} percent, unchanged ${Math.round(unchanged / total * 100)} percent"><span class="adv" style="width:${advances / total * 100}%"></span><span class="dec" style="width:${declines / total * 100}%"></span><span class="unc" style="width:${unchanged / total * 100}%"></span></div><div class="market-breadth-legend"><span>Advances ${Math.round(advances / total * 100)}%</span><span>Declines ${Math.round(declines / total * 100)}%</span><span>Unchanged ${Math.round(unchanged / total * 100)}%</span></div>`;
+  }).catch(error => setUnavailable('overviewBreadth', `Breadth data could not be loaded (${error.message}).`));
 })();
 </script>
 {% endblock %}

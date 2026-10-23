@@ -371,23 +371,55 @@
     .oc-sr-scroll .oc-sr-canvas-box{min-width:620px}
     .oc-sr-scroll{scrollbar-width:thin}
 }
+
+/* ── Phase 4: chain table, tabs and analysis panels ─────────── */
+.oc-table-wrap{max-height:70vh;overflow:auto}
+.oc-table thead tr:first-child th{top:0}
+.oc-table thead tr:nth-child(2) th{top:37px}
+.oc-table th:nth-child(7){text-align:center}
+.oc-table td.strike{font-weight:var(--fw-semibold)}
+.oc-table td.oc-oi-cell-wrap{padding-top:5px;padding-bottom:5px}
+.oc-table td .oc-oi-cell{display:inline-flex;min-width:62px;flex-direction:column;align-items:flex-end;gap:2px}
+.oc-table td .oc-oi-track{width:62px;height:3px;overflow:hidden;background:var(--bg-subtle);border-radius:var(--radius-tag)}
+.oc-table td .oc-oi-fill{display:block;height:100%;background:var(--positive);border-radius:var(--radius-tag)}
+.oc-table td .oc-oi-fill.is-put{background:var(--negative)}
+.oc-table tr.is-atm td{background:var(--warning-bg)}
+.oc-table tr.is-atm td.strike{background:var(--warning-bg)}
+.oc-tab-btn.active{border-bottom-color:var(--brand);color:var(--text-primary)}
+.oc-panel .oc-chart-box{height:300px;margin-top:var(--space-3)}
+.oc-maxpain-table tr.is-maxpain td{background:var(--brand-soft);font-weight:var(--fw-semibold)}
+.oc-expiry-chips .ds-chip.is-active{background:var(--brand-soft);border-color:var(--brand-border);color:var(--brand)}
 </style>
 
 <div class="oc-page">
-    <header class="oc-header">
+    <header class="page-header">
         <div>
-            <h1 style="margin:0"><i class="fa-solid fa-link me-2"></i>Options Analytics</h1>
-            <p class="text-muted" style="margin:4px 0 0;font-size:.85rem">
-                Volatility, sentiment, OI build-up, support &amp; resistance and unusual F&amp;O activity — all in one place.
-            </p>
+            <h1>Options Analytics</h1>
+            <p>Option chain, OI analysis, PCR, max pain and implied volatility for NIFTY.</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span id="ocAsOf" class="text-muted" style="font-size:.78rem"></span>
-            <button id="ocRefresh" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-rotate me-1"></i>Refresh
-            </button>
+        <div class="scans-actions">
+            <span id="ocAsOf" class="scans-asof"></span>
+            <button id="ocRefresh" class="ds-button ds-button-primary ds-button-small">Refresh</button>
         </div>
     </header>
+
+    <section class="oc-controls" aria-label="Option chain controls">
+        <label class="oc-control" for="ocUnderlying">
+            <span>Underlying</span>
+            <select class="ds-input" id="ocUnderlying">
+                <option value="NIFTY" selected>NIFTY 50</option>
+                <option value="BANKNIFTY" disabled>BANK NIFTY (soon)</option>
+                <option value="FINNIFTY" disabled>FINNIFTY (soon)</option>
+            </select>
+        </label>
+        <div class="oc-expiry-group">
+            <span>Expiry</span>
+            <div class="oc-expiry-chips" id="ocExpiryChips">
+                <span class="ds-chip is-active">Nearest weekly</span>
+            </div>
+            <span class="oc-expiry-note" id="ocExpiryNote">Expiry list loads with the chain.</span>
+        </div>
+    </section>
 
     <div id="ocLoading" class="oc-loading">
         <div class="app-spinner lg text-primary" role="status" aria-label="Loading"></div>
@@ -409,16 +441,17 @@
     </div>
 
     <div id="ocContent" hidden>
-        <nav class="oc-tabs" id="ocTabs" role="tablist">
-            <button type="button" class="oc-tab-btn active" data-tab-target="overview"><i class="fa-solid fa-gauge-high"></i>Overview</button>
-            <button type="button" class="oc-tab-btn" data-tab-target="chain"><i class="fa-solid fa-table-list"></i>Option Chain</button>
-            <button type="button" class="oc-tab-btn" data-tab-target="oi"><i class="fa-solid fa-arrows-up-to-line"></i>OI &amp; Levels</button>
-            <button type="button" class="oc-tab-btn" data-tab-target="blocks"><i class="fa-solid fa-money-bill-trend-up"></i>Block Deals</button>
-            <button type="button" class="oc-tab-btn" data-tab-target="preopen"><i class="fa-solid fa-sun"></i>Pre Open Market Analysis</button>
-            <button type="button" class="oc-tab-btn" data-tab-target="gapforecast"><i class="fa-solid fa-arrows-up-down"></i>Gap Forecast</button>
+        <nav class="oc-tabs" id="ocTabs" role="tablist" aria-label="Options analytics sections">
+            <button type="button" class="oc-tab-btn active" data-tab-target="chain">Option Chain</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="oi">OI Analysis</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="pcr">PCR</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="maxpain">Max Pain</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="iv">IV</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="preopen">Pre-Open</button>
+            <button type="button" class="oc-tab-btn" data-tab-target="gapforecast">Gap Forecast</button>
         </nav>
 
-        <div id="ocVix" class="oc-vix normal" data-tab="overview" hidden>
+        <div id="ocVix" class="oc-vix normal" data-tab="chain" hidden>
             <div class="oc-vix-icon"><i class="fa-solid fa-temperature-three-quarters"></i></div>
             <div>
                 <div class="oc-vix-label">India VIX</div>
@@ -437,7 +470,7 @@
             </div>
         </div>
 
-        <div id="ocRegime" class="oc-regime neutral" data-tab="overview" hidden>
+        <div id="ocRegime" class="oc-regime neutral" data-tab="chain" hidden>
             <div class="oc-regime-head">
                 <div>
                     <div class="oc-regime-title"><i class="fa-solid fa-wave-square me-1"></i>Market Regime Meter</div>
@@ -462,7 +495,7 @@
             </div>
         </div>
 
-        <div id="ocIndicator" class="oc-indicator neutral" data-tab="overview">
+        <div id="ocIndicator" class="oc-indicator neutral" data-tab="chain">
             <div class="oc-indicator-head">
                 <div>
                     <div style="font-size:.72rem;text-transform:uppercase;font-weight:700;color:var(--text-muted)">Institutional Flow Sentiment (Writer-weighted)</div>
@@ -481,7 +514,7 @@
             <ul id="ocReasons" class="oc-reasons"></ul>
         </div>
 
-        <div id="ocStrategy" class="oc-strat neutral" data-tab="overview">
+        <div id="ocStrategy" class="oc-strat neutral" data-tab="chain">
             <div class="oc-strat-head">
                 <div>
                     <div class="oc-strat-title"><i class="fa-solid fa-compass me-1"></i>Option Buy vs Sell Compass</div>
@@ -510,7 +543,7 @@
 
 
 
-        <div class="oc-summary-cards" data-tab="overview">
+        <div class="oc-summary-cards" data-tab="chain">
             <div class="oc-card">
                 <div class="oc-card-label">NIFTY Spot</div>
                 <div class="oc-card-value" id="ocSpot">—</div>
@@ -592,7 +625,7 @@
             <div class="oc-sr-summary" id="ocSrSummary">—</div>
         </div>
 
-        <div class="oc-block-panel" data-tab="blocks">
+        <div class="oc-block-panel" data-tab="oi">
             <h6>
                 <span><i class="fa-solid fa-money-bill-trend-up me-1"></i>Large F&amp;O Orders &amp; Unusual Activity</span>
                 <span class="oc-block-total" id="ocBlockTotal">—</span>
@@ -630,6 +663,47 @@
             Source: nseindia.com. Δ OI = intraday change vs previous close.
             "Crash" / "rally" indicator is purely heuristic and not investment advice.
         </div>
+
+        <section class="oc-panel" data-tab="pcr" aria-label="Put-call ratio">
+            <h3 class="oc-panel-title">Put-call ratio <small>Total put OI ÷ total call OI across the ATM window</small></h3>
+            <div class="oc-panel-grid">
+                <div class="oc-kpi"><div class="oc-kpi-label">PCR now</div><div class="oc-kpi-value" id="ocPcrValue">—</div><div class="oc-kpi-note" id="ocPcrRead">—</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Previous snapshot</div><div class="oc-kpi-value" id="ocPcrPrevValue">—</div><div class="oc-kpi-note">Prior reading in this session</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Put OI</div><div class="oc-kpi-value" id="ocPcrPe">—</div><div class="oc-kpi-note">ATM ± 10 strikes</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Call OI</div><div class="oc-kpi-value" id="ocPcrCe">—</div><div class="oc-kpi-note">ATM ± 10 strikes</div></div>
+            </div>
+            <div class="oc-chart-box"><canvas id="ocPcrChart" aria-label="PCR through the session" role="img"></canvas></div>
+            <p class="oc-note">PCR above 1 means put open interest exceeds call open interest. Rising PCR with a steady spot is usually read as put writing (support building); falling PCR with a rising spot is call writing or call unwinding.</p>
+        </section>
+
+        <section class="oc-panel" data-tab="maxpain" aria-label="Max pain">
+            <h3 class="oc-panel-title">Max pain <small>The strike where option writers collectively lose the least</small></h3>
+            <div class="oc-panel-grid">
+                <div class="oc-kpi"><div class="oc-kpi-label">Max pain strike</div><div class="oc-kpi-value" id="ocMaxPainStrike">—</div><div class="oc-kpi-note">Lowest aggregate payout</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Spot</div><div class="oc-kpi-value" id="ocMaxPainSpot">—</div><div class="oc-kpi-note">NIFTY 50</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Distance to max pain</div><div class="oc-kpi-value" id="ocMaxPainDistance">—</div><div class="oc-kpi-note">From the current spot</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Total pain at strike</div><div class="oc-kpi-value" id="ocMaxPainTotal">—</div><div class="oc-kpi-note">Writer payout if expiry settles there</div></div>
+            </div>
+            <div class="ds-table-scroll" style="margin-top:var(--space-3)">
+                <table class="ds-table oc-maxpain-table" aria-label="Max pain by strike">
+                    <thead><tr><th scope="col">Strike</th><th scope="col" class="is-numeric">Total pain</th><th scope="col" class="is-numeric">Call pain</th><th scope="col" class="is-numeric">Put pain</th></tr></thead>
+                    <tbody id="ocMaxPainRows"><tr><td colspan="4" class="ds-table-empty">Max pain loads with the chain.</td></tr></tbody>
+                </table>
+            </div>
+            <p class="oc-note">Computed locally from the displayed chain: for every candidate settlement strike, call and put writers' payouts are summed across all strikes. The candidate with the smallest total is the max pain strike. This is a positioning heuristic, not a price forecast.</p>
+        </section>
+
+        <section class="oc-panel" data-tab="iv" aria-label="Implied volatility">
+            <h3 class="oc-panel-title">Implied volatility <small>ATM and strike-wise IV for calls and puts</small></h3>
+            <div class="oc-panel-grid">
+                <div class="oc-kpi"><div class="oc-kpi-label">ATM call IV</div><div class="oc-kpi-value" id="ocAtmCeIv">—</div><div class="oc-kpi-note">Nearest strike to spot</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">ATM put IV</div><div class="oc-kpi-value" id="ocAtmPeIv">—</div><div class="oc-kpi-note">Nearest strike to spot</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Average IV</div><div class="oc-kpi-value" id="ocAvgIv">—</div><div class="oc-kpi-note">Across the displayed window</div></div>
+                <div class="oc-kpi"><div class="oc-kpi-label">Put-call IV skew</div><div class="oc-kpi-value" id="ocIvSkew">—</div><div class="oc-kpi-note">Put IV minus call IV at ATM</div></div>
+            </div>
+            <div class="oc-chart-box"><canvas id="ocIvChart" aria-label="Implied volatility by strike" role="img"></canvas></div>
+            <p class="oc-note">Positive skew means puts are priced richer than calls at the ATM strike, typically reflecting downside hedging demand. IV values are as reported by the exchange feed.</p>
+        </section>
 
         <!-- ── Gap Forecast (dedicated tab) ────────────────────────── -->
         <section class="oc-gapforecast" data-tab="gapforecast" style="display:none">
@@ -810,6 +884,211 @@ const fmt = (n) => {
 const sign = (n) => n > 0 ? '+' : (n < 0 ? '' : '');
 const cls  = (n) => n > 0 ? 'oc-pos' : (n < 0 ? 'oc-neg' : 'oc-zero');
 
+let _ocLastData = null;
+let _ocPcrChart = null;
+let _ocIvChart = null;
+
+function formatExpiry(value) {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+}
+
+function renderExpiryChips(d) {
+    const host = document.getElementById('ocExpiryChips');
+    const note = document.getElementById('ocExpiryNote');
+    if (!host) return;
+    const list = Array.isArray(d.expiries) ? d.expiries.filter(Boolean) : [];
+    const current = d.expiry || (list[0] || '');
+    if (!list.length) {
+        host.innerHTML = '<span class="ds-chip is-active">' + escapeHtml(current || 'Nearest weekly') + '</span>';
+        if (note) note.textContent = current ? 'Nearest expiry in the live feed.' : 'Expiry list unavailable.';
+        return;
+    }
+    host.innerHTML = list.slice(0, 4).map(function (item) {
+        const label = formatExpiry(item);
+        const active = item === current || label === current;
+        return '<button type="button" class="ds-chip' + (active ? ' is-active' : '') + '"' +
+            (active ? '' : ' disabled') +
+            ' title="' + (active ? 'Current expiry' : 'Only the nearest expiry is available in this feed') + '">' +
+            escapeHtml(label) + '</button>';
+    }).join('');
+    if (note) {
+        note.textContent = list.length > 1
+            ? 'Nearest expiry is live; later expiries are listed for reference only.'
+            : 'Nearest expiry in the live feed.';
+    }
+}
+
+function renderPcr(d) {
+    d = d || {};
+    const totals = d.totals || {};
+    const pcr = Number(d.pcr || 0);
+    document.getElementById('ocPcrValue').textContent = pcr ? pcr.toFixed(2) : '—';
+    document.getElementById('ocPcrPrevValue').textContent = d.pcr_prev ? Number(d.pcr_prev).toFixed(2) : '—';
+    document.getElementById('ocPcrPe').textContent = fmt(totals.pe_oi);
+    document.getElementById('ocPcrCe').textContent = fmt(totals.ce_oi);
+    const read = pcr >= 1.3 ? 'Put-heavy — hedging or support building'
+        : pcr >= 0.9 ? 'Balanced positioning'
+        : 'Call-heavy positioning';
+    document.getElementById('ocPcrRead').textContent = pcr ? read : 'Awaiting chain data';
+
+    const canvas = document.getElementById('ocPcrChart');
+    const series = (d.series || []).filter(point => point && point.pcr != null);
+    if (!canvas || !window.Chart || !series.length) {
+        if (_ocPcrChart) { _ocPcrChart.destroy(); _ocPcrChart = null; }
+        return;
+    }
+    const labels = series.map(point => point.t || '');
+    const values = series.map(point => Number(point.pcr));
+    if (_ocPcrChart) {
+        _ocPcrChart.data.labels = labels;
+        _ocPcrChart.data.datasets[0].data = values;
+        _ocPcrChart.update('none');
+        return;
+    }
+    const palette = window.FC_CHART_COLORS || {};
+    _ocPcrChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'PCR',
+                data: values,
+                borderColor: palette.brand || '#1F6FEB',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: .25
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { maxTicksLimit: 8 }, grid: { display: false } },
+                y: { beginAtZero: false, ticks: { callback: value => Number(value).toFixed(2) } }
+            }
+        }
+    });
+}
+
+function renderMaxPain(d) {
+    d = d || {};
+    const rows = d.rows || [];
+    const spot = Number(d.spot || 0);
+    const body = document.getElementById('ocMaxPainRows');
+    if (!body) return;
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="4" class="ds-table-empty">No chain data available.</td></tr>';
+        return;
+    }
+    let best = null;
+    const calc = rows.map(function (target) {
+        let callPain = 0;
+        let putPain = 0;
+        rows.forEach(function (row) {
+            const ceOi = Number((row.ce || {}).oi || 0);
+            const peOi = Number((row.pe || {}).oi || 0);
+            callPain += ceOi * Math.max(target.strike - row.strike, 0);
+            putPain += peOi * Math.max(row.strike - target.strike, 0);
+        });
+        const total = callPain + putPain;
+        if (!best || total < best.total) best = { strike: target.strike, total: total };
+        return { strike: target.strike, callPain: callPain, putPain: putPain, total: total };
+    });
+    const ranked = calc.slice().sort(function (left, right) { return left.total - right.total; });
+    document.getElementById('ocMaxPainStrike').textContent = best ? best.strike.toFixed(0) : '—';
+    document.getElementById('ocMaxPainSpot').textContent = spot ? spot.toLocaleString('en-IN') : '—';
+    let distance = '—';
+    if (best && spot) {
+        const distancePct = (best.strike - spot) / spot * 100;
+        distance = (distancePct >= 0 ? '+' : '') + distancePct.toFixed(2) + '%';
+    }
+    document.getElementById('ocMaxPainDistance').textContent = distance;
+    document.getElementById('ocMaxPainTotal').textContent = best ? fmt(best.total) : '—';
+    body.innerHTML = ranked.slice(0, 10).map(function (row) {
+        return '<tr' + (best && row.strike === best.strike ? ' class="is-maxpain"' : '') + '>' +
+            '<td>' + row.strike.toFixed(0) + '</td>' +
+            '<td class="is-numeric">' + fmt(row.total) + '</td>' +
+            '<td class="is-numeric">' + fmt(row.callPain) + '</td>' +
+            '<td class="is-numeric">' + fmt(row.putPain) + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function renderIv(d) {
+    d = d || {};
+    const rows = d.rows || [];
+    const spot = Number(d.spot || 0);
+    if (!rows.length) return;
+    let atm = rows[0];
+    rows.forEach(function (row) {
+        if (Math.abs(row.strike - spot) < Math.abs(atm.strike - spot)) atm = row;
+    });
+    const ceIv = Number((atm.ce || {}).iv || 0);
+    const peIv = Number((atm.pe || {}).iv || 0);
+    const values = [];
+    rows.forEach(function (row) {
+        const call = Number((row.ce || {}).iv || 0);
+        const put = Number((row.pe || {}).iv || 0);
+        if (call > 0) values.push(call);
+        if (put > 0) values.push(put);
+    });
+    const average = values.length ? values.reduce(function (sum, value) { return sum + value; }, 0) / values.length : null;
+    document.getElementById('ocAtmCeIv').textContent = ceIv ? ceIv.toFixed(1) + '%' : '—';
+    document.getElementById('ocAtmPeIv').textContent = peIv ? peIv.toFixed(1) + '%' : '—';
+    document.getElementById('ocAvgIv').textContent = average == null ? '—' : average.toFixed(1) + '%';
+    const skew = (ceIv && peIv) ? peIv - ceIv : null;
+    const skewEl = document.getElementById('ocIvSkew');
+    skewEl.textContent = skew == null ? '—' : (skew >= 0 ? '+' : '') + skew.toFixed(1) + ' pts';
+    skewEl.className = 'oc-kpi-value ' + (skew == null ? '' : (skew >= 0 ? 'oc-neg' : 'oc-pos'));
+
+    const canvas = document.getElementById('ocIvChart');
+    if (!canvas || !window.Chart) return;
+    const labels = rows.map(function (row) { return row.strike.toFixed(0); });
+    const calls = rows.map(function (row) { return Number((row.ce || {}).iv || 0); });
+    const puts = rows.map(function (row) { return Number((row.pe || {}).iv || 0); });
+    if (_ocIvChart) {
+        _ocIvChart.data.labels = labels;
+        _ocIvChart.data.datasets[0].data = calls;
+        _ocIvChart.data.datasets[1].data = puts;
+        _ocIvChart.update('none');
+        return;
+    }
+    const palette = window.FC_CHART_COLORS || {};
+    _ocIvChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Call IV', data: calls, backgroundColor: palette.positive || '#0F9D58', borderRadius: 2 },
+                { label: 'Put IV', data: puts, backgroundColor: palette.negative || '#D93025', borderRadius: 2 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { callback: value => Number(value).toFixed(0) + '%' } }
+            }
+        }
+    });
+}
+
+function renderAuxPanels() {
+    if (!_ocLastData) return;
+    const active = document.querySelector('.oc-tab-btn.active');
+    const tab = active ? active.dataset.tabTarget : 'chain';
+    requestAnimationFrame(function () {
+        if (tab === 'pcr') renderPcr(_ocLastData);
+        else if (tab === 'maxpain') renderMaxPain(_ocLastData);
+        else if (tab === 'iv') renderIv(_ocLastData);
+    });
+}
+
 function setBusy(busy) {
     document.getElementById('ocLoading').hidden = !busy;
     if (busy) {
@@ -968,6 +1247,10 @@ function render(d) {
     // Table
     const rows = d.rows || [];
     const spot = d.spot || 0;
+    _ocLastData = d;
+    renderExpiryChips(d);
+    const maxCeOi = Math.max(1, ...rows.map(r => Number((r.ce || {}).oi || 0)));
+    const maxPeOi = Math.max(1, ...rows.map(r => Number((r.pe || {}).oi || 0)));
     // ATM = strike with min |strike - spot|
     let atmIdx = 0, atmDiff = Infinity;
     rows.forEach((r, i) => {
@@ -986,9 +1269,11 @@ function render(d) {
         const peBg = pe.buildup_bias > 0 ? 'bull-bg' : (pe.buildup_bias < 0 ? 'bear-bg' : '');
         const ceCls = `${ceItm} ${ceBg}`.trim();
         const peCls = `${peItm} ${peBg}`.trim();
-        return `<tr class="${isATM ? 'atm' : ''}">
+        const ceOiPct = Math.max(2, (Number(ce.oi || 0) / maxCeOi) * 100);
+        const peOiPct = Math.max(2, (Number(pe.oi || 0) / maxPeOi) * 100);
+        return `<tr class="${isATM ? 'atm is-atm' : ''}">
             <td class="${ceCls}">${buildupChip(ce.buildup, ce.buildup_bias)}</td>
-            <td class="${ceCls}">${fmt(ce.oi)}</td>
+            <td class="${ceCls} oc-oi-cell-wrap"><span class="oc-oi-cell"><span>${fmt(ce.oi)}</span><span class="oc-oi-track"><span class="oc-oi-fill" style="width:${ceOiPct.toFixed(1)}%"></span></span></span></td>
             <td class="${ceCls} ${cls(ce.oi_chg)}">${sign(ce.oi_chg)}${fmt(ce.oi_chg)}</td>
             <td class="${ceCls}">${(ce.iv || 0).toFixed(1)}</td>
             <td class="${ceCls}">${fmt(ce.vol)}</td>
@@ -998,10 +1283,11 @@ function render(d) {
             <td class="${peCls}">${fmt(pe.vol)}</td>
             <td class="${peCls}">${(pe.iv || 0).toFixed(1)}</td>
             <td class="${peCls} ${cls(pe.oi_chg)}">${sign(pe.oi_chg)}${fmt(pe.oi_chg)}</td>
-            <td class="${peCls}">${fmt(pe.oi)}</td>
+            <td class="${peCls} oc-oi-cell-wrap"><span class="oc-oi-cell"><span>${fmt(pe.oi)}</span><span class="oc-oi-track"><span class="oc-oi-fill is-put" style="width:${peOiPct.toFixed(1)}%"></span></span></span></td>
             <td class="${peCls}">${buildupChip(pe.buildup, pe.buildup_bias)}</td>
         </tr>`;
     }).join('');
+    renderAuxPanels();
 }
 
 // Build-up name → semantic class (matches Python _BUILDUP_* tables).
@@ -1198,9 +1484,9 @@ function renderGapHistory(payload) {
     };
     const outcomeText = (o) => {
         const u = String(o || 'PENDING').toUpperCase();
-        if (u === 'HIT') return '✓ Hit';
-        if (u === 'MISS') return '✗ Miss';
-        if (u === 'FLAT_OK') return '✓ Flat';
+        if (u === 'HIT') return 'Hit';
+        if (u === 'MISS') return 'Miss';
+        if (u === 'FLAT_OK') return 'Flat';
         if (u === 'FLAT_MISS') return '~ Flat miss';
         if (u === 'NEAR') return '~ Near miss';
         return '… Pending';
@@ -1303,7 +1589,7 @@ function renderGapForecast(payload) {
     }
     const predClass = (p) => { const u = String(p||'').toUpperCase(); return u === 'GAP UP' ? 'up' : u === 'GAP DOWN' ? 'down' : 'flat'; };
     const outcomeClass = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return 'hit'; if (u==='MISS') return 'miss'; if (u==='FLAT_OK') return 'flat_ok'; if (u==='FLAT_MISS') return 'flat_miss'; if (u==='NEAR') return 'near'; return 'pending'; };
-    const outcomeText = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return '✓ Hit'; if (u==='MISS') return '✗ Miss'; if (u==='FLAT_OK') return '✓ Flat'; if (u==='FLAT_MISS') return '~ Flat miss'; if (u==='NEAR') return '~ Near miss'; return '… Pending'; };
+    const outcomeText = (o) => { const u = String(o||'PENDING').toUpperCase(); if (u==='HIT') return 'Hit'; if (u==='MISS') return 'Miss'; if (u==='FLAT_OK') return 'Flat'; if (u==='FLAT_MISS') return '~ Flat miss'; if (u==='NEAR') return '~ Near miss'; return '… Pending'; };
     const num = (n, dp) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(dp == null ? 2 : dp);
     const pts = (n) => { if (n == null || isNaN(n)) return '—'; const v = Number(n); return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0); };
     const pct = (n) => { if (n == null || isNaN(n)) return '—'; const v = Number(n); return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + '%'; };
@@ -1470,7 +1756,7 @@ function renderOiChart(series) {
             legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
             tooltip: { callbacks: {
                 label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(2)} Cr`,
-                afterLabel: c => glitchFlags[c.dataIndex] ? '⚠ unusual reading (sudden shift)' : '',
+                afterLabel: c => glitchFlags[c.dataIndex] ? 'Unusual reading (sudden shift)' : '',
             }},
         },
     };
@@ -1501,12 +1787,15 @@ if (_ocStaleRetryBtn) {
 function setActiveTab(name) {
     const root = document.getElementById('ocContent');
     if (!root) return;
+    const known = Array.from(document.querySelectorAll('.oc-tab-btn')).map(btn => btn.dataset.tabTarget);
+    if (known.indexOf(name) === -1) name = 'chain';
     root.querySelectorAll('[data-tab]').forEach(el => {
         el.style.display = (el.dataset.tab === name) ? '' : 'none';
     });
     document.querySelectorAll('.oc-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tabTarget === name);
     });
+    if (name === 'pcr' || name === 'maxpain' || name === 'iv') renderAuxPanels();
     // Chart.js needs an explicit resize when its container becomes visible again.
     if (name === 'oi') {
         requestAnimationFrame(() => {
@@ -1529,7 +1818,7 @@ document.querySelectorAll('.oc-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => setActiveTab(btn.dataset.tabTarget));
 });
 // Restore last-active tab (if any) once content is rendered.
-const _ocInitialTab = (() => { try { return sessionStorage.getItem('ocActiveTab') || 'overview'; } catch (_) { return 'overview'; } })();
+const _ocInitialTab = (() => { try { return sessionStorage.getItem('ocActiveTab') || 'chain'; } catch (_) { return 'chain'; } })();
 setActiveTab(_ocInitialTab);
 
 // Paint a prior browser value immediately, then prefer the durable Azure
@@ -2034,9 +2323,9 @@ function renderPreopen(d) {
         const ap = out.actual_change_pct;
         const apSign = ap >= 0 ? '+' : '';
         const map = {
-            HIT: '✓ HIT — verdict ' + fv + ' confirmed by actual open ' + apSign + ap + '%',
-            MISS: '✗ MISS — verdict ' + fv + ' but actual open ' + apSign + ap + '%',
-            FLAT_OK: '✓ Flat verdict held — actual open ' + apSign + ap + '%',
+            HIT: 'HIT — verdict ' + fv + ' confirmed by actual open ' + apSign + ap + '%',
+            MISS: 'MISS — verdict ' + fv + ' but actual open ' + apSign + ap + '%',
+            FLAT_OK: 'Flat verdict held — actual open ' + apSign + ap + '%',
             FLAT_MISS: '✗ Flat verdict but actual open ' + apSign + ap + '%',
         };
         outBox.innerHTML = '<i class="fa-solid fa-flag-checkered"></i>' + (map[out.status] || out.status);
