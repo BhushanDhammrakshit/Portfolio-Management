@@ -227,6 +227,9 @@
         b.classList.add('active');
         document.getElementById('panel-'+b.dataset.tab).classList.add('active');
     }));
+    const requestedTab=new URLSearchParams(window.location.search).get('tab');
+    const requestedTabButton=Array.from(document.querySelectorAll('.tools-tab')).find(button=>button.dataset.tab===requestedTab);
+    if(requestedTabButton) requestedTabButton.click();
 
     const fmt=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
     const inr=(v)=>v==null||isNaN(v)?'—':'₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:0});
@@ -353,15 +356,16 @@
                 {label:'Total Upcoming',value:(d.events||[]).length},
             ]);
             if(!d.events||!d.events.length){empty('earnContent','No earnings scheduled (yfinance calendar may be sparse for NSE).');return;}
-            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Earnings Date</th><th class="num">Days Out</th><th class="num">CMP</th><th class="num">Day %</th></tr></thead><tbody>';
+            let html='<div class="table-scroll"><table class="tool-table"><thead><tr><th>Stock</th><th>Event Type</th><th>Earnings Date</th><th class="num">Days Out</th><th class="num">CMP</th><th class="num">Day %</th></tr></thead><tbody>';
             for(const ev of d.events){
                 const urgency=ev.days_until<=7?'pill-dn':ev.days_until<=14?'pill-warn':'pill-neutral';
-                html+=`<tr><td><strong>${ev.name}</strong></td><td>${ev.earnings_date}</td><td class="num"><span class="pill ${urgency}">${ev.days_until}d</span></td><td class="num">${inr(ev.price)}</td><td class="num ${cls(ev.change_pct)}">${pct(ev.change_pct)}</td></tr>`;
+                html+=`<tr><td><strong>${ev.name}</strong></td><td>${ev.event_type||'Earnings'}</td><td>${ev.earnings_date}</td><td class="num"><span class="pill ${urgency}">${ev.days_until}d</span></td><td class="num">${inr(ev.price)}</td><td class="num ${cls(ev.change_pct)}">${pct(ev.change_pct)}</td></tr>`;
             }
             html+='</tbody></table></div>';
             document.getElementById('earnContent').innerHTML=html;
         }catch(e){setError('earnContent',e.message);}
     });
+    if(requestedTab==='earnings') document.getElementById('earnScan').click();
 
     // ============ Shareholding ============
     document.getElementById('shGo').addEventListener('click',async()=>{

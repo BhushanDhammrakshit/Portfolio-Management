@@ -381,6 +381,7 @@ def earnings_calendar(force: bool = False) -> Dict[str, Any]:
             return {
                 "symbol": symbol,
                 "name": _display_name(symbol),
+                "event_type": "Earnings",
                 "earnings_date": d.isoformat(),
                 "days_until": delta,
                 "price": _safe_float(quote.get("ltp")),

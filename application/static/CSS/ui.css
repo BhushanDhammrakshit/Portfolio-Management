@@ -30,6 +30,42 @@
     flex: 0 0 auto;
 }
 
+.app-back-btn {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.app-back-btn:hover {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+}
+
+.app-back-btn:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+.app-page-title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.app-page-title-row > :is(h1, h2) {
+    margin-bottom: 0;
+}
+
 .app-brand {
     display: inline-flex;
     align-items: center;

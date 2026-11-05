@@ -655,16 +655,21 @@ def design_system_page():
 def home():
     if not session.get("persona"):
         return redirect(url_for("choose_persona"))
+    return render_template("home.html",
+                           name=session["name"], email=session["email"],
+                           title="Dashboard")
+
+
+@app.route("/my-portfolio")
+@login_required
+def my_portfolio():
     stocks = _fetch_user_stocks(session["user_id"])
     if not stocks and demo_portfolio.seed_demo_stocks_if_needed(session["user_id"]):
         stocks = _fetch_user_stocks(session["user_id"])
-    has_demo_stocks = any(s.get("IsDemo") for s in stocks)
-    just_logged_in = session.pop("just_logged_in", False)
-    return render_template("home.html",
+    return render_template("myPortfolio.html",
                            name=session["name"], email=session["email"],
-                           title="Dashboard", stocks=stocks,
-                           has_demo_stocks=has_demo_stocks,
-                           just_logged_in=just_logged_in)
+                           title="My Portfolio", stocks=stocks,
+                           has_demo_stocks=any(s.get("IsDemo") for s in stocks))
 
 
 @app.route("/choose-persona")

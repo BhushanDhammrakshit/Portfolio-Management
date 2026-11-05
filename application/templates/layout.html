@@ -61,6 +61,9 @@
     <nav class="app-sidebar-nav" aria-label="Legacy navigation">
 
         <button type="button" class="nav-group-label" data-group="markets"><span>Markets</span>{{ icon('chevron-down', 12, 'nav-group-chev') }}</button>
+        <a href="{{ url_for('my_portfolio') }}" class="nav-item {% if title == 'My Portfolio' %}active{% endif %}">
+            {{ icon('briefcase') }}<span>My Portfolio</span>
+        </a>
         <a href="{{ url_for('home') }}" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
             {{ icon('dashboard') }}<span>Dashboard</span>
         </a>
@@ -204,6 +207,7 @@
     <nav class="nav-panel" id="appSidebarNav" aria-label="Section pages" data-active-section="{{ nav_section }}">
         <div class="nav-panel-heading" data-panel-heading="markets">Markets</div>
         <div class="nav-panel-pages" data-panel-section="markets" {% if nav_section != 'markets' %}hidden{% endif %}>
+            {{ analytics.NavRow(url_for('my_portfolio'), 'briefcase', 'My Portfolio', title == 'My Portfolio') }}
             {{ analytics.NavRow(url_for('home'), 'dashboard', 'Dashboard', title == 'Dashboard') }}
             {{ analytics.NavRow(url_for('heatmap.heatmap'), 'layers', 'Market Overview', title == 'Sector Heatmap') }}
             {{ analytics.NavRow(url_for('global_markets_api.global_markets_page'), 'globe', 'Global Markets', title == 'Global Markets') }}
@@ -401,6 +405,7 @@
 <script>
 window.FC_SEARCH = {
     pages: [
+        { title: 'My Portfolio', sub: 'Markets', url: {{ url_for('my_portfolio')|tojson }}, icon: 'briefcase' },
         { title: 'Dashboard', sub: 'Workspace', url: {{ url_for('home')|tojson }}, icon: 'dashboard' },
         { title: 'Portfolio Analysis', sub: 'Analysis', url: {{ url_for('portfolioAnalysis')|tojson }}, icon: 'briefcase' },
         { title: 'Advanced Metrics', sub: 'Analysis', url: {{ url_for('advanced_dashboard')|tojson }}, icon: 'line-chart' },
@@ -484,6 +489,10 @@ window.FC_SEARCH = {
     {% endif %}
 
     <main class="app-content">
+        <button type="button" class="app-back-btn app-content-back-btn" id="appBackButton"
+                data-fallback="{{ url_for('home') }}" aria-label="Go back" title="Go back">
+            {{ icon('arrow-left', 18) }}
+        </button>
         {% block content %}{% endblock %}
     </main>
 
@@ -513,14 +522,14 @@ window.FC_SEARCH = {
 
 <div class="mobile-sidebar-backdrop" id="mobileBackdrop"></div>
 <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-    <a href="{{ url_for('home') }}" class="mbn-item {% if title == 'Dashboard' %}active{% endif %}">
-        {{ icon('dashboard', 20) }}<span>Dashboard</span>
+    <a href="{{ url_for('my_portfolio') }}" class="mbn-item {% if title == 'My Portfolio' %}active{% endif %}">
+        {{ icon('briefcase', 20) }}<span>Portfolio</span>
     </a>
     <a href="{{ url_for('swing_tools_api.swing_tools_page') }}" class="mbn-item {% if title == 'Swing Trading' %}active{% endif %}">
         {{ icon('trending-up', 20) }}<span>Swing</span>
     </a>
-    <a href="{{ url_for('portfolioAnalysis') }}" class="mbn-item {% if title == 'Portfolio Analysis' %}active{% endif %}">
-        {{ icon('briefcase', 20) }}<span>Portfolio</span>
+    <a href="{{ url_for('home') }}" class="mbn-item {% if title == 'Dashboard' %}active{% endif %}">
+        {{ icon('dashboard', 20) }}<span>Dashboard</span>
     </a>
     <button type="button" class="mbn-item" id="mobileMoreBtn">
         {{ icon('menu', 20) }}<span>More</span>
@@ -571,6 +580,29 @@ window.FC_SEARCH = {
 <script defer src="{{ url_for('static', filename='Scripts/progressive.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/pp-loader.js') }}"></script>
 <script defer src="{{ url_for('static', filename='Scripts/stock-suggest.js') }}"></script>
+<script>
+(function () {
+  const backButton = document.getElementById('appBackButton');
+  if (!backButton) return;
+  const content = document.querySelector('.app-content');
+  const heading = content && content.querySelector('.page-header h1, .fa-page-head h2, h1, h2');
+  if (heading) {
+    const row = document.createElement('div');
+    row.className = 'app-page-title-row';
+    heading.parentNode.insertBefore(row, heading);
+    row.append(backButton, heading);
+  }
+  backButton.addEventListener('click', function () {
+    let referrer = null;
+    try { referrer = new URL(document.referrer); } catch (e) {}
+    if (window.history.length > 1 && referrer && referrer.origin === window.location.origin) {
+      window.history.back();
+      return;
+    }
+    window.location.assign(backButton.dataset.fallback);
+  });
+})();
+</script>
 <script>
 (function(){
   const collapseBtn = document.getElementById('sidebarCollapse');
