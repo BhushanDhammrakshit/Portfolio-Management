@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0B1024" />
-    <title>Terms &amp; Disclaimer · Finance Candle</title>
+    <title>Terms &amp; Disclaimer · financeCandle</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -62,20 +62,148 @@
         .btn-accept:not(:disabled):hover{transform:translateY(-1px)}
         .alert-slim{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#FCD34D;border-radius:10px;padding:10px 14px;font-size:.85rem;margin-bottom:16px}
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/tokens.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/ui.css') }}" />
+    <style>
+        body { background: var(--bg-app) !important; color: var(--text-primary) !important; }
+        body::before, body::after { display: none !important; }
+        .op-topbar {
+            padding: 14px 24px; background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .op-brand { color: var(--text-primary) !important; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+        .op-brand .mark {
+            width: 28px !important; height: 28px !important; border-radius: 6px !important;
+            background: var(--brand-soft) !important; border: 1px solid var(--border);
+            box-shadow: none !important;
+        }
+        .op-brand .mark img { display: none; }
+        .op-brand .mark::after {
+            content: ""; width: 14px; height: 14px; display: block; background: var(--brand);
+            clip-path: polygon(38% 0, 62% 0, 62% 22%, 100% 22%, 100% 78%, 62% 78%, 62% 100%, 38% 100%, 38% 78%, 0 78%, 0 22%, 38% 22%);
+        }
+        .op-brand .accent {
+            background: none !important; -webkit-text-fill-color: currentColor !important;
+            color: var(--brand) !important;
+        }
+        .op-logout { color: var(--text-secondary) !important; border-radius: 6px; font-size: 13px; }
+        .op-logout:hover { background: var(--bg-subtle) !important; color: var(--text-primary) !important; }
+        .op-shell { padding: 24px 24px 48px !important; }
+        .op-shell h1, .op-title {
+            font-size: 24px !important; line-height: 32px !important; font-weight: 600 !important;
+            letter-spacing: -0.01em !important; color: var(--text-primary) !important;
+        }
+        .op-shell h1 .grad {
+            background: none !important; -webkit-text-fill-color: currentColor !important;
+            color: var(--brand) !important;
+        }
+        .op-sub { color: var(--text-muted) !important; font-size: 13px !important; line-height: 20px !important; }
+        .op-eyebrow {
+            background: var(--bg-subtle) !important; border: 1px solid var(--border) !important;
+            color: var(--text-secondary) !important; border-radius: 4px !important;
+            padding: 3px 8px !important; font-size: 11px !important; letter-spacing: 0;
+        }
+        .op-eyebrow .dot { background: var(--positive) !important; animation: none !important; box-shadow: none !important; }
+        .op-grid { gap: 16px !important; }
+        .op-card button {
+            background: var(--bg-surface) !important; background-image: none !important;
+            border: 1px solid var(--border) !important; border-radius: 6px !important;
+            padding: 20px !important; color: var(--text-primary) !important;
+            box-shadow: none !important; transform: none !important;
+        }
+        .op-card button:hover {
+            border-color: var(--border-strong) !important;
+            box-shadow: none !important; transform: none !important;
+        }
+        .op-card.is-current button { border-color: var(--brand) !important; box-shadow: none !important; }
+        .op-card.is-soon button { opacity: 0.7; }
+        .op-ico,
+        .op-card.trader .op-ico,
+        .op-card.swing .op-ico,
+        .op-card.investor .op-ico {
+            width: 40px !important; height: 40px !important; border-radius: 6px !important;
+            background: var(--brand-soft) !important; background-image: none !important;
+            color: var(--brand) !important; font-size: 16px !important; box-shadow: none !important;
+        }
+        .op-name { font-size: 16px !important; font-weight: 600 !important; line-height: 24px !important; }
+        .op-badge {
+            background: var(--brand-soft) !important; color: var(--brand) !important;
+            border-radius: 4px !important; padding: 2px 6px !important;
+            font-size: 10px !important; text-transform: none !important; letter-spacing: 0;
+        }
+        .op-badge.soon { background: var(--warning-bg) !important; color: #8a6100 !important; }
+        .op-tag {
+            color: var(--text-secondary) !important; font-size: 12px !important;
+            font-weight: 500 !important; text-transform: none !important; letter-spacing: 0;
+        }
+        .op-desc { color: var(--text-muted) !important; font-size: 13px !important; line-height: 20px !important; }
+        .op-cta { color: var(--brand) !important; font-size: 13px !important; font-weight: 500 !important; }
+        .op-card button:hover .op-cta i { transform: none !important; }
+        .op-foot { color: var(--text-muted) !important; font-size: 12px !important; }
+        .op-foot i { color: var(--text-muted) !important; }
+        .op-modal-overlay { background: rgba(15, 23, 42, 0.4) !important; backdrop-filter: none !important; }
+        .op-modal-card {
+            background: var(--bg-surface) !important; background-image: none !important;
+            border: 1px solid var(--border) !important; border-radius: 8px !important;
+            box-shadow: var(--shadow-modal) !important;
+        }
+        .op-modal-ico {
+            width: 40px !important; height: 40px !important; border-radius: 6px !important;
+            background: var(--warning-bg) !important; color: #8a6100 !important;
+            font-size: 16px !important; box-shadow: none !important;
+        }
+        .op-modal-title { color: var(--text-primary) !important; font-size: 16px !important; font-weight: 600 !important; }
+        .op-modal-msg { color: var(--text-muted) !important; font-size: 13px !important; }
+        .op-modal-ok {
+            background: var(--brand) !important; background-image: none !important;
+            border-radius: 6px !important; font-weight: 500 !important; font-size: 13px !important;
+            box-shadow: none !important;
+        }
+        /* Terms page */
+        .terms-card {
+            background: var(--bg-surface) !important; border: 1px solid var(--border) !important;
+            border-radius: 6px !important; box-shadow: none !important; padding: 20px !important;
+        }
+        .terms-scroll {
+            background: var(--bg-subtle) !important; border: 1px solid var(--border) !important;
+            border-radius: 6px !important; max-height: 360px;
+        }
+        .terms-scroll h6 { color: var(--text-primary) !important; font-size: 13px !important; font-weight: 600 !important; }
+        .terms-scroll p, .terms-scroll li { color: var(--text-secondary) !important; font-size: 13px !important; line-height: 20px !important; }
+        .terms-scroll strong { color: var(--text-primary) !important; }
+        .terms-check {
+            background: var(--bg-subtle) !important; border: 1px solid var(--border) !important;
+            border-radius: 6px !important; padding: 12px 14px !important;
+        }
+        .terms-check input { accent-color: var(--brand) !important; }
+        .terms-check label { color: var(--text-primary) !important; font-size: 13px !important; }
+        .terms-check label strong { color: var(--text-primary) !important; }
+        .btn-accept {
+            background: var(--brand) !important; background-image: none !important;
+            border: 1px solid var(--brand) !important; border-radius: 6px !important;
+            height: 40px; padding: 0 16px !important; font-size: 14px !important;
+            font-weight: 500 !important; box-shadow: none !important; transform: none !important;
+        }
+        .btn-accept:not(:disabled):hover { background: var(--brand-hover) !important; transform: none !important; }
+        .alert-slim {
+            background: var(--warning-bg) !important; border: 1px solid #f0d58a !important;
+            color: var(--text-primary) !important; border-radius: 6px !important; font-size: 13px !important;
+        }
+    </style>
 </head>
 <body>
     <div class="op-topbar">
         <a class="op-brand" href="#">
             <span class="mark"><img src="{{ url_for('static', filename='logo.png') }}" alt="Finance Candle" /></span>
-            Finance<span class="accent">Candle</span>
+            finance<span class="accent">Candle</span>
         </a>
         <a class="op-logout" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</a>
     </div>
 
     <div class="op-shell">
         <span class="op-eyebrow"><i class="fa-solid fa-shield-halved"></i> One-time acknowledgement</span>
-        <h1 class="op-title">Before you continue, {{ name or 'there' }}</h1>
-        <p class="op-sub">We've updated how we describe our platform. Please read and accept the Terms of Use &amp; Disclaimer to keep using Finance Candle.</p>
+        <h1 class="op-title">Terms of Use &amp; Disclaimer</h1>
+        <p class="op-sub">Review and accept the terms to continue using Finance Candle.</p>
 
         {% with msgs = get_flashed_messages(with_categories=true) %}
           {% if msgs %}

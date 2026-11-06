@@ -381,6 +381,7 @@ def earnings_calendar(force: bool = False) -> Dict[str, Any]:
             return {
                 "symbol": symbol,
                 "name": _display_name(symbol),
+                "event_type": "Earnings",
                 "earnings_date": d.isoformat(),
                 "days_until": delta,
                 "price": _safe_float(quote.get("ltp")),
@@ -416,9 +417,56 @@ def shareholding_pattern(symbol: str) -> Dict[str, Any]:
         return {"error": "data unavailable", "symbol": symbol}
     raw = p["_raw"]
     own = (raw.get("metrics", {}) or {}).get("ownership", {}) or {}
+    holders = []
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+        for attribute, category in (
+            ("institutional_holders", "Institutional"),
+            ("mutualfund_holders", "Mutual fund"),
+        ):
+            try:
+                table = getattr(ticker, attribute, None)
+            except Exception as e:
+                log.debug("Shareholder lookup %s.%s failed: %s", symbol, attribute, e)
+                continue
+            if table is None or table.empty:
+                continue
+            for _, row in table.head(20).iterrows():
+                item = {"category": category}
+                for key, value in row.items():
+                    if value is None:
+                        item[str(key)] = None
+                    elif hasattr(value, "to_pydatetime"):
+                        item[str(key)] = value.to_pydatetime().isoformat()
+                    elif isinstance(value, (_dt.datetime, _dt.date)):
+                        item[str(key)] = value.isoformat()
+                    elif isinstance(value, (str, int, float, bool)):
+                        item[str(key)] = value if not isinstance(value, float) or math.isfinite(value) else None
+                    elif hasattr(value, "item"):
+                        scalar = value.item()
+                        item[str(key)] = (
+                            scalar if isinstance(scalar, (str, int, bool))
+                            or (isinstance(scalar, float) and math.isfinite(scalar))
+                            else None
+                        )
+                    else:
+                        item[str(key)] = str(value)
+                holders.append(item)
+    except Exception as e:
+        log.debug("Shareholder list unavailable for %s: %s", symbol, e)
+
+    pattern = [
+        {"category": "Promoter", "holding_pct": own.get("promoter_holding_pct")},
+        {"category": "Insider", "holding_pct": own.get("insider_holding_pct")},
+        {"category": "Institutional", "holding_pct": own.get("institutional_holding_pct")},
+    ]
     return {
         "symbol": symbol,
         "name": p["name"],
+        "pattern": pattern,
+        "holders": holders,
         "promoter_pct": own.get("promoter_holding_pct"),
         "institutional_pct": own.get("institutional_holding_pct"),
         "insider_pct": own.get("insider_holding_pct"),
