@@ -549,7 +549,8 @@ window.addEventListener('resize', () => {
       const price = formatNumber(item.price);
       const change = formatChange(item.change_pct);
       const cls = Number(item.change_pct) >= 0 ? 'market-change-positive' : 'market-change-negative';
-      return `<tr><td>${escapeHTML(item.index || 'N/A')}</td><td class="num">${price || '<span class="market-na" title="Index value unavailable">N/A</span>'}</td><td class="num ${cls}">${escapeHTML(change || 'N/A')}</td><td>${item.is_open ? 'Open' : 'Closed'}</td></tr>`;
+      const detailUrl = '/index?ticker=' + encodeURIComponent(item.ticker || '');
+      return `<tr><td><a class="market-index-link" href="${escapeHTML(detailUrl)}">${escapeHTML(item.index || 'N/A')}</a></td><td class="num">${price || '<span class="market-na" title="Index value unavailable">N/A</span>'}</td><td class="num ${cls}">${escapeHTML(change || 'N/A')}</td><td>${item.is_open ? 'Open' : 'Closed'}</td></tr>`;
     }).join('');
     document.getElementById('overviewIndices').innerHTML = tableMarkup(rows);
     const sortable = document.querySelector('#overviewIndices table');

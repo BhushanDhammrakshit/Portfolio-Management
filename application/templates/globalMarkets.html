@@ -73,9 +73,60 @@
       </div>
     </section>
 
-    <!-- Regions -->
-    <nav id="gmRegionTabs" class="global-region-tabs" role="tablist" aria-label="Global market regions"></nav>
+    <section id="gmMap" class="gm-map-card" aria-labelledby="gmMapTitle">
+      <div class="gm-section-heading">
+        <div>
+          <h2 id="gmMapTitle">Markets by region</h2>
+          <p>Click a highlighted country to show its region’s indices. Map boundaries: Natural Earth 1:50m (public domain).</p>
+        </div>
+        <span class="gm-map-legend"><i class="gm-map-dot up"></i> Up <i class="gm-map-dot down"></i> Down</span>
+      </div>
+      <div id="gmWorldMap" class="gm-world-map" role="group" aria-label="Selectable map of countries with tracked market indices">
+        <p class="gm-widget-message">Loading country map…</p>
+      </div>
+    </section>
+
+    <section class="gm-macro-card" aria-labelledby="gmMacroTitle">
+      <div class="gm-section-heading">
+        <div>
+          <h2 id="gmMacroTitle">Macro snapshot</h2>
+          <p>Latest annual observations from the World Bank. Release dates vary by country.</p>
+        </div>
+        <span id="gmMacroUpdated" class="gm-data-source"></span>
+      </div>
+      <div id="gmMacroCards" class="gm-macro-grid" aria-live="polite">
+        <p class="gm-widget-message">Loading economic indicators…</p>
+      </div>
+    </section>
+
+    <nav id="gmAssetTabs" class="global-region-tabs gm-asset-tabs" role="tablist" aria-label="Global market asset classes">
+      <button type="button" role="tab" id="gm-asset-indices" aria-selected="true" data-asset="indices">Indices</button>
+      <button type="button" role="tab" id="gm-asset-commodities" aria-selected="false" data-asset="commodities">Commodities</button>
+      <button type="button" role="tab" id="gm-asset-forex" aria-selected="false" data-asset="forex">Currencies / Forex</button>
+      <button type="button" role="tab" id="gm-asset-crypto" aria-selected="false" data-asset="crypto">Crypto</button>
+      <button type="button" role="tab" id="gm-asset-bonds" aria-selected="false" data-asset="bonds">Bonds</button>
+    </nav>
+    <div class="gm-market-controls">
+      <nav id="gmRegionTabs" class="global-region-tabs" role="tablist" aria-label="Global market regions"></nav>
+      <div class="gm-view-toggle" role="group" aria-label="Market display">
+        <button type="button" data-market-view="table" aria-pressed="true">Table</button>
+        <button type="button" data-market-view="heatmap" aria-pressed="false">Heatmap</button>
+      </div>
+    </div>
+    <p id="gmDataNote" class="gm-data-source" aria-live="polite"></p>
     <section id="gmRegions" class="gm-regions"></section>
+    <section class="gm-compare-card" aria-labelledby="gmCompareTitle">
+      <div class="gm-section-heading">
+        <div>
+          <h2 id="gmCompareTitle">Market comparison</h2>
+          <p>Compare up to five selected markets, normalized to 0% at the start of the period.</p>
+        </div>
+        <span class="gm-data-source">1 month · daily closes</span>
+      </div>
+      <div id="gmCompareChart" class="gm-compare-chart">
+        <p class="gm-widget-message">Select markets using the Compare boxes in the table.</p>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -84,19 +135,31 @@
 (function(){
   const $ = (id) => document.getElementById(id);
   let timer = null;
+  let marketData = null;
+  let activeAsset = "indices";
+  let activeRegion = "";
+  let activeView = "table";
+  let assetCache = {};
+  let assetLoadedAt = {};
+  let assetSources = {};
+  let historyCache = {};
+  let historyPending = new Set();
+  let selectedTickers = new Set();
+  let historyError = false;
 
   function fmtPct(v){
     if (v === null || v === undefined || isNaN(v)) return "N/A";
     return window.FCFormat.percent(+v, true);
   }
-  function fmtPrice(v){
+  function fmtPrice(v, precision){
     if (v === null || v === undefined || isNaN(v)) return "N/A";
     const n = +v;
-    return n > 0 ? window.FCFormat.number(n, 2) : "N/A";
+    return n > 0 ? window.FCFormat.number(n, precision ?? 2) : "N/A";
   }
   function classOf(pct){
-    if (pct > 0.05) return "up";
-    if (pct < -0.05) return "down";
+    const value = Number(pct);
+    if (Number.isFinite(value) && value > 0.05) return "up";
+    if (Number.isFinite(value) && value < -0.05) return "down";
     return "flat";
   }
 
@@ -111,14 +174,252 @@
     return escapeHTML(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   }
 
+  function priceText(item){
+    const value = fmtPrice(item.price, item.precision);
+    return item.unit === "%" && value !== "N/A" ? `${value}%` : value;
+  }
+
+  function currentItems(){
+    if (!marketData) return [];
+    if (activeAsset === "indices") {
+      const region = (marketData.regions || []).find(item => item.name === activeRegion);
+      return region ? region.items || [] : [];
+    }
+    return assetCache[activeAsset] || [];
+  }
+
+  function renderSparkline(points, tone, name){
+    if (!points || points.length < 2) {
+      return '<span class="market-na" title="Historical quote data is unavailable">N/A</span>';
+    }
+    const values = points.slice(-7).map(point => Number(point.close)).filter(Number.isFinite);
+    if (values.length < 2) return '<span class="market-na" title="Historical quote data is unavailable">N/A</span>';
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const spread = high - low || 1;
+    const coordinates = values.map((value, index) => {
+      const x = 2 + index * 76 / (values.length - 1);
+      const y = 22 - (value - low) * 18 / spread;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+    return `<svg class="gm-sparkline ${tone}" viewBox="0 0 80 26" role="img" aria-label="${escapeHTML(name)} 7-point price trend"><polyline points="${coordinates}"/></svg>`;
+  }
+
+  function renderMacro(data){
+    const cards = data.indicators || [];
+    $("gmMacroCards").innerHTML = cards.map(indicator => {
+      const countries = (indicator.countries || []).map(country =>
+        `<li><span>${escapeHTML(country.name)}</span><b>${country.value == null ? "N/A" : `${window.FCFormat.number(country.value, 1)}${escapeHTML(indicator.unit || "")}`}</b><small>${escapeHTML(country.year || "—")}</small></li>`
+      ).join("");
+      return `<article class="gm-macro-indicator">
+        <div class="gm-macro-name">${escapeHTML(indicator.name)}</div>
+        <ul>${countries || '<li class="gm-widget-message">No observations available.</li>'}</ul>
+      </article>`;
+    }).join("") || '<p class="gm-widget-message">No macro indicators are available.</p>';
+    $("gmMacroUpdated").textContent = data.source || "World Bank API";
+  }
+
+  function renderComparisonChart(){
+    const tickers = Array.from(selectedTickers).slice(0, 5);
+    const chart = $("gmCompareChart");
+    if (!tickers.length) {
+      chart.innerHTML = '<p class="gm-widget-message">Select markets using the Compare boxes in the table.</p>';
+      return;
+    }
+    const series = tickers.map(ticker => ({
+      ticker,
+      points: (historyCache[ticker] || []).filter(point => Number.isFinite(Number(point.close)))
+    })).filter(item => item.points.length > 1);
+    if (series.length !== tickers.length) {
+      chart.innerHTML = '<p class="gm-widget-message" role="status">Loading comparison history…</p>';
+      if (historyError) chart.innerHTML = '<p class="gm-widget-message" role="status">Comparison history is temporarily unavailable. Try refreshing.</p>';
+      return;
+    }
+
+    const dates = Array.from(new Set(series.flatMap(item =>
+      item.points.map(point => String(point.time || "").slice(0, 10))
+    ))).filter(Boolean).sort();
+    const returns = series.map(item => {
+      const byDate = new Map(item.points.map(point => [
+        String(point.time || "").slice(0, 10), Number(point.close)
+      ]));
+      let first = null, latest = null;
+      return dates.map(date => {
+        if (byDate.has(date)) latest = byDate.get(date);
+        if (first === null && Number.isFinite(latest)) first = latest;
+        return first && Number.isFinite(latest) ? (latest / first - 1) * 100 : null;
+      });
+    });
+    const allReturns = returns.flat().filter(Number.isFinite);
+    const min = Math.min(0, ...allReturns);
+    const max = Math.max(0, ...allReturns);
+    const spread = max - min || 1;
+    const colors = ["#4f8cff", "#16a36a", "#e05b55", "#a05ce0", "#d89b18"];
+    const left = 44, top = 14, width = 690, height = 190;
+    const y = value => top + (max - value) * height / spread;
+    const grid = [0, 1, 2, 3].map(step => {
+      const value = max - step * spread / 3;
+      const py = y(value);
+      return `<line x1="${left}" y1="${py}" x2="${left + width}" y2="${py}" class="gm-chart-grid"/><text x="${left - 7}" y="${py + 4}" text-anchor="end" class="gm-chart-label">${value.toFixed(1)}%</text>`;
+    }).join("");
+    const lines = series.map((item, index) => {
+      const points = returns[index].map((value, pointIndex) => {
+        if (!Number.isFinite(value)) return null;
+        const x = left + pointIndex * width / Math.max(1, dates.length - 1);
+        return `${x.toFixed(1)},${y(value).toFixed(1)}`;
+      }).filter(Boolean).join(" ");
+      return `<polyline class="gm-chart-line" stroke="${colors[index]}" points="${points}"/>`;
+    }).join("");
+    const legend = series.map((item, index) =>
+      `<span><i style="background:${colors[index]}"></i>${escapeHTML(item.ticker)}</span>`
+    ).join("");
+    chart.innerHTML = `<svg class="gm-comparison-svg" viewBox="0 0 760 240" role="img" aria-label="Normalized market performance comparison chart">${grid}${lines}<text x="${left}" y="226" class="gm-chart-label">${escapeHTML(dates[0] || "Start")}</text><text x="${left + width}" y="226" text-anchor="end" class="gm-chart-label">${escapeHTML(dates[dates.length - 1] || "Latest")}</text></svg><div class="gm-chart-legend">${legend}</div>`;
+  }
+
+  function renderMarket(){
+    const regionsNav = $("gmRegionTabs");
+    const isIndices = activeAsset === "indices";
+    $("gmMap").hidden = !isIndices;
+    regionsNav.hidden = !isIndices;
+    $("gmDataNote").textContent = isIndices
+      ? "Yahoo Finance via yfinance (free, potentially delayed). Heatmap color shows daily change."
+      : `${assetSources[activeAsset] || "Loading quotes…"} Heatmap color shows daily change.`;
+
+    const items = currentItems();
+    if (!isIndices && !assetCache[activeAsset]) {
+      $("gmRegions").innerHTML = '<p class="gm-widget-message" role="status">Loading market quotes…</p>';
+      renderComparisonChart();
+      return;
+    }
+    const rows = items.map(item => {
+      const ticker = String(item.ticker || "");
+      const checked = selectedTickers.has(ticker) ? " checked" : "";
+      const status = item.status || (item.is_open ? "Open" : "Closed");
+      const session = item.session ? ` title="${escapeHTML(item.session)}"` : "";
+      return `<tr class="gm-card ${classOf(item.change_pct)}">
+        <td class="gm-card-country">${escapeHTML(item.country || item.region || "—")}</td>
+        <td class="gm-card-index">${escapeHTML(item.index || item.name || ticker)}</td>
+        <td class="gm-card-price">${priceText(item)}</td>
+        <td class="gm-card-pct">${fmtPct(item.change_pct)}</td>
+        <td class="gm-card-status"${session}>${escapeHTML(status)}</td>
+        <td class="gm-card-spark" data-spark-for="${escapeHTML(ticker)}">${renderSparkline(historyCache[ticker], classOf(item.change_pct), item.index || item.name || ticker)}</td>
+        <td class="gm-card-compare"><label><input type="checkbox" data-compare-ticker="${escapeHTML(ticker)}" aria-label="Compare ${escapeHTML(item.index || item.name || ticker)}"${checked}></label></td>
+      </tr>`;
+    }).join("");
+
+    if (activeView === "table") {
+      $("gmRegions").innerHTML = `<div class="gm-region-grid"><table class="market-table gm-market-table">
+        <thead><tr><th>Market</th><th>Index / Asset</th><th>Value</th><th>Change</th><th>Status</th><th>Trend</th><th>Compare</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7">No market data is available.</td></tr>'}</tbody>
+      </table></div>`;
+    } else {
+      const columns = Math.max(1, Math.min(8, Math.floor(($("gmRegions").clientWidth || 900) / 170)));
+      const rowCount = Math.ceil(items.length / columns);
+      let tileIndex = 0;
+      const rows = [];
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        const columnsInRow = Math.ceil((items.length - tileIndex) / (rowCount - rowIndex));
+        const rowTiles = items.slice(tileIndex, tileIndex + columnsInRow).map(item => {
+          const ticker = String(item.ticker || "");
+          const name = item.index || item.name || ticker;
+          return `<article class="gm-heat-tile ${classOf(item.change_pct)}" title="${escapeHTML(`${name} · ${fmtPct(item.change_pct)} change`)}">
+            <label class="gm-tile-compare"><input type="checkbox" data-compare-ticker="${escapeHTML(ticker)}" aria-label="Compare ${escapeHTML(name)}"${selectedTickers.has(ticker) ? " checked" : ""}></label>
+            <span class="gm-tile-country">${escapeHTML(item.country || item.region || "")}</span>
+            <strong>${escapeHTML(name)}</strong><span class="gm-tile-value">${priceText(item)}</span>
+            <span class="gm-tile-change">${fmtPct(item.change_pct)}</span>
+            <span class="gm-tile-trend">${renderSparkline(historyCache[ticker], classOf(item.change_pct), name)}</span>
+          </article>`;
+        }).join("");
+        rows.push(`<div class="gm-heatmap-row" style="--gm-row-columns:${columnsInRow}">${rowTiles}</div>`);
+        tileIndex += columnsInRow;
+      }
+      $("gmRegions").innerHTML = `<div class="gm-heatmap">${rows.join("") || '<p class="gm-widget-message">No market data is available.</p>'}</div>`;
+    }
+    renderSparklines();
+    renderComparisonChart();
+    const missingHistory = items.map(item => item.ticker).filter(ticker => ticker && !historyCache[ticker]);
+    if (missingHistory.length) loadHistory(missingHistory);
+  }
+
+  function renderSparklines(){
+    document.querySelectorAll("[data-spark-for]").forEach(cell => {
+      const ticker = cell.dataset.sparkFor;
+      const item = currentItems().find(value => value.ticker === ticker);
+      cell.innerHTML = renderSparkline(historyCache[ticker], classOf(item && item.change_pct), item && (item.index || item.name) || ticker);
+    });
+  }
+
+  async function loadHistory(tickers){
+    const missing = Array.from(new Set(tickers)).filter(ticker => ticker && !historyCache[ticker] && !historyPending.has(ticker));
+    if (!missing.length) return;
+    historyError = false;
+    const requested = missing.slice(0, 30);
+    requested.forEach(ticker => historyPending.add(ticker));
+    try {
+      const params = new URLSearchParams({tickers: requested.join(",")});
+      const response = await fetch(`/api/global-markets/history?${params}`, {credentials: "same-origin"});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      (data.items || []).forEach(item => { historyCache[item.ticker] = item.points || []; });
+      requested.forEach(ticker => historyPending.delete(ticker));
+      renderSparklines();
+      renderComparisonChart();
+    } catch (error) {
+      console.error("global-markets history load failed", error);
+      requested.forEach(ticker => historyPending.delete(ticker));
+      historyError = true;
+      renderSparklines();
+      renderComparisonChart();
+    }
+  }
+
+  async function loadAsset(asset, force){
+    if (!force && assetCache[asset] && Date.now() - assetLoadedAt[asset] < 60000) {
+      renderMarket();
+      return;
+    }
+    if (asset !== "indices") {
+      assetCache[asset] = null;
+      renderMarket();
+    }
+    try {
+      const response = await fetch(`/api/global-markets/assets?asset=${encodeURIComponent(asset)}`, {credentials: "same-origin"});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      assetCache[asset] = data.items || [];
+      assetSources[asset] = data.source;
+      assetLoadedAt[asset] = Date.now();
+      if (activeAsset === asset) renderMarket();
+    } catch (error) {
+      console.error("global-markets asset load failed", error);
+      if (activeAsset === asset) {
+        $("gmRegions").innerHTML = '<p class="gm-widget-message" role="alert">Market quotes could not be loaded. Use Refresh to retry.</p>';
+        $("gmDataNote").textContent = "Quote provider unavailable.";
+      }
+    }
+  }
+
+  async function loadMacro(){
+    try {
+      const response = await fetch("/api/global-markets/macro", {credentials: "same-origin"});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      renderMacro(await response.json());
+    } catch (error) {
+      console.error("global-markets macro load failed", error);
+      $("gmMacroCards").innerHTML = '<p class="gm-widget-message" role="alert">Economic indicators could not be loaded from the World Bank. Try refreshing.</p>';
+    }
+  }
+
   function render(data){
     if (!data || !Array.isArray(data.regions)) throw new Error("Invalid global markets payload");
+    const firstRender = $("gmContent").hidden;
     if (!data.regions.length) {
       $("gmLoading").innerHTML = "<p role=\"status\">No global market data is available.</p>";
       return;
     }
 
     const sent = data.sentiment || {};
+    const stats = data.stats || {};
     const banner = $("gmBanner");
     banner.classList.remove("bull","bear","neutral");
     banner.classList.add(sent.tone || "neutral");
@@ -132,7 +433,9 @@
     const breadth = sent.breadth_pct == null || !Number.isFinite(breadthValue)
       ? window.FCFormat.missing('Market breadth is unavailable')
       : `${window.FCFormat.percent(breadthValue,false)} green`;
-    $("gmSentMeta").innerHTML = `Avg ${fmtPct(sent.avg_pct)} · Breadth ${breadth}${openSuffix}`;
+    $("gmSentMeta").innerHTML = Number(stats.total) > 0
+      ? `Avg ${fmtPct(sent.avg_pct)} · Breadth ${breadth}${openSuffix}`
+      : `No current quotes available${openSuffix}`;
 
     const stateBadge = $("gmStateBadge");
     if (stateBadge){
@@ -141,13 +444,15 @@
       stateBadge.textContent = sent.state || "NEUTRAL";
     }
 
-    const stats = data.stats || {};
     $("gmStatUp").textContent = stats.up ?? 0;
     $("gmStatDown").textContent = stats.down ?? 0;
     $("gmStatFlat").textContent = stats.flat ?? 0;
 
     // Breadth stacked bar
     const total = (stats.up || 0) + (stats.down || 0) + (stats.flat || 0);
+    $("gmBarUp").style.flex = "0";
+    $("gmBarFlat").style.flex = "0";
+    $("gmBarDown").style.flex = "0";
     if (total > 0){
       $("gmBarUp").style.flex   = String(stats.up   || 0);
       $("gmBarFlat").style.flex = String(stats.flat || 0);
@@ -163,6 +468,11 @@
       card.querySelector(".gm-mover-name").textContent = g.country || "";
       card.querySelector(".gm-mover-sub").textContent  = `${g.index || ""} · ${fmtPrice(g.price)}`;
       card.querySelector(".gm-mover-pct").textContent  = fmtPct(g.change_pct);
+    } else {
+      const card = $("gmTopGainer");
+      card.querySelector(".gm-mover-name").textContent = "No quote data";
+      card.querySelector(".gm-mover-sub").textContent = "—";
+      card.querySelector(".gm-mover-pct").textContent = "—";
     }
     if (stats.top_loser){
       const l = stats.top_loser;
@@ -171,6 +481,11 @@
       card.querySelector(".gm-mover-name").textContent = l.country || "";
       card.querySelector(".gm-mover-sub").textContent  = `${l.index || ""} · ${fmtPrice(l.price)}`;
       card.querySelector(".gm-mover-pct").textContent  = fmtPct(l.change_pct);
+    } else {
+      const card = $("gmTopLoser");
+      card.querySelector(".gm-mover-name").textContent = "No quote data";
+      card.querySelector(".gm-mover-sub").textContent = "—";
+      card.querySelector(".gm-mover-pct").textContent = "—";
     }
 
     const regions = data.regions || [];
@@ -178,37 +493,21 @@
     $("gmRegionTabs").innerHTML = regions.map((region, index) =>
       `<button type="button" role="tab" id="gm-tab-${index}" aria-controls="gm-panel-${index}" aria-selected="${index === 0}" data-region-index="${index}">${escapeHTML(labels[region.name] || region.name)}</button>`
     ).join("");
-    $("gmRegions").innerHTML = regions.map((region, index) => {
-      const rows = (region.items || []).map(item => {
-        const cls = classOf(item.change_pct);
-        const session = item.session ? ` title="${escapeHTML(item.session)}"` : "";
-        const status = item.is_open ? "Open" : "Closed";
-        return `<tr class="gm-card ${cls}">
-          <td class="gm-card-country">${escapeHTML(item.country || "N/A")}</td>
-          <td class="gm-card-index">${escapeHTML(item.index || "N/A")}</td>
-          <td class="gm-card-price">${fmtPrice(item.price)}</td>
-          <td class="gm-card-pct">${fmtPct(item.change_pct)}</td>
-          <td class="gm-card-status"${session}>${status}</td>
-          <td class="gm-card-spark"><span class="market-na" title="Historical series is not available from this quote feed">N/A</span></td>
-        </tr>`;
-      }).join("");
-      return `<section class="gm-region" id="gm-panel-${index}" role="tabpanel" aria-labelledby="gm-tab-${index}" data-region-panel="${index}"${index ? " hidden" : ""}>
-        <div class="gm-region-grid"><table class="market-table gm-market-table">
-          <thead><tr><th>Market</th><th>Index</th><th>Value</th><th>Change</th><th>Status</th><th>Trend</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="6">No index data available.</td></tr>'}</tbody>
-        </table></div>
-      </section>`;
-    }).join("");
+    marketData = data;
+    if (!regions.some(region => region.name === activeRegion)) activeRegion = regions[0].name;
+    renderMarket();
+    updateMap();
     $("gmRegionTabs").querySelectorAll("[data-region-index]").forEach(tab => {
       tab.addEventListener("click", () => {
-        const selected = tab.dataset.regionIndex;
+        const selected = regions[Number(tab.dataset.regionIndex)]?.name;
+        if (!selected) return;
+        activeRegion = selected;
         $("gmRegionTabs").querySelectorAll("[data-region-index]").forEach(item => {
           item.setAttribute("aria-selected", String(item === tab));
           item.tabIndex = item === tab ? 0 : -1;
         });
-        $("gmRegions").querySelectorAll("[data-region-panel]").forEach(panel => {
-          panel.hidden = panel.dataset.regionPanel !== selected;
-        });
+        renderMarket();
+        updateMap();
       });
       tab.addEventListener("keydown", event => {
         if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -228,6 +527,117 @@
 
     $("gmLoading").hidden = true;
     $("gmContent").hidden = false;
+    if (firstRender && activeView === "heatmap") requestAnimationFrame(renderMarket);
+  }
+
+  const countryAliases = {
+    "United States of America": "United States",
+    "Hong Kong S.A.R.": "Hong Kong"
+  };
+
+  function updateMap(){
+    if (!marketData) return;
+    const countries = new Map();
+    (marketData.regions || []).forEach(region => {
+      (region.items || []).forEach(item => {
+        if (!countries.has(item.country)) countries.set(item.country, {region: region.name, changes: []});
+        const change = Number(item.change_pct);
+        if (item.change_pct != null && Number.isFinite(change)) countries.get(item.country).changes.push(change);
+      });
+    });
+    document.querySelectorAll("#gmWorldMap [data-country]").forEach(path => {
+      const country = countryAliases[path.dataset.country] || path.dataset.country;
+      const stats = countries.get(country);
+      path.classList.remove("gm-market-country", "gm-active-region", "up", "down", "flat");
+      path.removeAttribute("role");
+      path.removeAttribute("tabindex");
+      path.removeAttribute("aria-label");
+      if (!stats) return;
+      const average = stats.changes.length
+        ? stats.changes.reduce((sum, value) => sum + value, 0) / stats.changes.length
+        : null;
+      stats.avgPct = average;
+      path.classList.add("gm-market-country", classOf(average));
+      if (stats.region === activeRegion) path.classList.add("gm-active-region");
+      path.setAttribute("role", "button");
+      path.setAttribute("tabindex", "0");
+      path.setAttribute("aria-label", `${country}, ${stats.region}, ${fmtPct(average)}`);
+    });
+    renderCountryLabels(countries);
+  }
+
+  function renderCountryLabels(countryStats){
+    const svg = $("gmWorldMap").querySelector("svg");
+    const countryLayer = svg && svg.querySelector("#gmMapCountries");
+    const labelLayer = svg && svg.querySelector("#gmMapRegionLabel");
+    if (!svg || !countryLayer || !labelLayer) return;
+    const regionLabel = {"Americas": "American market", "Europe": "European market", "Asia-Pacific": "Asian market"};
+    const height = 15;
+    const viewBox = svg.viewBox.baseVal;
+    const placed = [];
+    const labels = [];
+    const connectors = [];
+    const candidates = Array.from(countryLayer.querySelectorAll(".gm-market-country")).map(path => {
+      const name = countryAliases[path.dataset.country] || path.dataset.country;
+      const stats = countryStats.get(name);
+      if (!stats) return null;
+      const box = path.getBBox();
+      const label = `${name} · ${regionLabel[stats.region] || stats.region}`;
+      const width = Math.min(viewBox.width - 12, Math.max(58, label.length * 3.75 + 10));
+      return {path, name, stats, box, label, width, anchorX: box.x + box.width / 2, anchorY: box.y + box.height / 2};
+    }).filter(Boolean).sort((a, b) => a.anchorY - b.anchorY || a.anchorX - b.anchorX);
+
+    candidates.forEach(item => {
+      const offsets = [0];
+      for (let distance = 9; distance <= 192; distance += 9) offsets.push(-distance, distance);
+      const rightX = item.box.x + item.box.width + 4;
+      const leftX = item.box.x - item.width - 4;
+      const sides = rightX + item.width <= viewBox.width - 6
+        ? [rightX, leftX]
+        : [leftX, rightX];
+      const options = [];
+      sides.forEach((baseX, sideIndex) => offsets.forEach(offset => {
+        const x = Math.max(6, Math.min(baseX, viewBox.width - item.width - 6));
+        const y = Math.max(6, Math.min(item.anchorY - height / 2 + offset, viewBox.height - height - 6));
+        const overlap = placed.reduce((area, other) => {
+          const dx = Math.max(0, Math.min(x + item.width, other.x + other.width) - Math.max(x, other.x));
+          const dy = Math.max(0, Math.min(y + height + 2, other.y + height + 2) - Math.max(y - 2, other.y - 2));
+          return area + dx * dy;
+        }, 0);
+        options.push({x, y, score: overlap * 100 + Math.abs(offset) + sideIndex * 3});
+      }));
+      options.sort((a, b) => a.score - b.score);
+      const position = options[0];
+      placed.push({...position, width: item.width});
+      const labelY = position.y + height / 2;
+      const labelEdgeX = position.x > item.anchorX ? position.x : position.x + item.width;
+      connectors.push(`<line class="gm-map-country-connector" x1="${item.anchorX.toFixed(1)}" y1="${item.anchorY.toFixed(1)}" x2="${labelEdgeX.toFixed(1)}" y2="${labelY.toFixed(1)}"/>`);
+      labels.push(`<g class="gm-map-country-label ${classOf(item.stats.avgPct)}" transform="translate(${position.x.toFixed(1)} ${position.y.toFixed(1)})" aria-hidden="true"><rect width="${item.width.toFixed(1)}" height="${height}" rx="3"/><text x="5" y="10.5">${escapeHTML(item.label)}</text></g>`);
+    });
+    labelLayer.innerHTML = `<g class="gm-map-country-connectors">${connectors.join("")}</g><g>${labels.join("")}</g>`;
+  }
+
+  async function loadCountryMap(){
+    try {
+      const response = await fetch("/static/data/world-countries.svg", {credentials: "same-origin"});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const svg = new DOMParser().parseFromString(await response.text(), "image/svg+xml").documentElement;
+      if (svg.localName !== "svg" || svg.querySelector("parsererror")) throw new Error("Invalid country map SVG");
+      Array.from(svg.children).filter(child => child.localName === "title").forEach(title => title.remove());
+      const countryLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      countryLayer.setAttribute("id", "gmMapCountries");
+      Array.from(svg.children).filter(child => child.localName === "path").forEach(path => countryLayer.appendChild(path));
+      svg.appendChild(countryLayer);
+      const labelLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      labelLayer.setAttribute("id", "gmMapRegionLabel");
+      labelLayer.setAttribute("pointer-events", "none");
+      svg.appendChild(labelLayer);
+      $("gmWorldMap").replaceChildren(document.importNode(svg, true));
+      updateMap();
+    } catch (error) {
+      console.error("global-markets country map load failed", error);
+      $("gmWorldMap").innerHTML = '<p class="gm-widget-message" role="alert">The country map could not be loaded.</p>';
+    }
   }
 
   async function load(force, options){
@@ -247,6 +657,7 @@
       if (data && data.snapshot_missing) return false;
       try { ppCache.set('globalmarkets:data', data); } catch(e) {}
       render(data);
+      if (activeAsset !== "indices") loadAsset(activeAsset, force);
       return true;
     } catch (e){
       if (!suppressErrors && $("gmContent").hidden) {
@@ -267,6 +678,66 @@
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
+    loadCountryMap();
+    let heatmapResizeTimer = null;
+    window.addEventListener("resize", () => {
+      if (activeView !== "heatmap" || $("gmContent").hidden) return;
+      clearTimeout(heatmapResizeTimer);
+      heatmapResizeTimer = setTimeout(renderMarket, 150);
+    });
+    $("gmAssetTabs").addEventListener("click", event => {
+      const tab = event.target.closest("[data-asset]");
+      if (!tab) return;
+      activeAsset = tab.dataset.asset;
+      $("gmAssetTabs").querySelectorAll("[data-asset]").forEach(item => {
+        item.setAttribute("aria-selected", String(item === tab));
+      });
+      renderMarket();
+      if (activeAsset !== "indices") loadAsset(activeAsset);
+    });
+    document.querySelectorAll("[data-market-view]").forEach(button => {
+      button.addEventListener("click", () => {
+        activeView = button.dataset.marketView;
+        document.querySelectorAll("[data-market-view]").forEach(item =>
+          item.setAttribute("aria-pressed", String(item === button))
+        );
+        renderMarket();
+      });
+    });
+    $("gmRegions").addEventListener("change", event => {
+      const checkbox = event.target.closest("[data-compare-ticker]");
+      if (!checkbox) return;
+      const ticker = checkbox.dataset.compareTicker;
+      if (checkbox.checked && !selectedTickers.has(ticker) && selectedTickers.size >= 5) {
+        checkbox.checked = false;
+        $("gmCompareTitle").setAttribute("title", "Select up to five markets.");
+        return;
+      }
+      if (checkbox.checked) selectedTickers.add(ticker);
+      else selectedTickers.delete(ticker);
+      renderComparisonChart();
+      if (checkbox.checked) loadHistory([ticker]);
+    });
+    $("gmMap").addEventListener("click", event => {
+      const country = event.target.closest("#gmWorldMap [data-country]");
+      if (!country) return;
+      const name = countryAliases[country.dataset.country] || country.dataset.country;
+      const region = (marketData.regions || []).find(item => (item.items || []).some(index => index.country === name));
+      if (region) selectMapRegion(region.name);
+    });
+    $("gmMap").addEventListener("keydown", event => {
+      const country = event.target.closest("#gmWorldMap [data-country]");
+      if (country && ["Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        country.click();
+      }
+    });
+    function selectMapRegion(name){
+      const index = (marketData.regions || []).findIndex(region => region.name === name);
+      const tab = $("gmRegionTabs").querySelector(`[data-region-index="${index}"]`);
+      if (tab) { tab.focus(); tab.click(); }
+    }
+
     // Stale-while-revalidate init
     let hasCached = false;
     try {
@@ -278,6 +749,7 @@
     } catch(e) {}
     const snapshotLoaded = await load(false, { snapshotOnly: true, silent: hasCached, suppressErrors: true });
     await load(false, { silent: hasCached || snapshotLoaded, suppressErrors: hasCached || snapshotLoaded });
+    loadMacro();
     const lt = $("gmLiveToggle");
     if (lt){
       lt.addEventListener("change", (e) => e.target.checked ? startTimer() : stopTimer());

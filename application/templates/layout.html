@@ -1260,7 +1260,12 @@ window.appPlanRank = {free:0, pro:1, elite:2};
     function pick(item){
         if (!item) return;
         closePop();
-        if (item.kind === 'stock' || item.kind === 'index') {
+        if (item.kind === 'stock') {
+            const symbol = String(item.symbol || '').replace(/\.NS$/i, '');
+            window.location.href = '/stock/' + encodeURIComponent(symbol);
+            return;
+        }
+        if (item.kind === 'index') {
             const symbol = String(item.symbol || '').replace(/\.NS$/i, '').replace(/\.BO$/i, '');
             if (window.openTVChart) {
                 window.openTVChart(symbol);

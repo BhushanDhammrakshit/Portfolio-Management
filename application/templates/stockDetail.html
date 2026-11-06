@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/stock-detail.css') }}">
+{% endblock %}
+{% block content %}
+<div class="stock-detail" id="stockDetail" data-symbol="{{ stock_symbol }}" data-exchange="{{ exchange }}">
+    <header class="stock-detail-header">
+        <div class="stock-company-mark" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="stock-heading">
+            <h1 id="stockName">{{ stock_symbol }}</h1>
+            <div class="stock-symbol-line"><span id="stockExchange">{{ exchange }}</span><span id="stockSymbol">{{ stock_symbol }}</span><span id="stockSector"></span></div>
+        </div>
+        <div class="stock-quote">
+            <strong id="stockPrice" aria-live="polite">—</strong>
+            <span id="stockChange"></span>
+        </div>
+        <a class="stock-tv-link" href="https://www.tradingview.com/chart/?symbol={{ exchange }}%3A{{ stock_symbol }}" target="_blank" rel="noopener noreferrer" aria-label="Open chart in TradingView">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
+    </header>
+
+    <nav class="stock-tabs" role="tablist" aria-label="Stock details">
+        <button type="button" class="stock-tab active" id="tab-prices" role="tab" aria-selected="true" aria-controls="panel-prices" data-tab="prices">Prices</button>
+        <button type="button" class="stock-tab" id="tab-charts" role="tab" aria-selected="false" aria-controls="panel-charts" data-tab="charts">Charts</button>
+        <button type="button" class="stock-tab" id="tab-updates" role="tab" aria-selected="false" aria-controls="panel-updates" data-tab="updates">Updates</button>
+        <button type="button" class="stock-tab" id="tab-fundamentals" role="tab" aria-selected="false" aria-controls="panel-fundamentals" data-tab="fundamentals">Fundamentals</button>
+        <button type="button" class="stock-tab" id="tab-shareholding" role="tab" aria-selected="false" aria-controls="panel-shareholding" data-tab="shareholding">Shareholding</button>
+        <button type="button" class="stock-tab" id="tab-oi" role="tab" aria-selected="false" aria-controls="panel-oi" data-tab="oi">OI Analysis</button>
+    </nav>
+
+    <section class="stock-panel" id="panel-prices" role="tabpanel" aria-labelledby="tab-prices">
+        <div class="stock-price-summary">
+            <div><span class="stock-eyebrow">Latest price</span><strong id="priceSummary">—</strong></div>
+            <div><span class="stock-eyebrow" id="periodChangeLabel">1D change</span><strong id="periodChange">—</strong></div>
+            <div><span class="stock-eyebrow">Period low</span><strong id="periodLow">—</strong></div>
+            <div><span class="stock-eyebrow">Period high</span><strong id="periodHigh">—</strong></div>
+            <div><span class="stock-eyebrow">Volume</span><strong id="periodVolume">—</strong></div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-card-heading"><div><h2>Price movement</h2><p id="priceChartCaption">Intraday price history</p></div><div class="stock-range-controls" data-range-controls></div></div>
+            <div class="stock-chart-wrap">
+                <canvas data-price-chart aria-label="Stock price line chart" role="img"></canvas>
+                <div class="stock-chart-tooltip" hidden></div>
+                <div class="stock-chart-empty" hidden></div>
+            </div>
+            <div class="stock-volume-wrap"><span>Volume</span><canvas data-volume-chart aria-label="Trading volume chart" role="img"></canvas></div>
+        </div>
+    </section>
+
+    <section class="stock-panel" id="panel-charts" role="tabpanel" aria-labelledby="tab-charts" hidden>
+        <div class="stock-card">
+            <div class="stock-card-heading">
+                <div><h2>Charts</h2><p>OHLC candlesticks and traded volume for the selected period</p></div>
+                <div class="stock-chart-toolbar">
+                    <div class="stock-range-controls" data-range-controls></div>
+                    <div class="stock-chart-zoom" role="group" aria-label="Chart zoom controls">
+                        <button type="button" data-chart-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+                        <button type="button" data-chart-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+                        <button type="button" data-chart-reset title="Fit all candles">Fit</button>
+                    </div>
+                </div>
+            </div>
+            <div class="stock-chart-wrap stock-chart-wrap-large">
+                <canvas data-candle-chart aria-label="Stock candlestick chart" role="img"></canvas>
+                <div class="stock-chart-empty" hidden></div>
+            </div>
+            <div class="stock-candle-readout" data-candle-readout aria-live="polite">Drag to pan · Scroll to zoom · Hover for OHLC</div>
+            <div class="stock-volume-wrap"><span>Volume</span><canvas data-candle-volume-chart aria-label="Trading volume chart"></canvas></div>
+        </div>
+    </section>
+
+    <section class="stock-panel" id="panel-updates" role="tabpanel" aria-labelledby="tab-updates" hidden>
+        <div class="stock-subtabs" role="tablist" aria-label="Company updates">
+            <button type="button" class="stock-subtab active" role="tab" aria-selected="true" data-update-type="news">News</button>
+            <button type="button" class="stock-subtab" role="tab" aria-selected="false" data-update-type="announcements">Announcements</button>
+            <button type="button" class="stock-subtab" role="tab" aria-selected="false" data-update-type="actions">Corporate actions</button>
+            <button type="button" class="stock-subtab" role="tab" aria-selected="false" data-update-type="feeds">Feeds</button>
+        </div>
+        <div class="stock-table-card"><div class="stock-table-scroll"><table class="ds-table stock-table" aria-label="Company updates"><thead><tr><th>Date</th><th>Type</th><th>Update</th><th>Source</th></tr></thead><tbody id="stockUpdates" aria-live="polite"><tr><td class="ds-table-empty" colspan="4">Loading company updates…</td></tr></tbody></table></div></div>
+    </section>
+
+    <section class="stock-panel" id="panel-fundamentals" role="tabpanel" aria-labelledby="tab-fundamentals" hidden>
+        <div class="stock-panel-title"><div><h2>Fundamentals</h2><p>Company financials and valuation metrics</p></div><span class="stock-asof" id="fundamentalsAsOf"></span></div>
+        <div class="stock-fundamentals-grid" id="fundamentalsGrid" aria-live="polite">
+            <div class="stock-table-card"><div class="stock-table-scroll"><table class="ds-table stock-table"><tbody><tr><td class="ds-table-empty">Loading fundamentals…</td></tr></tbody></table></div></div>
+        </div>
+        <p class="stock-disclaimer">Financial data may be delayed or incomplete. This information is for research purposes only and is not investment advice.</p>
+    </section>
+
+    <section class="stock-panel" id="panel-shareholding" role="tabpanel" aria-labelledby="tab-shareholding" hidden>
+        <div class="stock-panel-title"><div><h2>Shareholding</h2><p>Reported ownership pattern and available institutional holders</p></div><span class="stock-asof" id="shareholdingAsOf"></span></div>
+        <div class="stock-table-card"><h3>Shareholding pattern</h3><div class="stock-table-scroll"><table class="ds-table stock-table" aria-label="Shareholding pattern"><thead><tr><th>Shareholder category</th><th class="is-numeric">Holding</th></tr></thead><tbody id="shareholdingPattern"><tr><td class="ds-table-empty" colspan="2">Loading shareholding…</td></tr></tbody></table></div></div>
+        <div class="stock-table-card"><h3>Shareholders</h3><div class="stock-table-scroll"><table class="ds-table stock-table" aria-label="Named shareholders"><thead id="holdersHead"></thead><tbody id="holdersBody"><tr><td class="ds-table-empty">Loading shareholders…</td></tr></tbody></table></div></div>
+        <p class="stock-disclaimer">Shareholder details depend on the data provider and may not include the latest exchange-filed quarterly pattern.</p>
+    </section>
+
+    <section class="stock-panel" id="panel-oi" role="tabpanel" aria-labelledby="tab-oi" hidden>
+        <div class="stock-panel-title"><div><h2>Open interest analysis</h2><p>Listed stock options for the nearest available expiry</p></div><span class="stock-asof" id="oiExpiry"></span></div>
+        <div class="stock-table-card"><h3>Market summary</h3><div class="stock-table-scroll"><table class="ds-table stock-table" aria-label="Open interest summary"><thead><tr><th>Underlying price</th><th>Put / call OI ratio</th><th>Highest put OI support</th><th>Highest call OI resistance</th></tr></thead><tbody id="oiSummary"><tr><td class="ds-table-empty" colspan="4">Loading open interest…</td></tr></tbody></table></div></div>
+        <div class="stock-table-card"><h3>Option chain by strike</h3><div class="stock-table-scroll"><table class="ds-table stock-table" aria-label="Option chain by strike"><thead><tr><th>Strike</th><th class="is-numeric">Call OI</th><th class="is-numeric">Call OI change</th><th class="is-numeric">Put OI</th><th class="is-numeric">Put OI change</th></tr></thead><tbody id="oiRows"><tr><td class="ds-table-empty" colspan="5">Loading option chain…</td></tr></tbody></table></div></div>
+        <p class="stock-disclaimer">Open interest is available only for stocks with listed derivatives and an active configured broker data feed. Not investment advice.</p>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script defer src="{{ url_for('static', filename='Scripts/ohlc_chart.js') }}"></script>
+<script defer src="{{ url_for('static', filename='Scripts/stock-detail.js') }}"></script>
+{% endblock %}
