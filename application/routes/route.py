@@ -2,6 +2,7 @@
 import uuid
 import csv
 import io
+import math
 from datetime import datetime
 from functools import wraps
 
@@ -1238,9 +1239,10 @@ def tv_chart():
 <title>__SYM__ · Chart</title>
 <link rel="stylesheet" href="/static/CSS/tokens.css">
 <style>
+  :root{--chart-toolbar-height:34px;--chart-toolbar-button-height:26px}
   html,body{height:100%;width:100%;margin:0;padding:0;background:var(--bg-app);
     font-family:var(--font-sans);color:var(--text-primary)}
-  .bar{display:flex;align-items:center;gap:var(--space-2);min-height:var(--chart-toolbar-height);padding:var(--space-1) var(--space-3);
+  .bar{display:flex;align-items:center;gap:var(--space-2);min-height:var(--chart-toolbar-height);padding:2px var(--space-3);
     border-bottom:var(--border-width) solid var(--border);background:var(--bg-surface)}
   .bar .sym{font-weight:600;font-size:var(--fs-card-title);margin-right:var(--space-2)}
   .bar button{height:var(--chart-toolbar-button-height);border:var(--border-width) solid var(--border-strong);background:var(--bg-surface);color:var(--text-secondary);
@@ -1290,7 +1292,8 @@ def tv_chart():
     const value = parseInt(hex.slice(1), 16);
     return 'rgba(' + (value >> 16) + ',' + ((value >> 8) & 255) + ',' + (value & 255) + ',' + alpha + ')';
   };
-  const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+  const chartEl = document.getElementById('chart');
+  const chart = LightweightCharts.createChart(chartEl, {
     layout:{background:{color:surface}, textColor:text},
     grid:{vertLines:{color:grid}, horzLines:{color:grid}},
     rightPriceScale:{borderColor:border},
@@ -1304,8 +1307,8 @@ def tv_chart():
   });
   const volSeries = chart.addHistogramSeries({
     priceFormat:{type:'volume'}, priceScaleId:'', color:'#94a3b8',
-    scaleMargins:{top:0.8, bottom:0}
   });
+  chart.priceScale('').applyOptions({scaleMargins:{top:0.8,bottom:0}});
   const emaSeries = chart.addLineSeries({
     color:emaColor, lineWidth:2, priceLineVisible:false, lastValueVisible:false,
     crosshairMarkerVisible:false
@@ -1332,7 +1335,17 @@ def tv_chart():
       +'<span>L '+d.low.toFixed(2)+'</span>'
       +'<span class="'+cls+'">C '+d.close.toFixed(2)+'</span>';
   });
-  window.addEventListener('resize', ()=>chart.timeScale().fitContent());
+  function resizeChart(){
+    const rect = chartEl.getBoundingClientRect();
+    if(rect.width > 0 && rect.height > 0){
+      chart.resize(Math.floor(rect.width), Math.floor(rect.height));
+    }
+  }
+  if('ResizeObserver' in window){
+    new ResizeObserver(resizeChart).observe(chartEl);
+  }
+  window.addEventListener('resize', resizeChart);
+  resizeChart();
 
   function load(tf){
     curTf = tf;
@@ -1350,7 +1363,8 @@ def tv_chart():
           color: b.c>=b.o ? rgba(upColor,0.4) : rgba(downColor,0.4)})));
         emaSeries.setData(computeEma(bars, 20));
         chart.timeScale().fitContent();
-        statusEl.textContent = bars.length + ' bars · ' + (j.source || '');
+        statusEl.textContent = bars.length + ' bars · ' + (j.source || '')
+          + (j.skipped ? ' · ' + j.skipped + ' invalid bars skipped' : '');
       })
       .catch(e=>{ statusEl.textContent = 'Error: '+e.message; });
   }
@@ -1424,6 +1438,7 @@ def tv_ohlc():
         return jsonify({"ok": False, "error": "unexpected data shape"}), 500
 
     bars = []
+    skipped = 0
     for ts, row in df.iterrows():
         try:
             # Lightweight Charts always renders UNIX times in UTC. Feed it the
@@ -1432,15 +1447,28 @@ def tv_ohlc():
             if ts2.tzinfo is not None:
                 ts2 = ts2.tz_convert("Asia/Kolkata").tz_localize(None)
             t_val = int(ts2.tz_localize("UTC").timestamp())
+            open_price = float(row[o_col])
+            high_price = float(row[h_col])
+            low_price = float(row[l_col])
+            close_price = float(row[c_col])
+            if (
+                not all(map(math.isfinite, (open_price, high_price, low_price, close_price)))
+                or low_price <= 0
+                or low_price > min(open_price, close_price)
+                or high_price < max(open_price, close_price)
+            ):
+                skipped += 1
+                continue
             bars.append({
                 "t": t_val,
-                "o": float(row[o_col]),
-                "h": float(row[h_col]),
-                "l": float(row[l_col]),
-                "c": float(row[c_col]),
+                "o": open_price,
+                "h": high_price,
+                "l": low_price,
+                "c": close_price,
                 "v": float(row[v_col]) if v_col and pd.notna(row[v_col]) else 0.0,
             })
         except Exception:
+            skipped += 1
             continue
 
     # Lightweight Charts rejects a series whose points are not strictly
@@ -1460,5 +1488,6 @@ def tv_ohlc():
         "symbol": sym,
         "interval": tf,
         "source": market_data.provider_name(),
+        "skipped": skipped,
         "bars": bars,
     })

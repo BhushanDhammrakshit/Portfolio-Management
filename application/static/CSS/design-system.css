@@ -419,14 +419,14 @@
     transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 .persona-switch-btn:hover { color: var(--text-primary); background: var(--bg-subtle); border-color: var(--border-strong); }
-.persona-switch-ico { display: inline-flex; width: var(--control-height-small); height: var(--control-height-small); align-items: center; justify-content: center; color: var(--brand); background: var(--brand-soft); border-radius: var(--radius-tag); }
+.persona-switch-ico { display: inline-flex; width: var(--control-height-small); height: var(--control-height-small); align-items: center; justify-content: center; color: var(--brand); background: transparent; border-radius: var(--radius-tag); }
 .persona-switch-menu { min-width: var(--persona-menu-width); padding: var(--space-1); border: var(--border-width) solid var(--border); border-radius: var(--radius); }
 .persona-switch-head { padding: var(--space-2) var(--space-3); color: var(--text-muted); font-size: var(--fs-label); font-weight: var(--fw-medium); }
 .persona-switch-item { display: flex; width: 100%; align-items: center; gap: var(--space-3); padding: var(--space-2); color: var(--text-primary); background: transparent; border: 0; border-radius: var(--radius); text-align: left; cursor: pointer; transition: background-color var(--transition-fast), color var(--transition-fast); }
 .persona-switch-item:hover { background: var(--bg-subtle); }
 .persona-switch-item.active { background: var(--brand-soft); }
-.persona-switch-item-ico { display: inline-flex; width: var(--control-height); height: var(--control-height); flex: 0 0 auto; align-items: center; justify-content: center; color: var(--text-secondary); background: var(--bg-subtle); border-radius: var(--radius); }
-.persona-switch-item.active .persona-switch-item-ico { color: var(--brand); background: var(--bg-surface); }
+.persona-switch-item-ico { display: inline-flex; width: var(--control-height); height: var(--control-height); flex: 0 0 auto; align-items: center; justify-content: center; color: var(--text-secondary); background: transparent; border-radius: var(--radius); }
+.persona-switch-item.active .persona-switch-item-ico { color: var(--brand); background: transparent; }
 .persona-switch-item-text { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; }
 .persona-switch-item-title { color: var(--text-primary); font-size: var(--fs-body); font-weight: var(--fw-medium); }
 .persona-switch-item-sub { margin-top: var(--space-1); color: var(--text-muted); font-size: var(--fs-caption); }

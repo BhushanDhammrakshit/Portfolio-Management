@@ -140,16 +140,29 @@
     .arrg-side-panel .arrg-legend-card{grid-column:1/-1}
     .arrg-side-panel .arrg-legend-list{max-height:220px}
 }
-.ta-workspace{margin-bottom:var(--space-5);overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
-.ta-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border-bottom:var(--border-width) solid var(--border)}
-.ta-workspace-title h2{margin:0;color:var(--text-primary);font-size:var(--fs-section-title);font-weight:600}
-.ta-workspace-title p{margin:var(--space-1) 0 0;color:var(--text-secondary);font-size:var(--fs-table-cell)}
-.ta-stock-controls{display:flex;align-items:center;gap:var(--space-2)}
-.ta-stock-controls input{width:var(--analysis-control-width);height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
-.ta-stock-quote{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) var(--space-4);border-bottom:var(--border-width) solid var(--border)}
-.ta-stock-quote strong{color:var(--text-primary);font-size:var(--fs-card-title);font-weight:600}
-.ta-stock-quote span{color:var(--text-muted);font-size:var(--fs-caption)}
+.scans-page.ta-page{gap:8px}
+.ta-page-shell{display:flex;width:100%;min-width:0;flex-direction:column;gap:8px;align-self:stretch}
+.ta-page-shell>.page-header{width:100%;margin-bottom:0}
+.ta-page-title{display:flex;align-items:center;gap:8px}
+.ta-page-title h1{margin:0}
+.ta-disclaimer{position:relative;display:inline-flex;font-size:0;line-height:1}
+.ta-disclaimer summary{display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:18px;font-weight:400;cursor:pointer;list-style:none}
+.ta-disclaimer summary::-webkit-details-marker{display:none}
+.ta-disclaimer-popover{position:absolute;top:calc(100% + 8px);left:0;z-index:10;width:min(320px,calc(100vw - 32px));padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-md);color:var(--text-secondary);font-size:var(--fs-caption);font-weight:400;line-height:1.45}
+.ta-disclaimer:not([open]):not(:hover):not(:focus-within) .ta-disclaimer-popover{display:none}
+.ta-workspace{width:100%;min-width:0;margin-bottom:0;overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.ta-workspace-head{padding:0;border-bottom:0}
+.ta-market-toolbar{display:flex;min-height:44px;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 12px;border-bottom:var(--border-width) solid var(--border)}
+.ta-stock-controls{display:flex;align-items:center;gap:6px}
+.ta-stock-controls input{width:min(190px,32vw);height:32px;padding:0 9px;border:var(--border-width) solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
+.ta-stock-quote{display:flex;min-width:0;flex:1;align-items:center;gap:10px;flex-wrap:wrap}
+.ta-stock-quote>strong{color:var(--text-primary);font-size:var(--fs-body);font-weight:600}
+.ta-stock-quote>span{color:var(--text-muted);font-size:var(--fs-caption);white-space:nowrap}
+.ta-stock-quote>span:not(:first-of-type){padding-left:10px;border-left:var(--border-width) solid var(--border)}
+.ta-stock-quote .ta-value{color:var(--text-primary);font-weight:600}
 .ta-na{color:var(--text-muted)}
+.ta-missing-note{margin-left:3px;color:var(--text-muted);font-size:10px;line-height:1;cursor:help}
+.ta-missing-note[hidden]{display:none}
 .ta-tech-content{padding:var(--space-4)}
 .ta-tech-table{width:100%;border-collapse:collapse;font-size:var(--fs-table-cell)}
 .ta-tech-table th{height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-align:left}
@@ -163,30 +176,40 @@
 .ta-score-track{position:relative;flex:1;height:var(--space-2);border-radius:var(--radius-tag);background:linear-gradient(90deg,var(--negative-bg),var(--bg-subtle) 50%,var(--positive-bg))}
 .ta-score-track span{position:absolute;top:50%;width:var(--status-dot-size);height:var(--status-dot-size);border:var(--border-width) solid var(--surface);border-radius:50%;background:var(--brand);transform:translate(-50%,-50%)}
 .ta-score-note{margin-top:var(--space-2);color:var(--text-muted);font-size:var(--fs-caption)}
-.ta-snapshot-status{padding:var(--space-2) var(--space-4);border-bottom:var(--border-width) solid var(--border);color:var(--text-muted);font-size:var(--fs-caption)}
-.ta-view-tabs{display:flex;gap:var(--space-4);overflow:auto;padding:0 var(--space-4);border-bottom:var(--border-width) solid var(--border)}
-.ta-view-tabs button{flex:0 0 auto;padding:var(--space-3) 0;border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font-size:var(--fs-table-cell);font-weight:500}
+.ta-view-tabs{display:flex;gap:16px;overflow:auto;padding:0 12px;border-bottom:var(--border-width) solid var(--border)}
+.ta-view-tabs button{flex:0 0 auto;padding:8px 0;border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font-size:var(--fs-table-cell);font-weight:500}
 .ta-view-tabs button[aria-selected="true"]{border-bottom-color:var(--brand);color:var(--brand)}
+.ta-view-panel{width:100%;min-width:0}
 .ta-view-panel[hidden]{display:none}
-.ta-chart-frame{display:block;width:100%;height:var(--analysis-chart-height);border:0;background:var(--surface)}
+.ta-chart-frame{display:block;width:100%;max-width:none;height:max(500px,calc(100vh - 400px));min-height:500px;border:0;background:var(--surface)}
 .ta-unavailable{display:grid;min-height:var(--analysis-empty-min-height);place-items:center;padding:var(--space-5);color:var(--text-muted);font-size:var(--fs-table-cell);text-align:center}
-@media(max-width:767px){.ta-workspace-head{align-items:flex-start;flex-direction:column}.ta-stock-controls{width:100%}.ta-stock-controls input{flex:1}.ta-chart-frame{height:var(--analysis-chart-height-mobile)}}
+@media(max-width:767px){.ta-market-toolbar{align-items:stretch}.ta-stock-controls{width:100%}.ta-stock-controls input{width:auto;flex:1}.ta-stock-quote{gap:8px}.ta-stock-quote>span:not(:first-of-type){padding-left:8px}.ta-chart-frame{height:var(--analysis-chart-height-mobile);min-height:var(--analysis-chart-height-mobile)}}
 </style>
 
-<div class="page-container scans-page{% if request.args.get('tool') == 'arrg' %} standalone-arrg{% endif %}">
-    {% set standalone_tool = {
-        'orb': 'ORB Scanner',
-        'momentum': 'Momentum Burst',
-        'arrg': 'Advanced Sector Rotation',
-        'oi': 'OI Buildup'
-    }.get(request.args.get('tool')) %}
+{% set standalone_tool = {
+    'orb': 'ORB Scanner',
+    'momentum': 'Momentum Burst',
+    'arrg': 'Advanced Sector Rotation',
+    'oi': 'OI Buildup'
+}.get(request.args.get('tool')) %}
+<div class="page-container scans-page{% if not standalone_tool %} ta-page{% endif %}{% if request.args.get('tool') == 'arrg' %} standalone-arrg{% endif %}">
+    {% if not standalone_tool %}<div class="ta-page-shell">{% endif %}
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
-        <div>
-            <h1>{{ standalone_tool or 'Technical Analysis' }}</h1>
-            <p>{% if standalone_tool %}Focused technical analysis tool.{% else %}Stock chart and intraday market analysis tools.{% endif %}</p>
+        <div{% if not standalone_tool %} class="ta-page-title"{% endif %}>
+            <h1>
+                {{ standalone_tool or 'Technical Analysis' }}
+            </h1>
+            {% if not standalone_tool %}
+            <details class="ta-disclaimer">
+                <summary aria-label="Show technical analysis disclaimer">ⓘ</summary>
+                <span class="ta-disclaimer-popover">{% if not has_pro %}ORB Scanner, Advanced Sector Rotation and OI Buildup are Pro tools. Momentum Burst is available on every plan.{% else %}Charts and scanner data are for educational purposes only and are not trading tips or buy/sell recommendations.{% endif %}</span>
+            </details>
+            {% endif %}
+            {% if standalone_tool %}<p>Focused technical analysis tool.</p>{% endif %}
         </div>
     </header>
 
+    {% if standalone_tool %}
     <div class="ds-info-banner-wrap">
         {% if not has_pro %}
         <div class="info-banner">ORB Scanner, Advanced Sector Rotation and OI Buildup are Pro tools. Momentum Burst is available on every plan. <a href="{{ url_for('billing.billing_page') }}">View plans</a></div>
@@ -194,27 +217,25 @@
         <div class="info-banner">Scanners provide technical analysis for educational purposes only — not trading tips or buy/sell recommendations.</div>
         {% endif %}
     </div>
+    {% endif %}
 
     {% if not standalone_tool %}
     <section class="ta-workspace" aria-label="Technical analysis chart">
         <div class="ta-workspace-head">
-            <div class="ta-workspace-title">
-                <h2>Technical Analysis</h2>
-                <p>Price chart and analysis tools for NSE-listed securities.</p>
-            </div>
-            <div class="ta-stock-controls">
-                <input id="taSymbol" type="search" value="RELIANCE" data-stock-suggest aria-label="Stock symbol" placeholder="Search symbol">
-                <button type="button" class="btn btn-primary btn-sm" id="taLoadSymbol">Load</button>
+            <div class="ta-market-toolbar">
+                <div class="ta-stock-controls">
+                    <input id="taSymbol" type="search" value="RELIANCE" data-stock-suggest aria-label="Stock symbol" placeholder="Search symbol">
+                    <button type="button" class="btn btn-primary btn-sm" id="taLoadSymbol">Load</button>
+                </div>
+                <div class="ta-stock-quote" aria-label="Selected security and quote">
+                    <strong id="taSelectedSymbol">RELIANCE</strong><span>NSE</span>
+                    <span>Price: <strong id="taCurrentPrice" class="ta-na ta-value" title="No scan snapshot is available">N/A</strong><span class="ta-missing-note" data-ta-missing-for="taCurrentPrice" title="Price is unavailable from the chart feed." aria-label="Price is unavailable from the chart feed." tabindex="0" hidden>(?)</span></span>
+                    <span>Change: <strong id="taDayChange" class="ta-na ta-value" title="No scan snapshot is available">N/A</strong><span class="ta-missing-note" data-ta-missing-for="taDayChange" title="Change is unavailable from the chart feed." aria-label="Change is unavailable from the chart feed." tabindex="0" hidden>(?)</span></span>
+                    <span>Day range: <strong id="taDayRange" class="ta-na ta-value" title="No scan snapshot is available">N/A</strong><span class="ta-missing-note" data-ta-missing-for="taDayRange" title="Day range is unavailable from the chart feed." aria-label="Day range is unavailable from the chart feed." tabindex="0" hidden>(?)</span></span>
+                    <span>52W range: <strong id="taYearRange" class="ta-na ta-value" title="52-week prices are unavailable">N/A</strong><span class="ta-missing-note" data-ta-missing-for="taYearRange" title="52-week prices are unavailable from the chart feed." aria-label="52-week prices are unavailable from the chart feed." tabindex="0" hidden>(?)</span></span>
+                </div>
             </div>
         </div>
-        <div class="ta-stock-quote">
-            <strong id="taSelectedSymbol">RELIANCE</strong><span>NSE</span>
-            <span>Price <strong id="taCurrentPrice" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
-            <span>Change <strong id="taDayChange" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
-            <span>Day range <strong id="taDayRange" class="ta-na" title="No scan snapshot is available">N/A</strong></span>
-            <span>52W range <span class="ta-na" title="52-week prices are unavailable">N/A</span></span>
-        </div>
-        <div class="ta-snapshot-status" role="status">Quote, range and indicator details are not available from the chart feed.</div>
         <div class="ta-view-tabs" role="tablist" aria-label="Technical analysis views">
             <button type="button" role="tab" aria-selected="true" data-ta-view="overview">Overview</button>
             <button type="button" role="tab" aria-selected="false" data-ta-view="technicals">Technicals</button>
@@ -247,6 +268,7 @@
         <div class="ta-view-panel ta-unavailable" data-ta-panel="patterns" hidden>Pattern detection data is not available for the selected symbol.</div>
         <div class="ta-view-panel ta-unavailable" data-ta-panel="peers" hidden>Peer comparison data is not available in the current technical-analysis feeds.</div>
     </section>
+    </div>
     {% endif %}
 
     <!-- ORB -->
@@ -1394,6 +1416,13 @@
     const frame = document.getElementById('taChartFrame');
     if (!input || !frame) return;
     const selected = document.getElementById('taSelectedSymbol');
+    const updateMissingNotes = () => {
+        document.querySelectorAll('[data-ta-missing-for]').forEach(note => {
+            const value = document.getElementById(note.dataset.taMissingFor);
+            note.hidden = !value || value.textContent.trim() !== 'N/A';
+        });
+    };
+    updateMissingNotes();
     const load = () => {
         const symbol = input.value.trim().toUpperCase().replace(/^[A-Z]+:/, '').replace(/\.NS$/i, '');
         if (!/^[A-Z0-9._-]+$/.test(symbol)) {
@@ -1404,6 +1433,7 @@
         input.setCustomValidity('');
         input.value = symbol;
         selected.textContent = symbol;
+        updateMissingNotes();
         frame.title = 'Candlestick chart for ' + symbol;
         frame.src = '/tv-chart?symbol=' + encodeURIComponent(symbol) + '&interval=D';
     };

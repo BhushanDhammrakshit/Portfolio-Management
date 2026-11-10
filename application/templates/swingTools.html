@@ -12,6 +12,28 @@
 .tool-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
 .tool-header h2{font-size:1.35rem;font-weight:700;margin:0}
 .tool-header p{font-size:.85rem;color:var(--text-muted);margin:4px 0 0}
+.page-container>.page-header{margin-bottom:12px}
+.swing-disclaimer{position:relative;margin-bottom:6px;padding:3px 34px 3px 10px;border-radius:8px}
+.swing-disclaimer[hidden]{display:none}
+.swing-disclaimer-row{display:flex;align-items:center;min-height:20px}
+.swing-disclaimer-main{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.swing-disclaimer-toggle,.swing-disclaimer-dismiss{border:0;background:transparent;color:inherit;cursor:pointer}
+.swing-disclaimer-toggle{display:inline-flex;align-items:center;gap:4px;padding:2px 4px;font-size:.75rem;font-weight:600;white-space:nowrap}
+.swing-disclaimer-dismiss{position:absolute;top:7px;right:9px;padding:2px 4px;line-height:1}
+.swing-disclaimer-more{margin:4px 0 2px;line-height:1.45}
+.breakout-header{align-items:center;gap:8px;margin-bottom:6px}
+.breakout-controls{display:flex;align-items:center;gap:10px}
+#brkKpis{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0}
+#brkKpis[hidden]{display:none}
+#brkKpis .kpi-box{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:var(--surface-2);border-color:var(--border);white-space:nowrap}
+#brkKpis .lbl{font-size:.64rem;text-transform:none;letter-spacing:0}
+#brkKpis .val{font-size:.82rem;margin:0}
+.tool-help{margin:0 0 6px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.tool-help summary{display:flex;align-items:center;gap:7px;min-height:28px;padding:4px 10px;font-size:.78rem;line-height:1.25;cursor:pointer}
+.tool-help summary i{color:var(--text-muted)}
+.tool-help-body{padding:0 12px 10px;font-size:.8rem}
+.tool-help-body p{margin:6px 0}
+@media(max-width:700px){.breakout-controls{width:100%;justify-content:space-between}.swing-disclaimer-row{align-items:flex-start}}
 .tool-table{width:100%;font-size:.82rem;border-collapse:collapse}
 .tool-table th{background:var(--surface-2);text-align:left;padding:10px;font-weight:600;color:var(--text-muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);position:sticky;top:0}
 .tool-table td{padding:10px;border-bottom:1px solid var(--border)}
@@ -113,22 +135,31 @@ body.sidebar-collapsed #panel-rotation .rrg-chart{width:calc(100vw - var(--sideb
         </div>
     </header>
 
-    <div class="alert alert-warning small py-2 px-3 mb-3" role="alert" style="border-radius:8px">
-        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-        These setups flag <strong>short-term bullish/bearish technical conditions for educational
-        purposes only</strong> — they are <strong>not buy/sell recommendations or trading tips</strong>.
-        Finance Candle is not a SEBI-registered adviser or research analyst. Do your own research
-        before trading.
+    <div class="alert alert-warning small swing-disclaimer" id="swingDisclaimer" role="alert">
+        <div class="swing-disclaimer-row">
+            <div class="swing-disclaimer-main">
+                <span>⚠ Educational purposes only — not trading advice.</span>
+                <button type="button" class="swing-disclaimer-toggle" id="swingDisclaimerToggle" aria-expanded="false" aria-controls="swingDisclaimerMore">
+                    <span>Learn more</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+            </div>
+            <button type="button" class="swing-disclaimer-dismiss" id="swingDisclaimerDismiss" aria-label="Dismiss educational disclaimer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="swing-disclaimer-more" id="swingDisclaimerMore" hidden>
+            These setups flag short-term bullish/bearish technical conditions only — they are not buy/sell recommendations or trading tips. Finance Candle is not a SEBI-registered adviser or research analyst. Do your own research before trading.
+        </div>
     </div>
 
     <!-- Breakouts -->
     <section class="tool-panel active" id="panel-breakout">
         {% if has_pro %}
-        <div class="tool-header">
+        <div class="tool-header breakout-header">
             <div><h2>Breakout from Consolidation</h2><p>NR7 · Inside-Bar · BB-Squeeze · 20-day high breakout.</p></div>
-            <div class="tool-controls"><button class="btn btn-primary btn-sm" id="brkScan"><i class="fa-solid fa-satellite-dish me-1"></i>Scan</button></div>
+            <div class="tool-controls breakout-controls">
+                <div id="brkKpis" class="kpi-row" hidden></div>
+                <button class="btn btn-primary btn-sm" id="brkScan"><i class="fa-solid fa-satellite-dish me-1"></i>Scan</button>
+            </div>
         </div>
-        <div id="brkKpis" class="kpi-row" hidden></div>
         <div id="brkContent"></div>
         {% else %}
         {{ upgrade_card('pro', title='Breakouts — Pro feature', message='Scan for NR7, inside-bar, BB-squeeze and 20-day breakouts. Upgrade to Pro to unlock.') }}
@@ -341,6 +372,35 @@ body.sidebar-collapsed #panel-rotation .rrg-chart{width:calc(100vw - var(--sideb
         el.innerHTML=items.map(i=>`<div class="kpi-box"><div class="lbl">${i.label}</div><div class="val" style="color:${i.color||'var(--text)'}">${i.value}</div></div>`).join('');
         el.hidden=false;
     }
+
+    function initSwingDisclaimer(){
+        const banner=document.getElementById('swingDisclaimer');
+        const toggle=document.getElementById('swingDisclaimerToggle');
+        const more=document.getElementById('swingDisclaimerMore');
+        const dismiss=document.getElementById('swingDisclaimerDismiss');
+        if(!banner||!toggle||!more||!dismiss)return;
+        const storageKey='swingTools:disclaimer';
+        let state='collapsed';
+        try { state=localStorage.getItem(storageKey)||'collapsed'; } catch(_){}
+        if(state==='dismissed'){
+            banner.hidden=true;
+            return;
+        }
+        const setExpanded=(expanded,save)=>{
+            more.hidden=!expanded;
+            toggle.setAttribute('aria-expanded',String(expanded));
+            toggle.querySelector('span').textContent=expanded?'Show less':'Learn more';
+            toggle.querySelector('i').className='fa-solid '+(expanded?'fa-chevron-up':'fa-chevron-down');
+            if(save){try { localStorage.setItem(storageKey,expanded?'expanded':'collapsed'); } catch(_){}}
+        };
+        setExpanded(state==='expanded',false);
+        toggle.addEventListener('click',()=>setExpanded(more.hidden,true));
+        dismiss.addEventListener('click',()=>{
+            banner.hidden=true;
+            try { localStorage.setItem(storageKey,'dismissed'); } catch(_){}
+        });
+    }
+    initSwingDisclaimer();
 
     // ============ Breakouts ============
     async function loadBreakouts(){

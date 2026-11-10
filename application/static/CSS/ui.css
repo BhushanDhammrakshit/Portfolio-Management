@@ -2050,7 +2050,7 @@ body .btn-close:hover { opacity: 1; }
     width: 20px;
     height: 20px;
     border-radius: var(--radius-sm);
-    background: var(--brand-soft) !important;
+    background: transparent !important;
     background-image: none !important;
     color: var(--brand) !important;
     font-size: 10px;
@@ -2062,12 +2062,12 @@ body .btn-close:hover { opacity: 1; }
     width: 28px;
     height: 28px;
     border-radius: var(--radius-sm);
-    background: var(--bg-subtle) !important;
+    background: transparent !important;
     background-image: none !important;
     color: var(--text-secondary) !important;
     font-size: 12px;
 }
-.persona-switch-item.active .persona-switch-item-ico { background: var(--brand-soft) !important; color: var(--brand) !important; }
+.persona-switch-item.active .persona-switch-item-ico { background: transparent !important; color: var(--brand) !important; }
 .persona-switch-item-title { color: var(--text-primary) !important; font-size: 13px !important; font-weight: var(--fw-medium) !important; }
 .persona-switch-item-sub { color: var(--text-muted) !important; font-size: 11px !important; }
 .persona-switch-item-check { color: var(--brand) !important; }

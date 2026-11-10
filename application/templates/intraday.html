@@ -25,7 +25,7 @@
 <div class="intraday-page scans-page">
     <header class="page-header">
         <div>
-            <h1 id="scannerTitle">Intraday RSI/MACD Scanner</h1>
+            <h1 id="scannerTitle"><span id="scannerTitleText">Intraday RSI/MACD Scanner</span><button type="button" class="signals-info-button" id="signalsInfoButton" aria-label="About day trading signals" aria-describedby="signalsInfoTooltip"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span class="signals-info-tooltip" id="signalsInfoTooltip" role="tooltip">Signals use 15-minute bars and are for educational use only — not trading tips or buy/sell recommendations.</span></button></h1>
             <p id="strategyTagline">RSI + MACD + EMA + VWAP strategy on top NIFTY 50 stocks. <span id="scanTime" class="scan-time-badge"></span></p>
         </div>
         <button id="scanBtn" class="ds-button ds-button-primary ds-button-small">
@@ -33,13 +33,11 @@
         </button>
     </header>
 
+    {% if not has_pro %}
     <div class="ds-info-banner-wrap">
-        {% if not has_pro %}
         <div class="info-banner">Advanced intraday scanners — ORB, RVOL, Momentum Burst and Sector Rotation — are available on Pro. <a href="{{ url_for('billing.billing_page') }}">View plans</a></div>
-        {% else %}
-        <div class="info-banner">Signals use 15-minute bars and are for educational use only — not trading tips or buy/sell recommendations.</div>
-        {% endif %}
     </div>
+    {% endif %}
 
     <!-- Universe size chooser (intraday mode only) -->
     {% if scan_tiers %}
@@ -52,10 +50,13 @@
             {% for tier in scan_tiers %}
             <button type="button" class="scan-size-btn{% if tier.count == default_scan_count %} active{% endif %}"
                     data-count="{{ tier.count }}" data-est="{{ tier.est_seconds }}">
-                <span class="ss-count">{{ tier.count }}<small> stocks</small></span>
-                <span class="ss-label">{{ tier.label }}</span>
-                <span class="ss-desc">{{ tier.description }}</span>
-                <span class="ss-est"><i class="fa-regular fa-clock me-1"></i>~{{ tier.est_seconds }}s</span>
+                <span class="ss-count">{{ tier.count }}</span>
+                <span class="ss-details">
+                    <span class="ss-desc">{{ tier.description }}</span>
+                    <span class="ss-label">{{ tier.label }}</span>
+                    <span class="ss-unit">Stocks</span>
+                    <span class="ss-est"><i class="fa-regular fa-clock me-1"></i>~{{ tier.est_seconds }}s</span>
+                </span>
             </button>
             {% endfor %}
         </div>
@@ -115,28 +116,28 @@
     <div id="scanContent" hidden>
         <!-- Summary cards -->
         <div class="signal-summary" id="signalSummary">
-            <div><span>Buy signals</span><strong id="buyCount">0</strong></div>
-            <div><span>Sell signals</span><strong id="sellCount">0</strong></div>
-            <div><span>Hold</span><strong id="holdCount">0</strong></div>
-            <div><span>Scanned</span><strong id="totalScanned">0</strong></div>
+            <div><span>Buy signals</span><strong class="summary-buy-value" id="buyCount">0</strong></div>
+            <div><span>Sell signals</span><strong class="summary-sell-value" id="sellCount">0</strong></div>
+            <div><span>Hold</span><strong class="summary-hold-value" id="holdCount">0</strong></div>
+            <div><span>Scanned</span><strong class="summary-scanned-value" id="totalScanned">0</strong></div>
         </div>
 
-        <!-- Filter bar -->
-        <div class="tender-filter-bar mb-3">
-            <button class="tender-filter-btn active" data-filter="all">All</button>
-            <button class="tender-filter-btn" data-filter="strong-buy">Strong Buy</button>
-            <button class="tender-filter-btn" data-filter="buy">Buy</button>
-            <button class="tender-filter-btn" data-filter="strong-sell">Strong Sell</button>
-            <button class="tender-filter-btn" data-filter="sell">Sell</button>
-            <button class="tender-filter-btn" data-filter="hold">Hold</button>
-            <button class="tender-filter-btn" data-filter="has-plan">Has trade plan</button>
-            <button class="tender-filter-btn" data-filter="good-rr">High R:R (≥1.5)</button>
-        </div>
-
-        <div class="signals-toolbar">
-            <input id="signalSearch" type="search" aria-label="Search signals" placeholder="Search symbols or setups">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="signalDensity" aria-pressed="false">Compact</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportSignalsCsv">Export CSV</button>
+        <div class="signals-controls-row">
+            <div class="tender-filter-bar">
+                <button class="tender-filter-btn active" data-filter="all">All</button>
+                <button class="tender-filter-btn" data-filter="strong-buy">Strong Buy</button>
+                <button class="tender-filter-btn" data-filter="buy">Buy</button>
+                <button class="tender-filter-btn" data-filter="strong-sell">Strong Sell</button>
+                <button class="tender-filter-btn" data-filter="sell">Sell</button>
+                <button class="tender-filter-btn" data-filter="hold">Hold</button>
+                <button class="tender-filter-btn" data-filter="has-plan">Has trade plan</button>
+                <button class="tender-filter-btn" data-filter="good-rr">High R:R (≥1.5)</button>
+            </div>
+            <div class="signals-toolbar">
+                <input id="signalSearch" type="search" aria-label="Search signals" placeholder="Search symbols or setups">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="signalDensity" aria-pressed="false">Compact</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="exportSignalsCsv">Export CSV</button>
+            </div>
         </div>
         <div class="signals-layout" id="signalGrid">
             <div class="signal-table-wrap">
@@ -256,10 +257,14 @@
 [data-theme="dark"] .scan-size-btn .ss-est { color:#60a5fa; }
 .scan-size-block { padding:12px 14px; }
 .scan-size-head { margin-bottom:8px; }
-.scan-size-row { grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
-.scan-size-btn { min-height:78px; padding:9px 11px; }
-.scan-size-btn .ss-desc { display:none; }
-.scan-size-btn .ss-est { margin-top:2px; }
+#scanSizeBlock .scan-size-row { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+#scanSizeBlock .scan-size-btn { min-height:92px; flex-direction:row; align-items:center; justify-content:flex-start; gap:12px; padding:10px 12px; }
+#scanSizeBlock .scan-size-btn .ss-count { flex:0 0 82px; font-size:clamp(48px, 4vw, 60px); line-height:1; white-space:nowrap; }
+#scanSizeBlock .scan-size-btn .ss-details { display:grid; min-width:0; flex:1 1 auto; grid-template:"description label" 1fr "unit estimate" 1fr / minmax(0,1fr) auto; align-items:center; gap:4px 8px; align-self:stretch; }
+#scanSizeBlock .scan-size-btn .ss-desc { grid-area:description; min-width:0; font-size:.78rem; line-height:1.2; }
+#scanSizeBlock .scan-size-btn .ss-label { grid-area:label; justify-self:end; font-size:.76rem; }
+#scanSizeBlock .scan-size-btn .ss-unit { grid-area:unit; font-size:.76rem; font-weight:500; opacity:.85; }
+#scanSizeBlock .scan-size-btn .ss-est { grid-area:estimate; justify-self:end; margin-top:0; font-size:.72rem; white-space:nowrap; }
 .scan-ready { display:flex; align-items:center; gap:8px; padding:12px 14px; color:var(--text-secondary); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-size:.82rem; }
 .scan-ready strong { color:var(--text); white-space:nowrap; }
 .scan-ready span { color:var(--text-muted); }
@@ -313,11 +318,15 @@
     .detail-kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .mode-btn { flex: 1 1 auto; text-align: center; }
 }
-.signal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--space-4);overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.signal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:8px;overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
 .signal-summary>div{display:flex;min-height:var(--analysis-summary-cell-min-height);flex-direction:column;justify-content:center;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-right:var(--border-width) solid var(--border)}
 .signal-summary>div:last-child{border-right:0}
 .signal-summary span{color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-transform:uppercase}
 .signal-summary strong{color:var(--text-primary);font:600 var(--fs-kpi-value)/var(--lh-kpi-value) var(--font-mono)}
+.signal-summary .summary-buy-value{color:var(--positive)}
+.signal-summary .summary-sell-value{color:var(--negative)}
+.signal-summary .summary-hold-value{color:var(--warning)}
+.signal-summary .summary-scanned-value{color:var(--brand)}
 .signals-layout{display:grid;grid-template-columns:minmax(0,1fr) var(--analysis-context-width);gap:var(--card-gap);align-items:start}
 .signal-table-wrap{overflow:auto;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
 .signal-table{width:100%;min-width:var(--analysis-signal-table-min-width);border-collapse:collapse;font-size:var(--fs-table-cell)}
@@ -339,11 +348,23 @@
 .signal-context-row{display:flex;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:var(--border-width) solid var(--border);font-size:var(--fs-caption)}
 .signal-context-row span{color:var(--text-secondary)}
 .signal-context-row strong{color:var(--text-primary);font-family:var(--font-mono);font-weight:600}
-.signals-toolbar{display:flex;justify-content:flex-end;gap:var(--space-2);margin:0 0 var(--space-2)}
-.signals-toolbar input{width:min(100%,var(--analysis-search-width));height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
+.signals-controls-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px;min-width:0;margin-bottom:8px}
+.signals-toolbar{display:flex;flex:0 0 auto;justify-content:flex-end;flex-wrap:nowrap;gap:6px;margin:0}
+.signals-toolbar input{flex:0 1 190px;width:min(100%,190px);min-width:0;height:var(--control-height-small);padding:0 var(--space-2);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary);font-size:var(--fs-caption)}
+.signals-toolbar .btn{flex:0 0 auto;padding:var(--space-1) var(--space-2);font-size:var(--fs-caption);white-space:nowrap}
+.signals-controls-row .tender-filter-bar{display:flex;flex:1 1 auto;min-width:0;flex-wrap:nowrap;gap:6px;overflow-x:auto;margin:0!important}
+.tender-filter-btn{flex:0 0 auto;padding:var(--space-1) var(--space-2);font-size:var(--fs-caption);white-space:nowrap}
+.scans-page{gap:8px}
+.scans-page .scans-section{gap:0;margin:0}
+.scans-page #scanSizeBlock,.scans-page #swingSizeBlock{margin-bottom:0!important}
+.scans-page #scanContent{margin-top:4px}
 .signal-table.compact td{height:var(--table-row-height-compact)}
 .intraday-page .page-header h1{font-size:var(--fs-page-title);font-weight:600}
-.intraday-page .page-header h1 i{display:none}
+.intraday-page .page-header h1{display:flex;align-items:center;gap:8px}
+.intraday-page .page-header h1 .signals-info-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text-muted);font-size:.9rem;cursor:help}
+.intraday-page .page-header h1 .signals-info-button:hover,.intraday-page .page-header h1 .signals-info-button:focus-visible{color:var(--brand);outline:2px solid var(--brand);outline-offset:2px}
+.signals-info-tooltip{position:absolute;z-index:10;top:calc(100% + 8px);left:50%;width:280px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.14);color:var(--text-primary);font-size:var(--fs-caption);font-weight:400;line-height:1.45;text-align:left;white-space:normal;visibility:hidden;opacity:0;transform:translate(-50%,-4px);transition:opacity .12s,transform .12s,visibility .12s;pointer-events:none}
+.signals-info-button:hover .signals-info-tooltip,.signals-info-button:focus-visible .signals-info-tooltip{visibility:visible;opacity:1;transform:translate(-50%,0)}
 .mode-btn,.scan-size-btn,.tender-filter-btn{border-radius:var(--radius);box-shadow:none!important}
 .scan-size-btn:hover,.swing-card:hover{transform:none;box-shadow:none}
 .signal-card{border-radius:var(--radius);border-left:1px solid var(--border)}
@@ -352,7 +373,8 @@
 .swing-grade-badge,.signal-badge{border-radius:var(--radius-tag)}
 @media(max-width:1023px){.signals-layout{grid-template-columns:1fr}.signal-context-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}.signal-context-card h2,.signal-context-card>p{grid-column:1/-1}}
 @media(max-width:767px){.signal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.signal-summary>div:nth-child(2){border-right:0}.signal-summary>div:nth-child(n+3){border-top:1px solid var(--border)}}
-@media(max-width:600px){.scan-ready{align-items:flex-start;flex-direction:column;gap:3px}.scan-size-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.signals-controls-row{align-items:stretch;flex-wrap:wrap}.signals-controls-row .tender-filter-bar{flex-basis:100%}.signals-toolbar{margin-left:auto}}
+@media(max-width:600px){.scan-ready{align-items:flex-start;flex-direction:column;gap:3px}#scanSizeBlock .scan-size-row{grid-template-columns:repeat(2,minmax(0,1fr))}#scanSizeBlock .scan-size-btn{gap:8px;padding:8px}#scanSizeBlock .scan-size-btn .ss-count{flex-basis:68px;font-size:48px}.signals-toolbar input{flex-basis:140px;width:140px}.signals-info-tooltip{left:0;transform:translate(0,-4px)}.signals-info-button:hover .signals-info-tooltip,.signals-info-button:focus-visible .signals-info-tooltip{transform:translate(0,0)}}
 </style>
 
 <script>
@@ -377,9 +399,10 @@ const TAGLINES = {
     swing:    'Qullamaggie + Minervini momentum-breakout scanner — targets 10–15% over 1–2 weeks.'
 };
 function applyModeUI() {
-    document.getElementById('scannerTitle').textContent = _mode === 'swing'
+    document.getElementById('scannerTitleText').textContent = _mode === 'swing'
         ? 'Swing 10–15% Scanner'
         : 'Day Trading Signals';
+    document.getElementById('signalsInfoButton').hidden = _mode !== 'intraday';
     document.getElementById('strategyTagline').innerHTML = TAGLINES[_mode] + ' <span id="scanTime" class="scan-time-badge"></span>';
     // Hide intraday-only filter bar in swing mode
     document.querySelector('.tender-filter-bar').style.display = (_mode === 'intraday') ? '' : 'none';
@@ -606,10 +629,10 @@ async function runScan() {
 // this markup first keeps intraday's ids valid no matter which mode ran last.
 function resetIntradaySummaryCards() {
     document.getElementById('signalSummary').innerHTML = `
-        <div><span>Buy signals</span><strong id="buyCount">0</strong></div>
-        <div><span>Sell signals</span><strong id="sellCount">0</strong></div>
-        <div><span>Hold</span><strong id="holdCount">0</strong></div>
-        <div><span>Scanned</span><strong id="totalScanned">0</strong></div>
+        <div><span>Buy signals</span><strong class="summary-buy-value" id="buyCount">0</strong></div>
+        <div><span>Sell signals</span><strong class="summary-sell-value" id="sellCount">0</strong></div>
+        <div><span>Hold</span><strong class="summary-hold-value" id="holdCount">0</strong></div>
+        <div><span>Scanned</span><strong class="summary-scanned-value" id="totalScanned">0</strong></div>
     `;
 }
 

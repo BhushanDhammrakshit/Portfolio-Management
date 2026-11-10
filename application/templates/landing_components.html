@@ -48,13 +48,9 @@
                 <a class="ds-button ds-button-secondary ds-button-large" href="#features">See features</a>
             </div>
         </div>
-        <div class="product-frame" role="img" aria-label="Placeholder for a financeCandle dashboard screenshot; add a real product capture before launch">
+        <div class="product-frame">
             <div class="browser-bar" aria-hidden="true"><span></span><span></span><span></span><b>Dashboard preview</b></div>
-            <div class="screenshot-placeholder">
-                <span class="placeholder-label">Product screenshot required</span>
-                <strong>Dashboard / Advanced Metrics</strong>
-                <span>Replace this frame with an application screenshot.</span>
-            </div>
+            <img class="product-screenshot" src="{{ url_for('static', filename='images/landing/dashboard-preview.svg') }}" alt="Illustrative financeCandle dashboard with sample portfolio metrics, market indices, and performance charts." width="1200" height="660" />
         </div>
     </div>
 </section>
@@ -181,10 +177,16 @@
                 {% endfor %}
                 <a class="text-link" href="{{ signup_url }}">Explore features {{ icon('arrow-up-right', 14) }}</a>
             </div>
-            <div class="feature-preview" role="img" aria-label="Placeholder for {{ tab.title }} product screenshot">
-                <span class="placeholder-label">Product screenshot required</span>
-                <strong>{{ tab.title }}</strong>
-                <span>Replace this frame with a current application capture.</span>
+            <div class="feature-preview">
+                {% if tab.id == 'day-trading' %}
+                <img class="product-screenshot" src="{{ url_for('static', filename='images/landing/intraday-preview.svg') }}" alt="Illustrative intraday scanner with sample NSE signals, RSI values, and volume data." width="1200" height="660" loading="lazy" />
+                {% elif tab.id == 'swing-trading' %}
+                <img class="product-screenshot" src="{{ url_for('static', filename='images/landing/swing-preview.svg') }}" alt="Illustrative swing tools screen with fictional breakout candidates and setup scores." width="1200" height="660" loading="lazy" />
+                {% elif tab.id == 'options' %}
+                <img class="product-screenshot" src="{{ url_for('static', filename='images/landing/options-preview.svg') }}" alt="Illustrative NIFTY option-chain analytics with sample open interest, PCR, and max pain values." width="1200" height="660" loading="lazy" />
+                {% else %}
+                <img class="product-screenshot" src="{{ url_for('static', filename='images/landing/portfolio-preview.svg') }}" alt="Illustrative portfolio analytics dashboard with fictional risk ratios and performance charts." width="1200" height="660" loading="lazy" />
+                {% endif %}
             </div>
         </div>
         {% endfor %}

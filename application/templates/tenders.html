@@ -146,13 +146,13 @@ document.querySelectorAll('.tender-filter-btn').forEach(btn => {
             card.style.display = show ? '' : 'none';
         });
         // Hide section titles when their grid is empty after filter
-        document.querySelectorAll('[data-section]').forEach(title => {
-            const isHigh = title.dataset.section === 'high';
+        document.querySelectorAll('.signal-section-title[data-section]').forEach(sectionTitle => {
+            const isHigh = sectionTitle.dataset.section === 'high';
             const grid = isHigh ? document.getElementById('highConvictionGrid') : document.getElementById('tendersGrid');
             if (!grid) return;
             const anyVisible = Array.from(grid.querySelectorAll('.tender-card')).some(c => c.style.display !== 'none');
-            title.style.display = anyVisible ? '' : 'none';
-            const sib = title.nextElementSibling;
+            sectionTitle.style.display = anyVisible ? '' : 'none';
+            const sib = sectionTitle.nextElementSibling;
             if (sib && sib.classList.contains('disclaimer-tip')) sib.style.display = anyVisible ? '' : 'none';
         });
     });
