@@ -49,8 +49,8 @@
     border-bottom: 1px solid var(--border);
 }
 .landing-nav { display: flex; height: 100%; align-items: center; gap: 32px; }
-.brand-wordmark { display: inline-flex; flex: 0 0 auto; color: var(--text-primary) !important; font-size: 18px; font-weight: 700; line-height: 1; text-decoration: none; }
-.brand-wordmark span:last-child { color: var(--brand); }
+.brand-wordmark { display: inline-flex; flex: 0 0 auto; text-decoration: none; }
+.brand-wordmark img { display: block; width: 178px; height: auto; }
 .nav-links { display: flex; height: 100%; align-items: center; gap: 24px; }
 .nav-links > a { display: inline-flex; height: 100%; align-items: center; border-bottom: 2px solid transparent; color: var(--text-secondary); font-size: 14px; font-weight: var(--fw-medium); text-decoration: none; transition: color var(--transition-fast), border-color var(--transition-fast); }
 .nav-links > a:hover { color: var(--brand); border-bottom-color: var(--brand); }
@@ -249,6 +249,7 @@
     .hero-actions form,
     .hero-actions form .ds-button,
     .hero-actions > .ds-button { width: 100%; }
+    .brand-wordmark img { width: 150px; }
     .screenshot-placeholder { min-height: 220px; padding: 20px; }
     .stat-strip-wrap { padding-bottom: 32px; }
     .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }

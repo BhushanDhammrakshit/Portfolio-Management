@@ -189,7 +189,7 @@ def index():
 @app.route("/favicon.ico")
 def favicon():
     # Browsers auto-request /favicon.ico; serve the brand logo from /static.
-    return redirect(url_for("static", filename="favicon.png"))
+    return redirect(url_for("static", filename="favicon.png", v=2))
 
 
 @app.route("/robots.txt")

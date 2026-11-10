@@ -10,8 +10,8 @@
     <meta name="robots" content="{% block meta_robots %}noindex, nofollow{% endblock %}" />
     <link rel="canonical" href="{{ request.base_url }}" />
 
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png', v=2) }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png', v=2) }}" />
 
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -256,8 +256,7 @@
 <header class="app-header">
     <div class="app-header-left">
         <a href="{{ url_for('home') }}" class="app-brand" aria-label="financeCandle home">
-            <span class="brand-mark">{{ icon('candlestick', 18) }}</span>
-            <span class="fc-wordmark">finance<b>Candle</b></span>
+            <img class="app-brand-logo" src="{{ url_for('static', filename='brand-wordmark.png') }}" alt="" width="192" height="40" />
         </a>
         <button class="topbar-toggle" id="legacySidebarCollapse" aria-label="Toggle sidebar" title="Toggle sidebar">
             {{ icon('panel-left', 18) }}

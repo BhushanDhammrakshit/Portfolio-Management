@@ -77,6 +77,13 @@
 
 .app-brand:hover { color: var(--text-primary); }
 
+.app-brand-logo {
+    display: block;
+    width: 176px;
+    max-width: 100%;
+    height: auto;
+}
+
 .brand-mark {
     width: 28px;
     height: 28px;
@@ -2386,8 +2393,7 @@ body .btn-close:hover { opacity: 1; }
 }
 
 @media (max-width: 520px) {
-    .app-header-left .brand-mark { display: none; }
-    .fc-wordmark { font-size: 16px; }
+    .app-brand-logo { width: 148px; }
     .fc-stats { --fc-stats-cols: 1; }
     .fc-stat { border-right: 0; border-top: 1px solid var(--border); }
     .fc-stat:first-child { border-top: 0; }

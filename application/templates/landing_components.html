@@ -4,7 +4,7 @@
 {% macro LandingNav(signup_url, login_url) -%}
 <header class="landing-header">
     <nav class="landing-nav container-x" aria-label="Main navigation">
-        <a class="brand-wordmark" href="#top" aria-label="financeCandle home"><span>finance</span><span>Candle</span></a>
+        <a class="brand-wordmark" href="#top" aria-label="financeCandle home"><img src="{{ url_for('static', filename='brand-wordmark.png') }}" alt="" width="192" height="40" /></a>
         <button class="nav-menu-button" type="button" aria-label="Open navigation menu" aria-controls="primary-navigation" aria-expanded="false" data-menu-toggle>{{ icon('menu', 20) }}</button>
         <div class="nav-links" id="primary-navigation">
             <a href="#features">Features</a>
@@ -448,7 +448,7 @@
         {{ RiskDisclosure() }}
         <div class="footer-grid">
             <div class="footer-brand">
-                <a class="brand-wordmark" href="#top"><span>finance</span><span>Candle</span></a>
+                <a class="brand-wordmark" href="#top" aria-label="financeCandle home"><img src="{{ url_for('static', filename='brand-wordmark.png') }}" alt="" width="192" height="40" /></a>
                 <p>Market analytics and portfolio tools for Indian traders.</p>
             </div>
             <div class="footer-column"><h2>Product</h2><a href="#features">Features</a><a href="#markets">Markets</a><a href="#pricing">Pricing</a><a href="#learn">How it works</a></div>
