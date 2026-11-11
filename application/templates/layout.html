@@ -53,8 +53,8 @@
 {% from "_icons.html" import icon %}
 {% import "_analytics_components.html" as analytics with context %}
 {% set nav_section = 'markets' %}
-{% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation', 'Market Radar'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
-{% elif title in ['Fundamentals', 'Stock Screener', 'Volume Alerts', 'Market Pulse', 'Investing Tools'] or (title == 'Intraday Tools' and request.args.get('tool')) %}{% set nav_section = 'scans' %}
+{% if title in ['Portfolio Analysis', 'Advanced Metrics', 'Intraday Scanner', 'Swing Tools', 'RRG Rotation', 'Market Radar', 'Investing Tools'] or (title == 'Intraday Tools' and not request.args.get('tool')) %}{% set nav_section = 'analysis' %}
+{% elif title in ['Fundamentals', 'Stock Screener', 'Volume Alerts', 'Market Pulse'] or (title == 'Intraday Tools' and request.args.get('tool')) %}{% set nav_section = 'scans' %}
 {% elif title in ['Options Analytics', 'F&O Gap Forecast', 'F&O Forecast Summary'] %}{% set nav_section = 'options' %}
 {% elif title in ['Portfolio', 'Watchlist', 'AI & Tools', 'AI Assistant', 'Add Stock', 'My Account', 'Plans & Billing', 'Settings', 'Admin Portal', 'Mutual Funds'] %}{% set nav_section = 'my-space' %}{% endif %}
 <aside class="app-sidebar" id="appSidebar">
@@ -220,6 +220,7 @@
             {{ analytics.NavRow(url_for('intraday_api.intraday_page', mode='intraday'), 'zap', 'Day Trading Scanner', title == 'Intraday Scanner' and request.args.get('mode') != 'swing') }}
             {{ analytics.NavRow(url_for('swing_tools_api.swing_tools_page'), 'trending-up', 'Swing Trading', title == 'Swing Tools') }}
             {{ analytics.NavRow(url_for('swing_tools_api.rrg_page'), 'rotate', 'RRG Rotation', title == 'RRG Rotation') }}
+            {{ analytics.NavRow(url_for('investing_tools_api.investing_tools_page'), 'factory', 'Investing Tools', title == 'Investing Tools') }}
             {{ analytics.NavRow(url_for('advanced_dashboard'), 'line-chart', 'Advanced Metrics', title == 'Advanced Metrics') }}
             {{ analytics.NavRow(url_for('portfolioAnalysis'), 'briefcase', 'Portfolio Analysis', title == 'Portfolio Analysis') }}
         </div>
@@ -233,7 +234,6 @@
             {{ analytics.NavRow(url_for('intraday_tools_api.market_radar_page', tool='gappers'), 'arrow-up-right', 'Daily Gappers', title == 'Market Radar' and request.args.get('tool') == 'gappers') }}
             {{ analytics.NavRow(url_for('volume_api.volume_page'), 'bar-chart', 'Volume Shockers', title == 'Volume Alerts') }}
             {{ analytics.NavRow(url_for('market_pulse_api.market_pulse_page'), 'radio', 'Market Pulse', title == 'Market Pulse') }}
-            {{ analytics.NavRow(url_for('investing_tools_api.investing_tools_page'), 'factory', 'Investing Tools', title == 'Investing Tools') }}
         </div>
         <div class="nav-panel-heading" data-panel-heading="options" hidden>Options</div>
         <div class="nav-panel-pages" data-panel-section="options" {% if nav_section != 'options' %}hidden{% endif %}>
@@ -430,7 +430,6 @@ window.FC_SEARCH = {
         { title: 'AI Assistant', sub: 'AI', url: {{ url_for('algoHelper')|tojson }}, icon: 'robot' },
         { title: 'AI & Tools', sub: 'AI', url: {{ url_for('ai_tools_api.ai_tools_page', view='tools')|tojson }}, icon: 'sparkles' },
         { title: 'Portfolio', sub: 'My Space', url: {{ url_for('portfolioMaker')|tojson }}, icon: 'briefcase' },
-        { title: 'Investing Tools', sub: 'Scans', url: {{ url_for('investing_tools_api.investing_tools_page')|tojson }}, icon: 'factory' },
         { title: 'Mutual Funds', sub: 'My Space', url: {{ url_for('mutual_funds_api.mutual_funds_page')|tojson }}, icon: 'piggy-bank' },
         { title: 'F&O Forecast Summary', sub: 'Options', url: {{ url_for('fno_gap_api.fno_gap_summary_page')|tojson }}, icon: 'list' },
         { title: 'Stock Chart', sub: 'Analysis', url: {{ url_for('tv_chart', symbol='RELIANCE')|tojson }}, icon: 'line-chart' },

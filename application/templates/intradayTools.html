@@ -195,26 +195,22 @@
 <div class="page-container scans-page{% if not standalone_tool %} ta-page{% endif %}{% if request.args.get('tool') == 'arrg' %} standalone-arrg{% endif %}">
     {% if not standalone_tool %}<div class="ta-page-shell">{% endif %}
     <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
-        <div{% if not standalone_tool %} class="ta-page-title"{% endif %}>
+        <div class="ta-page-title">
             <h1>
                 {{ standalone_tool or 'Technical Analysis' }}
             </h1>
-            {% if not standalone_tool %}
             <details class="ta-disclaimer">
                 <summary aria-label="Show technical analysis disclaimer">ⓘ</summary>
-                <span class="ta-disclaimer-popover">{% if not has_pro %}ORB Scanner, Advanced Sector Rotation and OI Buildup are Pro tools. Momentum Burst is available on every plan.{% else %}Charts and scanner data are for educational purposes only and are not trading tips or buy/sell recommendations.{% endif %}</span>
+                <span class="ta-disclaimer-popover">Scanners provide technical analysis for educational purposes only — not trading tips or buy/sell recommendations.</span>
             </details>
-            {% endif %}
-            {% if standalone_tool %}<p>Focused technical analysis tool.</p>{% endif %}
         </div>
+        {% if standalone_tool %}<p>Focused technical analysis tool.</p>{% endif %}
     </header>
 
     {% if standalone_tool %}
     <div class="ds-info-banner-wrap">
         {% if not has_pro %}
         <div class="info-banner">ORB Scanner, Advanced Sector Rotation and OI Buildup are Pro tools. Momentum Burst is available on every plan. <a href="{{ url_for('billing.billing_page') }}">View plans</a></div>
-        {% else %}
-        <div class="info-banner">Scanners provide technical analysis for educational purposes only — not trading tips or buy/sell recommendations.</div>
         {% endif %}
     </div>
     {% endif %}
