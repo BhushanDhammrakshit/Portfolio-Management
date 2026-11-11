@@ -1,0 +1,344 @@
+{% extends "layout.html" %}
+{% block content %}
+{% from "_icons.html" import icon %}
+<div class="home-dashboard my-portfolio-page">
+    <header class="page-header">
+        <div>
+            <h1>My Portfolio</h1>
+            <p>Overview, performance, sector allocation and holdings{% if name %} · {{ name.split(' ')[0] }}{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="refreshPricesBtn" class="btn btn-secondary btn-sm" type="button">
+                {{ icon('rotate', 14) }} Refresh prices
+            </button>
+            <a href="{{ url_for('portfolioMaker') }}" class="btn btn-primary btn-sm">
+                {{ icon('plus', 14) }} Add stock
+            </a>
+        </div>
+    </header>
+
+    {% if has_demo_stocks %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2" role="alert">
+        <div>You're viewing <strong>sample holdings</strong>. Add your real stocks anytime.</div>
+        <form action="{{ url_for('remove_demo_portfolio') }}" method="post" class="m-0" onsubmit="return confirm('Remove all sample stocks from your portfolio?');">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Remove sample stocks</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <nav class="nav-tabs" aria-label="Portfolio sections">
+        <a class="nav-link active" href="#portfolio-overview">Overview</a>
+        <a class="nav-link" href="#portfolio-performance">Performance</a>
+        <a class="nav-link" href="#portfolio-sectors">Sectors</a>
+        <a class="nav-link" href="#portfolio-holdings">Holdings</a>
+    </nav>
+
+    <section id="portfolio-overview" class="fc-section">
+        <div class="fc-stats">
+            <div class="fc-stat"><span class="fc-stat-label">Current value</span><span class="fc-stat-value" id="totalValue">₹0</span></div>
+            <div class="fc-stat"><span class="fc-stat-label">Invested</span><span class="fc-stat-value" id="totalInvested">₹0</span></div>
+            <div class="fc-stat"><span class="fc-stat-label">Total gain / loss</span><span class="fc-stat-value" id="totalGain">₹0</span><span class="fc-stat-delta" id="totalGainPct">0.00%</span></div>
+            <div class="fc-stat"><span class="fc-stat-label">Today's gain / loss</span><span class="fc-stat-value" id="dayGain">—</span><span class="fc-stat-delta" id="dayGainPct">Refresh prices to see</span></div>
+            <div class="fc-stat"><span class="fc-stat-label">Holdings</span><span class="fc-stat-value" id="totalStocks">0</span></div>
+        </div>
+    </section>
+
+    {% if stocks %}
+    <section id="portfolio-performance" class="fc-section" aria-label="Portfolio performance">
+        <div class="fc-grid">
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">Portfolio allocation</h2><span class="fc-card-meta">By current value</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="portfolioPieChart" aria-label="Portfolio allocation chart"></canvas></div></div>
+            </article>
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">Invested vs current</h2><span class="fc-card-meta">Per holding</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="portfolioBarChart" aria-label="Invested versus current value chart"></canvas></div></div>
+            </article>
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">Top gainers &amp; losers</h2><span class="fc-card-meta">P/L %</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="topMoversChart" aria-label="Top portfolio gainers and losers chart"></canvas></div></div>
+            </article>
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">P/L by stock</h2><span class="fc-card-meta">In rupees</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="plByStockChart" aria-label="Profit and loss by stock chart"></canvas></div></div>
+            </article>
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">Sector allocation</h2><span class="fc-card-meta">By current value</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="sectorPieChart" aria-label="Sector allocation chart"></canvas></div></div>
+            </article>
+            <article class="fc-card fc-col-6">
+                <div class="fc-card-head"><h2 class="fc-card-title">P/L contribution</h2><span class="fc-card-meta">By holding</span></div>
+                <div class="fc-card-body"><div class="chart-canvas-wrap"><canvas id="contributionChart" aria-label="Profit and loss contribution chart"></canvas></div></div>
+            </article>
+        </div>
+    </section>
+
+    <section id="portfolio-sectors" class="fc-section">
+        <div class="fc-card" data-fc-table>
+            <div class="fc-card-head">
+                <h2 class="fc-card-title">Sector performance</h2>
+                <a href="{{ url_for('heatmap.heatmap') }}" class="fc-card-link">Market heatmap {{ icon('arrow-up-right', 12) }}</a>
+            </div>
+            <div class="fc-table-toolbar">
+                <span class="fc-table-meta">Portfolio allocation and gain / loss by sector</span>
+                <div class="fc-table-toolbar-right">
+                    <button type="button" class="fc-table-btn" data-density="comfortable" title="Comfortable rows" aria-label="Comfortable rows">{{ icon('list', 14) }}</button>
+                    <button type="button" class="fc-table-btn" data-density="compact" title="Compact rows" aria-label="Compact rows">{{ icon('menu', 14) }}</button>
+                    <button type="button" class="fc-table-btn" data-export="csv" title="Export CSV" aria-label="Export CSV">{{ icon('download', 14) }}</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="sectorTable">
+                    <thead><tr><th>Sector</th><th class="text-end">Value</th><th class="text-end">P/L</th><th>Allocation</th><th class="text-end">Stocks</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="portfolio-holdings" class="fc-section">
+        <div class="fc-card">
+            <div class="fc-card-head">
+                <h2 class="fc-card-title">Holdings</h2>
+                <a href="{{ url_for('portfolioMaker') }}" class="fc-card-link">Manage portfolio {{ icon('chevron-right', 12) }}</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="portfolioHoldingsTable">
+                    <thead><tr><th>Stock</th><th>Sector</th><th class="text-end">Quantity</th><th class="text-end">Avg. cost</th><th class="text-end">Price</th><th class="text-end">Invested</th><th class="text-end">Current value</th><th class="text-end">P/L</th><th class="text-end">Return</th></tr></thead>
+                    <tbody>
+                        {% for stock in stocks %}
+                        {% set quantity = stock.Quantity|default(0)|float %}
+                        {% set purchase_price = stock.PurchasePrice|default(0)|float %}
+                        {% set current_price = stock.CurrentPrice|default(0)|float or purchase_price %}
+                        {% set invested = quantity * purchase_price %}
+                        {% set current_value = quantity * current_price %}
+                        {% set gain = current_value - invested %}
+                        <tr>
+                            <td><strong>{{ stock.StockName }}</strong>{% if stock.Symbol %}<small class="d-block text-muted">{{ stock.Symbol }}</small>{% endif %}</td>
+                            <td>{{ stock.Sector or 'Other' }}</td>
+                            <td class="text-end">{{ quantity|int if quantity == quantity|int else quantity }}</td>
+                            <td class="text-end">{{ '₹{:,.2f}'.format(purchase_price) }}</td>
+                            <td class="text-end">{{ '₹{:,.2f}'.format(current_price) }}</td>
+                            <td class="text-end">{{ '₹{:,.2f}'.format(invested) }}</td>
+                            <td class="text-end">{{ '₹{:,.2f}'.format(current_value) }}</td>
+                            <td class="text-end {{ 'gain-positive' if gain >= 0 else 'gain-negative' }}">{{ '+' if gain >= 0 else '' }}{{ '₹{:,.2f}'.format(gain) }}</td>
+                            <td class="text-end {{ 'gain-positive' if gain >= 0 else 'gain-negative' }}">{{ '{:+.2f}%'.format(gain / invested * 100 if invested else 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {% else %}
+    <div class="fc-card">
+        <div class="empty-state">
+            <div class="empty-icon">{{ icon('briefcase', 18) }}</div>
+            <h4>No stocks yet</h4>
+            <p>Add your first holding to see live performance, allocation and sector analytics.</p>
+            <a href="{{ url_for('portfolioMaker') }}" class="btn btn-primary">{{ icon('plus', 14) }} Add a stock</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const stocks = {{ stocks|tojson }};
+const chartColors = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5', '--chart-6', '--chart-accent']
+    .map(token => getComputedStyle(document.documentElement).getPropertyValue(token).trim());
+const chartStyle = getComputedStyle(document.documentElement);
+const currency = value => '₹' + Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const valueOf = stock => (Number(stock.Quantity) || 0) * (Number(stock.CurrentPrice) || Number(stock.PurchasePrice) || 0);
+const investedOf = stock => (Number(stock.Quantity) || 0) * (Number(stock.PurchasePrice) || 0);
+const currentOf = stock => (Number(stock.CurrentPrice) || Number(stock.PurchasePrice) || 0);
+const gainOf = stock => valueOf(stock) - investedOf(stock);
+
+if (window.Chart) {
+    Chart.defaults.font.family = "'Inter', 'Segoe UI', Roboto, Arial, sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = chartStyle.getPropertyValue('--text-muted').trim();
+    Chart.defaults.borderColor = chartStyle.getPropertyValue('--chart-grid').trim();
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.boxWidth = 8;
+    Chart.defaults.plugins.legend.labels.boxHeight = 8;
+    Chart.defaults.plugins.legend.labels.color = chartStyle.getPropertyValue('--text-primary').trim();
+    Chart.defaults.animation = false;
+}
+
+const investedTotal = stocks.reduce((sum, stock) => sum + investedOf(stock), 0);
+const currentTotal = stocks.reduce((sum, stock) => sum + valueOf(stock), 0);
+const totalGain = currentTotal - investedTotal;
+document.getElementById('totalValue').textContent = currency(currentTotal);
+document.getElementById('totalInvested').textContent = currency(investedTotal);
+document.getElementById('totalGain').textContent = `${totalGain >= 0 ? '+' : ''}${currency(totalGain)}`;
+document.getElementById('totalGain').style.color = totalGain >= 0 ? 'var(--success)' : 'var(--danger)';
+document.getElementById('totalGainPct').textContent = `${totalGain >= 0 ? '▲ ' : '▼ '}${Math.abs(investedTotal ? totalGain / investedTotal * 100 : 0).toFixed(2)}%`;
+document.getElementById('totalGainPct').className = `fc-stat-delta ${totalGain >= 0 ? 'pos' : 'neg'}`;
+document.getElementById('totalStocks').textContent = stocks.length;
+
+const hasPreviousClose = stocks.some(stock => Number(stock.PreviousClose) > 0);
+if (hasPreviousClose) {
+    const previousValue = stocks.reduce((sum, stock) => {
+        const price = Number(stock.PreviousClose) > 0 ? Number(stock.PreviousClose) : currentOf(stock);
+        return sum + (Number(stock.Quantity) || 0) * price;
+    }, 0);
+    const dayGain = currentTotal - previousValue;
+    document.getElementById('dayGain').textContent = `${dayGain >= 0 ? '+' : ''}${currency(dayGain)}`;
+    document.getElementById('dayGain').style.color = dayGain >= 0 ? 'var(--success)' : 'var(--danger)';
+    document.getElementById('dayGainPct').textContent = `${dayGain >= 0 ? '▲ ' : '▼ '}${Math.abs(previousValue ? dayGain / previousValue * 100 : 0).toFixed(2)}%`;
+    document.getElementById('dayGainPct').className = `fc-stat-delta ${dayGain >= 0 ? 'pos' : 'neg'}`;
+}
+
+if (window.Chart && stocks.length) {
+    const canvas = id => document.getElementById(id);
+    const labels = stocks.map(stock => stock.StockName);
+    const textColor = chartStyle.getPropertyValue('--text-primary').trim();
+    const mutedColor = chartStyle.getPropertyValue('--text-muted').trim();
+    const gridColor = chartStyle.getPropertyValue('--chart-grid').trim();
+    const surfaceColor = chartStyle.getPropertyValue('--bg-surface').trim();
+    const positiveColor = chartStyle.getPropertyValue('--positive').trim();
+    const negativeColor = chartStyle.getPropertyValue('--negative').trim();
+    const barOptions = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: textColor, usePointStyle: true } } },
+        scales: {
+            y: { beginAtZero: true, ticks: { color: mutedColor, callback: value => '₹' + Number(value).toLocaleString('en-IN') }, grid: { color: gridColor } },
+            x: { ticks: { color: mutedColor }, grid: { display: false } }
+        }
+    };
+    const makeChart = (id, type, data, options) => new Chart(canvas(id), { type, data, options });
+    const allocation = {};
+    stocks.forEach(stock => {
+        const sector = stock.Sector || 'Other';
+        allocation[sector] = (allocation[sector] || 0) + valueOf(stock);
+    });
+
+    makeChart('portfolioPieChart', 'doughnut', {
+        labels, datasets: [{ data: stocks.map(valueOf), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderColor: surfaceColor, borderWidth: 1 }]
+    }, { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, color: textColor } } } });
+
+    makeChart('portfolioBarChart', 'bar', {
+        labels, datasets: [
+            { label: 'Invested', data: stocks.map(investedOf), backgroundColor: mutedColor, borderRadius: 2 },
+            { label: 'Current', data: stocks.map(valueOf), backgroundColor: chartColors[0], borderRadius: 2 }
+        ]
+    }, barOptions);
+
+    const movers = stocks.map(stock => ({ name: stock.StockName, pct: investedOf(stock) ? gainOf(stock) / investedOf(stock) * 100 : 0 }))
+        .sort((a, b) => b.pct - a.pct);
+    const selectedMovers = [...movers.filter(item => item.pct > 0).slice(0, 5), ...movers.filter(item => item.pct < 0).slice(-5).reverse()];
+    makeChart('topMoversChart', 'bar', {
+        labels: selectedMovers.map(item => item.name),
+        datasets: [{ label: 'P/L %', data: selectedMovers.map(item => item.pct), backgroundColor: selectedMovers.map(item => item.pct >= 0 ? positiveColor : negativeColor), borderRadius: 2 }]
+    }, { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: mutedColor, callback: value => value + '%' }, grid: { color: gridColor } }, y: { ticks: { color: textColor } } } });
+
+    const sortedStocks = [...stocks].sort((a, b) => gainOf(b) - gainOf(a));
+    makeChart('plByStockChart', 'bar', {
+        labels: sortedStocks.map(stock => stock.StockName),
+        datasets: [{ label: 'P/L (₹)', data: sortedStocks.map(gainOf), backgroundColor: sortedStocks.map(stock => gainOf(stock) >= 0 ? chartColors[0] : negativeColor), borderRadius: 2 }]
+    }, barOptions);
+
+    const sectorLabels = Object.keys(allocation);
+    makeChart('sectorPieChart', 'doughnut', {
+        labels: sectorLabels, datasets: [{ data: sectorLabels.map(sector => allocation[sector]), backgroundColor: sectorLabels.map((_, i) => chartColors[i % chartColors.length]), borderColor: surfaceColor, borderWidth: 1 }]
+    }, { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, color: textColor } } } });
+
+    const absGainTotal = stocks.reduce((sum, stock) => sum + Math.abs(gainOf(stock)), 0) || 1;
+    makeChart('contributionChart', 'bar', {
+        labels: sortedStocks.map(stock => stock.StockName),
+        datasets: [{ label: 'P/L contribution', data: sortedStocks.map(stock => gainOf(stock) / absGainTotal * 100), backgroundColor: sortedStocks.map(stock => gainOf(stock) >= 0 ? chartColors[0] : negativeColor), borderRadius: 2 }]
+    }, { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: mutedColor, callback: value => value + '%' }, grid: { color: gridColor } }, y: { ticks: { color: textColor } } } });
+
+}
+
+const sectors = {};
+stocks.forEach(stock => {
+    const name = stock.Sector || 'Other';
+    if (!sectors[name]) sectors[name] = { value: 0, invested: 0, count: 0 };
+    sectors[name].value += valueOf(stock);
+    sectors[name].invested += investedOf(stock);
+    sectors[name].count += 1;
+});
+const sectorBody = document.querySelector('#sectorTable tbody');
+if (sectorBody) {
+    Object.entries(sectors).sort((a, b) => b[1].value - a[1].value).forEach(([name, data]) => {
+        const gain = data.value - data.invested;
+        const allocationPct = currentTotal ? data.value / currentTotal * 100 : 0;
+        const row = document.createElement('tr');
+        const cells = [
+            { text: name, strong: true },
+            { text: currency(data.value), className: 'text-end num' },
+            { text: `${gain >= 0 ? '+' : ''}${currency(gain)}`, className: `text-end num ${gain >= 0 ? 'gain-positive' : 'gain-negative'}` },
+            { text: `${allocationPct.toFixed(1)}%`, className: 'num' },
+            { text: String(data.count), className: 'text-end' }
+        ];
+        cells.forEach(cell => {
+            const td = document.createElement('td');
+            td.className = cell.className || '';
+            if (cell.strong) {
+                const strong = document.createElement('strong');
+                strong.textContent = cell.text;
+                td.appendChild(strong);
+            } else td.textContent = cell.text;
+            row.appendChild(td);
+        });
+        sectorBody.appendChild(row);
+    });
+}
+
+document.getElementById('refreshPricesBtn').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="app-spinner me-1" aria-hidden="true"></span>Refreshing…';
+    try {
+        const response = await fetch('/portfolio/refresh-prices', { method: 'POST' });
+        if (!response.ok) throw new Error('Price refresh failed.');
+        const result = await response.json();
+        await appAlert(`Refreshed <strong>${result.updated}</strong> prices. ${result.skipped} skipped (no symbol set).`, 'success');
+        location.reload();
+    } catch (error) {
+        await appAlert(error.message || 'Price refresh failed.', 'danger');
+        button.disabled = false;
+        button.innerHTML = original;
+    }
+});
+
+(function () {
+    document.querySelectorAll('.my-portfolio-page .nav-tabs .nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            document.querySelectorAll('.my-portfolio-page .nav-tabs .nav-link').forEach(item => item.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+
+    const table = document.getElementById('sectorTable');
+    const card = table && table.closest('[data-fc-table]');
+    if (!card || !table) return;
+    const comfortable = card.querySelector('[data-density="comfortable"]');
+    if (comfortable) comfortable.classList.add('is-active');
+    card.querySelectorAll('[data-density]').forEach(button => {
+        button.addEventListener('click', () => {
+            card.querySelectorAll('[data-density]').forEach(item => item.classList.remove('is-active'));
+            button.classList.add('is-active');
+            table.classList.toggle('fc-table-compact', button.dataset.density === 'compact');
+        });
+    });
+    const exportButton = card.querySelector('[data-export="csv"]');
+    if (exportButton) {
+        exportButton.addEventListener('click', () => {
+            const rows = Array.from(table.querySelectorAll('tr')).map(row =>
+                Array.from(row.children).map(cell => `"${cell.innerText.trim().replace(/\s+/g, ' ').replace(/"/g, '""')}"`).join(',')
+            );
+            const url = URL.createObjectURL(new Blob([rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'portfolio-sector-performance.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+})();
+</script>
+{% endblock %}

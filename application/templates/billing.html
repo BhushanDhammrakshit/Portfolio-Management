@@ -52,9 +52,9 @@
 .usage-count{font-size:.82rem;font-weight:700;color:var(--text)}
 .usage-count .of{color:var(--text-muted);font-weight:500}
 .usage-bar{grid-column:1/-1;height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden}
-.usage-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .4s}
-.usage-bar-fill.danger{background:linear-gradient(90deg,#f59e0b,#dc2626)}
-.usage-row.unlim .usage-bar-fill{width:25%;opacity:.4;background:linear-gradient(90deg,#16a34a,#22c55e)}
+.usage-bar-fill{height:100%;border-radius:999px;background:var(--brand);transition:width .4s}
+.usage-bar-fill.danger{background:var(--warning)}
+.usage-row.unlim .usage-bar-fill{width:25%;opacity:.4;background:var(--positive)}
 
 .bill-faq{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px}
 .bill-faq h5{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin:0 0 12px}
@@ -71,12 +71,9 @@
 </style>
 
 <header class="bill-hero">
-    <h1><i class="fa-solid fa-rocket me-2"></i>Plans &amp; Billing</h1>
-    <p>Pick the plan that fits how seriously you trade. Upgrade or downgrade anytime.</p>
-    <div class="bill-current">
-        <i class="fa-solid fa-circle-check"></i>
-        Current plan: <strong>{{ current_plan.name }}</strong>
-    </div>
+    <h1>Plans &amp; Billing</h1>
+    <p>Subscription plan, usage, and available upgrades.</p>
+    <div class="bill-current">Current plan: <strong>{{ current_plan.name }}</strong></div>
     {% if plan_expires and current_plan.id != 'free' %}
     <div class="bill-expires"><i class="fa-regular fa-calendar me-1"></i>Renews on {{ plan_expires }}</div>
     {% endif %}
@@ -92,7 +89,7 @@
 .ref-code{font-family:monospace;font-size:1.05rem;font-weight:700;padding:9px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border-strong);letter-spacing:.04em}
 .ref-copy-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s}
 .ref-copy-btn:hover{background:#6366f1;color:#fff;border-color:#6366f1}
-.ref-share-btn{padding:7px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s}
+.ref-share-btn{padding:7px 12px;border-radius:8px;border:none;background:var(--brand);color:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:.15s}
 .ref-share-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(99,102,241,.4)}
 .ref-stats{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0}
 .ref-stat{text-align:center}
@@ -139,43 +136,99 @@
     <span id="billCouponStatus" class="bill-coupon-status"></span>
 </div>
 
-{# ── Plan cards ───────────────────────────────────────────────── #}
+{# ── Plan comparison ──────────────────────────────────────────── #}
 <div class="bill-grid">
-    {% for pid in plan_order %}
-    {% set p = plans[pid] %}
-    {% set is_current = (current_plan.id == pid) %}
-    <div class="bill-card {{ 'highlight' if p.get('highlight') else '' }} {{ 'current' if is_current else '' }}">
-        <h3 class="bill-name">{{ p.name }}</h3>
-        <p class="bill-tag">{{ p.tagline }}</p>
-        <div class="bill-price">
-            <span class="currency">&#8377;</span><span class="amount" data-monthly="{{ p.price_monthly }}" data-annual="{{ (p.price_annual / 12)|round|int }}">{{ p.price_monthly }}</span><span class="per">/mo</span>
-        </div>
-        <div class="bill-annual-note" data-annual-text="Billed &#8377;{{ p.price_annual }}/year">
-            {% if pid != 'free' %}Billed monthly{% endif %}
-        </div>
-        <ul class="bill-features">
-            {% for f in p.features %}<li><i class="fa-solid fa-check"></i>{{ f }}</li>{% endfor %}
-            {% for f in p.missing %}<li class="miss"><i class="fa-solid fa-xmark"></i>{{ f }}</li>{% endfor %}
-        </ul>
+    <table class="bill-compare">
+        <thead>
+            <tr>
+                <th scope="col">Plan</th>
+                {% for pid in plan_order %}
+                {% set p = plans[pid] %}
+                <th scope="col" class="{{ 'bill-plan-current' if current_plan.id == pid else '' }}">
+                    {{ p.name }}{% if current_plan.id == pid %}<span class="badge bg-primary ms-1">Current</span>{% endif %}
+                    <div class="bill-tag">{{ p.tagline }}</div>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th scope="row">Price</th>
+                {% for pid in plan_order %}
+                {% set p = plans[pid] %}
+                <td class="{{ 'bill-plan-current' if current_plan.id == pid else '' }}">
+                    <div class="bill-price">
+                        <span class="currency">&#8377;</span><span class="amount" data-monthly="{{ p.price_monthly }}" data-annual="{{ (p.price_annual / 12)|round|int }}">{{ p.price_monthly }}</span><span class="per">/mo</span>
+                    </div>
+                    <div class="bill-annual-note" data-annual-text="Billed &#8377;{{ p.price_annual }}/year">
+                        {% if pid != 'free' %}Billed monthly{% endif %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th scope="row">Features</th>
+                {% for pid in plan_order %}
+                {% set p = plans[pid] %}
+                <td class="{{ 'bill-plan-current' if current_plan.id == pid else '' }}">
+                    <ul class="bill-features">
+                        {% for f in p.features %}<li><i class="fa-solid fa-check"></i>{{ f }}</li>{% endfor %}
+                        {% for f in p.missing %}<li class="miss"><i class="fa-solid fa-minus"></i>{{ f }}</li>{% endfor %}
+                    </ul>
+                </td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th scope="row">Subscription</th>
+                {% for pid in plan_order %}
+                {% set p = plans[pid] %}
+                {% set is_current = (current_plan.id == pid) %}
+                <td class="{{ 'bill-plan-current' if is_current else '' }}">
+                    {% if is_current %}
+                    <button type="button" class="bill-cta current" disabled>Your current plan</button>
+                    {% elif pid == 'free' %}
+                    <form method="POST" action="{{ url_for('billing.cancel') }}" class="js-downgrade-form" data-plan-name="{{ current_plan.name }}">
+                        <button type="submit" class="bill-cta danger">Downgrade to Free</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('billing.upgrade') }}" class="js-upgrade-form" data-plan="{{ pid }}">
+                        <input type="hidden" name="plan" value="{{ pid }}">
+                        <input type="hidden" name="cycle" class="cycle-input" value="monthly">
+                        <input type="hidden" name="coupon" class="coupon-input" value="">
+                        <button type="submit" class="bill-cta {{ 'primary' if p.get('highlight') else '' }}">Upgrade to {{ p.name }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
 
-        {% if is_current %}
-        <button type="button" class="bill-cta current" disabled><i class="fa-solid fa-check me-1"></i>Your current plan</button>
-        {% elif pid == 'free' %}
-        <form method="POST" action="{{ url_for('billing.cancel') }}" class="js-downgrade-form" data-plan-name="{{ current_plan.name }}">
-            <button type="submit" class="bill-cta danger">Downgrade to Free</button>
-        </form>
-        {% else %}
-        <form method="POST" action="{{ url_for('billing.upgrade') }}" class="js-upgrade-form" data-plan="{{ pid }}">
-            <input type="hidden" name="plan" value="{{ pid }}">
-            <input type="hidden" name="cycle" class="cycle-input" value="monthly">
-            <input type="hidden" name="coupon" class="coupon-input" value="">
-            <button type="submit" class="bill-cta {{ 'primary' if p.get('highlight') else '' }}">
-                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Upgrade to {{ p.name }}
-            </button>
-        </form>
-        {% endif %}
-    </div>
-    {% endfor %}
+<div class="bill-details-grid">
+    <section class="bill-info-card" aria-labelledby="paymentMethodTitle">
+        <h2 id="paymentMethodTitle">Payment Method</h2>
+        <p>Saved payment methods are not available in this billing view.</p>
+    </section>
+    <section class="bill-info-card" aria-labelledby="invoiceHistoryTitle">
+        <h2 id="invoiceHistoryTitle">Invoice History</h2>
+        <div class="bill-invoice-table-wrap">
+            <table class="bill-invoice-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Invoice</th>
+                        <th scope="col">Plan</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5">Invoice records are not available in this billing view.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 
 {# ── FAQ ─────────────────────────────────────────────────────── #}

@@ -16,6 +16,11 @@ from application.services.event_tracker import track_feature
 intraday_tools_api = Blueprint("intraday_tools_api", __name__)
 
 
+# Tools that now live on the Market Radar page. Kept here so old bookmarks and
+# links like /intraday-tools?tool=gappers land on the right page.
+_RADAR_TOOLS = {"rvol", "gappers", "pivots", "basis", "rotation", "news"}
+
+
 def _auth_ok():
     return "email" in session
 
@@ -25,11 +30,27 @@ def _auth_ok():
 def intraday_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))
+    tool = (request.args.get("tool") or "").strip().lower()
+    if tool in _RADAR_TOOLS:
+        return redirect(url_for("intraday_tools_api.market_radar_page", tool=tool))
     return render_template(
         "intradayTools.html",
         name=session.get("name", "User"),
         email=session.get("email", ""),
         title="Intraday Tools",
+    )
+
+
+@intraday_tools_api.route("/market-radar")
+@track_feature("intraday_tools")
+def market_radar_page():
+    if not _auth_ok():
+        return redirect(url_for("logIn"))
+    return render_template(
+        "marketRadar.html",
+        name=session.get("name", "User"),
+        email=session.get("email", ""),
+        title="Market Radar",
     )
 
 

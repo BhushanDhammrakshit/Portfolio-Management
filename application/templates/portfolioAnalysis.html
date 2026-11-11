@@ -139,11 +139,59 @@
 [data-theme="dark"] .pa-disclaimer{background:#3f2d04;border-color:#854d0e;color:#fef3c7}
 [data-theme="dark"] .pa-src-badge.news{background:#1e3a8a;color:#bfdbfe}
 [data-theme="dark"] .pa-src-badge.filing{background:#78350f;color:#fde68a}
+.pa-overview{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--card-gap);margin:var(--space-4) 0 var(--space-5)}
+.pa-overview-kpis{grid-column:1/-1}
+.pa-overview-card{min-width:0;overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.pa-overview-card h2{margin:0;padding:var(--space-3) var(--space-4);border-bottom:var(--border-width) solid var(--border);font-size:var(--fs-card-title);font-weight:600;color:var(--text-primary)}
+.pa-overview-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:hidden;border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.pa-overview-kpis>div{display:flex;min-height:var(--analysis-kpi-cell-min-height);flex-direction:column;justify-content:center;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-right:var(--border-width) solid var(--border)}
+.pa-overview-kpis>div:last-child{border-right:0}
+.pa-overview-kpis span{color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-transform:uppercase}
+.pa-overview-kpis strong{color:var(--text-primary);font:600 var(--fs-kpi-value)/var(--lh-kpi-value) var(--font-mono)}
+.pa-overview-kpis strong.positive{color:var(--positive)}.pa-overview-kpis strong.negative{color:var(--negative)}
+.pa-overview-allocation,.pa-overview-performance{grid-column:span 6}
+.pa-sector-list{padding:var(--space-2) var(--space-4) var(--space-3)}
+.pa-sector-row{display:grid;grid-template-columns:minmax(var(--analysis-sector-label-min-width),1fr) 2fr auto;align-items:center;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:var(--border-width) solid var(--border);font-size:var(--fs-caption)}
+.pa-sector-row:last-child{border-bottom:0}
+.pa-sector-row>span:first-child{color:var(--text-secondary)}
+.pa-sector-row strong{color:var(--text-primary);font-family:var(--font-mono);font-weight:500}
+.pa-sector-track{height:var(--market-dot-size);overflow:hidden;border-radius:var(--radius-tag);background:var(--bg-subtle)}
+.pa-sector-track span{display:block;width:var(--sector-share);height:100%;background:var(--sector-color)}
+.pa-overview-empty{display:grid;min-height:var(--analysis-portfolio-empty-min-height);place-items:center;padding:var(--space-4);color:var(--text-muted);font-size:var(--fs-table-cell);text-align:center}
+.pa-overview-table-toolbar{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4)}
+.pa-overview-table-toolbar input{width:min(100%,var(--analysis-search-width));height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary)}
+.pa-overview-table-wrap{overflow:auto}
+.pa-overview-table{width:100%;min-width:var(--analysis-portfolio-table-min-width);border-collapse:collapse;font-size:var(--fs-table-cell)}
+.pa-overview-table th{height:var(--table-head-height);padding:var(--space-2) var(--space-3);background:var(--bg-subtle);color:var(--text-muted);font-size:var(--fs-kpi-label);font-weight:500;text-align:right;white-space:nowrap}
+.pa-overview-table th:first-child,.pa-overview-table td:first-child{text-align:left}
+.pa-overview-table td{height:var(--table-row-height);padding:var(--space-2) var(--space-3);border-top:var(--border-width) solid var(--border);color:var(--text-primary);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pa-overview-table td:first-child{font-weight:500}
+.pa-overview-table .numeric{font-family:var(--font-mono)}
+.pa-overview-table tfoot td{background:var(--bg-subtle);font-weight:600}
+.pa-card{border-radius:var(--radius);box-shadow:none;transition:border-color 120ms;background:var(--surface)}
+.pa-card:hover{border-color:var(--border-strong);box-shadow:none}
+.pa-card-header{padding:var(--space-3) var(--space-4)}
+.pa-card-name{font-size:14px;font-weight:600}
+.pa-action-pill{justify-content:flex-start;padding:0;border:0;background:transparent!important;color:var(--text-secondary)!important;font-size:var(--fs-label);font-weight:600;letter-spacing:0;text-transform:none}
+.pa-action-pill i{display:none}
+.pa-action-pill::before{width:var(--status-dot-size);height:var(--status-dot-size);flex:0 0 var(--status-dot-size);border-radius:50%;background:var(--text-muted);content:""}
+.pa-action-pill.pa-pill-buy::before,.pa-action-pill.pa-pill-strong-buy::before,.pa-action-pill.pa-pill-accumulate::before{background:var(--positive)}
+.pa-action-pill.pa-pill-sell::before,.pa-action-pill.pa-pill-strong-sell::before,.pa-action-pill.pa-pill-reduce::before{background:var(--negative)}
+.pa-action-pill.pa-pill-hold::before,.pa-action-pill.pa-pill-book-profit::before{background:var(--warning)}
+.pa-summary{border-radius:var(--radius);box-shadow:none}
+.pa-summary-pill{padding:var(--space-1) var(--space-2);border-radius:var(--radius-tag);background:transparent!important;color:var(--text-secondary)!important;font-size:var(--fs-label);font-weight:500}
+.pa-summary-title{font-size:14px;font-weight:600}
+.pa-kpi,.pa-dr-card,.pa-sources-block{border-radius:var(--radius);box-shadow:none}
+.pa-kpi{text-align:left}
+.pa-kpi-label{font-size:11px;font-weight:500}
+.pa-kpi-value{font-family:var(--font-mono);font-size:14px;font-weight:600}
+.pa-overview-card h2{line-height:var(--lh-section-title)}
+@media(max-width:767px){.pa-overview-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-overview-kpis>div:nth-child(2){border-right:0}.pa-overview-kpis>div:nth-child(n+3){border-top:1px solid var(--border)}.pa-overview-allocation,.pa-overview-performance{grid-column:1/-1}}
 </style>
 
 <header class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
     <div>
-        <h1><i class="fa-solid fa-magnifying-glass-chart me-2"></i>Portfolio Analysis</h1>
+        <h1>Portfolio Analysis</h1>
         <p>AI-powered Buy / Hold / Sell signals for every stock you own.</p>
     </div>
     {% if stocks %}<span class="badge-soft badge-soft-info">{{ stocks|length }} holdings</span>{% endif %}
@@ -365,6 +413,23 @@ async function paExternalPick(item) {
 </div>
 {% else %}
 
+<section class="pa-overview" aria-label="Portfolio summary">
+    <div class="pa-overview-kpis">
+        <div><span>Portfolio value</span><strong id="paOverviewValue">N/A</strong></div>
+        <div><span>Invested</span><strong id="paOverviewInvested">N/A</strong></div>
+        <div><span>Total P&amp;L</span><strong id="paOverviewGain">N/A</strong></div>
+        <div><span>Holdings</span><strong id="paOverviewCount">{{ stocks|length }}</strong></div>
+    </div>
+    <article class="pa-overview-card pa-overview-allocation">
+        <h2>Sector Allocation</h2>
+        <div id="paSectorAllocation" class="pa-sector-list"></div>
+    </article>
+    <article class="pa-overview-card pa-overview-performance">
+        <h2>Performance vs NIFTY 50</h2>
+        <div class="pa-overview-empty" role="status">Historical portfolio and benchmark series are unavailable for this view. No performance chart is shown.</div>
+    </article>
+</section>
+
 <!-- Toolbar: search, select-all, primary action button -->
 <div class="pa-toolbar">
     <div class="pa-search">
@@ -404,6 +469,42 @@ const stocks = {{ stocks|tojson }};
 const cache = {}; // stockName -> insight data
 const selected = new Set();
 let activeFilter = null; // 'BUY' | 'HOLD' | etc, or null = all
+
+function renderPortfolioOverview() {
+    const values = stocks.map(stock => {
+        const quantity = Number(stock.Quantity) || 0;
+        const purchase = stock.PurchasePrice == null ? NaN : Number(stock.PurchasePrice);
+        const price = stock.CurrentPrice ? Number(stock.CurrentPrice) : purchase;
+        const invested = Number.isFinite(purchase) ? quantity * purchase : null;
+        const value = Number.isFinite(price) ? quantity * price : null;
+        return { stock, quantity, purchase, price, invested, value, gain: value != null && invested != null ? value - invested : null };
+    });
+    const completeValuation = values.every(row => row.value != null && row.invested != null);
+    const totalInvested = values.reduce((sum, row) => sum + (row.invested || 0), 0);
+    const totalValue = values.reduce((sum, row) => sum + (row.value || 0), 0);
+    const totalGain = totalValue - totalInvested;
+    const money = value => window.FCFormat ? window.FCFormat.currency(value) : '₹' + Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const gainEl = document.getElementById('paOverviewGain');
+    document.getElementById('paOverviewValue').textContent = completeValuation ? money(totalValue) : 'N/A';
+    document.getElementById('paOverviewInvested').textContent = completeValuation ? money(totalInvested) : 'N/A';
+    gainEl.textContent = completeValuation ? (totalGain >= 0 ? '+' : '-') + money(Math.abs(totalGain)) : 'N/A';
+    if (completeValuation && totalGain > 0) gainEl.classList.add('positive');
+    if (completeValuation && totalGain < 0) gainEl.classList.add('negative');
+
+    const sectors = {};
+    const sectorPalette = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5', '--chart-6']
+        .map(token => getComputedStyle(document.documentElement).getPropertyValue(token).trim());
+    values.forEach(row => {
+        const name = row.stock.Sector || 'Other';
+        sectors[name] = (sectors[name] || 0) + (row.value || 0);
+    });
+    const sectorRows = completeValuation ? Object.entries(sectors).sort((a, b) => b[1] - a[1]) : [];
+    document.getElementById('paSectorAllocation').innerHTML = sectorRows.map(([name, value], index) => {
+        const share = totalValue > 0 ? value / totalValue * 100 : 0;
+        const color = sectorPalette[index % sectorPalette.length];
+        return `<div class="pa-sector-row"><span>${escapeHtml(name)}</span><div class="pa-sector-track" aria-label="${share.toFixed(2)}%"><span style="--sector-share:${Math.min(100, Math.max(0, share))}%;--sector-color:${color}"></span></div><strong>${share.toFixed(2)}%</strong></div>`;
+    }).join('') || '<div class="pa-overview-empty">Sector allocation is unavailable because portfolio values are incomplete.</div>';
+}
 
 function renderCardBody(stock, data) {
     const qty = stock.Quantity || 0;
@@ -724,6 +825,7 @@ document.getElementById('paAnalyzeBtn').addEventListener('click', async () => {
 });
 
 // Initial render
+renderPortfolioOverview();
 renderCards();
 </script>
 {% endif %}
