@@ -1,2 +1,27 @@
+[project]
+name = "portfolio-management"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "Flask>=3.0.0,<4",
+  "Flask-CORS>=4.0.0",
+  "python-dotenv>=1.0.0",
+  "azure-data-tables>=12.4.0",
+  "yfinance>=0.2.40,<0.3",
+  "pandas>=2.0.0,<2.3",
+  "numpy>=1.26.0,<2.2",
+  "requests>=2.31.0",
+  "beautifulsoup4>=4.12.0",
+  "lxml>=4.9.0,<6",
+  "gunicorn>=21.2.0",
+  "feedparser>=6.0.10",
+  "APScheduler>=3.10.4",
+  "redis>=5.0.0",
+  "Flask-Caching>=2.1.0",
+  "Flask-Compress>=1.14",
+  "truedata>=7.0.0",
+  "selenium>=4.18.0",
+]
+
 [tool.vercel]
 entrypoint = "application:app"
