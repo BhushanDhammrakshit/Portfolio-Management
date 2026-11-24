@@ -1,0 +1,121 @@
+{% macro PageHeader(description) -%}
+<header class="radar-page-header">
+    <div class="radar-title-group">
+        <h1>Market Radar</h1>
+        <details class="radar-info">
+            <summary aria-label="Market Radar information"><i class="fa-regular fa-circle-question" aria-hidden="true"></i></summary>
+            <div class="radar-info-popover">
+                <p>{{ description }}</p>
+                <div id="radarToolHelp"></div>
+                <p class="radar-disclaimer">Scanner output is technical analysis for educational purposes only. It is not investment advice or a buy/sell recommendation.</p>
+            </div>
+        </details>
+    </div>
+    <div class="radar-header-actions">
+        <span id="radarUpdated" class="radar-updated" aria-live="polite">Updated —</span>
+        <details class="radar-header-menu">
+            <summary aria-label="More actions"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></summary>
+            <div class="radar-header-menu-content">
+                <button type="button" class="radar-button radar-history-trigger" id="radarHistoryOpen" aria-haspopup="dialog" aria-controls="radarHistoryDrawer">
+                    <i class="fa-regular fa-clock" aria-hidden="true"></i><span>History</span>
+                </button>
+                <button type="button" class="radar-button radar-refresh" id="radarRefresh">
+                    <i class="fa-solid fa-rotate" aria-hidden="true"></i><span>Refresh</span>
+                </button>
+            </div>
+        </details>
+    </div>
+</header>
+{%- endmacro %}
+
+{% macro ScanTabs(tabs, active_tab) -%}
+<nav class="tools-tabs radar-tabs" role="tablist" aria-label="Market Radar scans">
+    {% for tab in tabs %}
+    <button type="button" class="tools-tab{% if tab.id == active_tab %} active{% endif %}"
+            id="radarTab-{{ tab.id }}" role="tab" aria-controls="panel-{{ tab.id }}"
+            aria-selected="{{ 'true' if tab.id == active_tab else 'false' }}"
+            tabindex="{{ '0' if tab.id == active_tab else '-1' }}" data-tab="{{ tab.id }}">{{ tab.label }}</button>
+    {% endfor %}
+</nav>
+{%- endmacro %}
+
+{% macro ScanToolbar() -%}
+<div class="radar-toolbar" id="radarToolbar">
+    <div class="radar-filter-controls">
+        <label class="radar-search">
+            <span class="visually-hidden">Filter symbol</span>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" id="radarSearch" placeholder="Filter symbol" autocomplete="off">
+        </label>
+        <details class="radar-filters-menu" id="radarFiltersMenu" open>
+            <summary>Filters</summary>
+            <div class="radar-filters-menu-content">
+                <div class="radar-pivot-controls" id="radarPivotControls" hidden>
+                    <input id="pivotSymbol" placeholder="Symbol" aria-label="Pivot symbol" data-stock-suggest>
+                    <button class="radar-button" id="pivotGo" type="button">Compute</button>
+                </div>
+                <div class="radar-gap-controls" id="radarGapControls" hidden role="group" aria-label="Filter gappers by direction">
+                    <button type="button" class="radar-filter-chip" data-filter="all" data-filter-control aria-pressed="true">All</button>
+                    <button type="button" class="radar-filter-chip" data-filter="gap_up" data-filter-control aria-pressed="false">Gap up</button>
+                    <button type="button" class="radar-filter-chip" data-filter="gap_down" data-filter-control aria-pressed="false">Gap down</button>
+                    <label class="radar-gap-min">Min gap
+                        <select id="gapMinPct" aria-label="Minimum gap percentage">
+                            <option value="0.5">0.5%</option>
+                            <option value="1">1%</option>
+                            <option value="2">2%</option>
+                            <option value="3">3%</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="radar-rvol-controls" id="radarRvolControls" hidden>
+                    <div class="radar-filter-chips" role="group" aria-label="Filter by relative volume">
+                        <button type="button" class="radar-filter-chip active" data-rvol-filter="" aria-pressed="true">All</button>
+                        <button type="button" class="radar-filter-chip" data-rvol-filter="elevated" aria-pressed="false">&gt;1.3x</button>
+                        <button type="button" class="radar-filter-chip" data-rvol-filter="high" aria-pressed="false">&gt;2x</button>
+                        <button type="button" class="radar-filter-chip" data-rvol-filter="extreme" aria-pressed="false">&gt;3x</button>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+    <span id="radarSessionNotice" class="radar-session-notice" hidden>Showing data from the last completed session</span>
+    <div class="radar-summary" id="radarSummary" aria-label="Scan summary"></div>
+    <div class="radar-result-actions">
+        <div class="radar-view-toggle" id="radarViewToggle" role="group" aria-label="RVOL results view" hidden>
+            <button type="button" data-rvol-view="heatmap" aria-pressed="true" class="active">Heatmap</button>
+            <button type="button" data-rvol-view="table" aria-pressed="false">Table</button>
+        </div>
+        <button type="button" class="radar-icon-button" id="radarExport" aria-label="Export visible results" title="Export visible results">
+            <i class="fa-solid fa-download" aria-hidden="true"></i>
+        </button>
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro HistoryDrawer() -%}
+<div class="radar-drawer-backdrop" id="radarHistoryBackdrop" hidden></div>
+<aside class="radar-history-drawer" id="radarHistoryDrawer" role="dialog" aria-modal="true" aria-labelledby="radarHistoryTitle" hidden>
+    <header class="radar-drawer-header">
+        <h2 id="radarHistoryTitle">Scan history</h2>
+        <button type="button" class="radar-icon-button" id="radarHistoryClose" aria-label="Close history"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="radar-drawer-body">
+        <div class="radar-history-toggle" id="toolHistoryToggle" role="group" aria-label="Scan history range">
+            <button type="button" data-view="recent" class="active" aria-pressed="true">Recent</button>
+            <button type="button" data-view="past" aria-pressed="false">Past</button>
+        </div>
+        <p class="radar-history-note">Runs are saved in this browser. Load reruns the selected scan with current data.</p>
+        <div class="radar-history-list" id="toolPastRows" aria-live="polite"></div>
+    </div>
+</aside>
+{%- endmacro %}
+
+{% macro ScanPageLayout(tabs, active_tab, description) -%}
+<div class="page-container scans-page market-radar-page">
+    {{ PageHeader(description) }}
+    {{ ScanTabs(tabs, active_tab) }}
+    {{ caller() }}
+    <footer class="radar-footer-note">Scanner output is technical analysis for educational purposes only. It is not investment advice or a buy/sell recommendation.</footer>
+</div>
+{{ HistoryDrawer() }}
+{%- endmacro %}

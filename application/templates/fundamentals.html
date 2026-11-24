@@ -381,26 +381,13 @@
 
     // ── formatters ──────────────────────────────────────────
     function fmtNum(v, digits) {
-        if (v === null || v === undefined || v === '' || Number.isNaN(v)) return '–';
-        const n = Number(v);
-        if (!Number.isFinite(n)) return '–';
-        return n.toLocaleString('en-IN', {
-            maximumFractionDigits: digits == null ? 2 : digits,
-            minimumFractionDigits: 0,
-        });
+        return window.FCFormat.number(v, digits == null ? 2 : digits, 'Metric is unavailable');
     }
     function fmtPct(v) {
-        if (v === null || v === undefined) return '–';
-        const n = Number(v);
-        if (!Number.isFinite(n)) return '–';
-        const sign = n > 0 ? '+' : '';
-        return `${sign}${n.toFixed(2)}%`;
+        return window.FCFormat.percent(v, true, 'Percentage is unavailable');
     }
-    function fmtMoney(v, digits) {
-        if (v === null || v === undefined) return '–';
-        const n = Number(v);
-        if (!Number.isFinite(n)) return '–';
-        return '₹' + fmtNum(n, digits == null ? 0 : digits);
+    function fmtMoney(v) {
+        return window.FCFormat.currency(v, false, 'Price is unavailable');
     }
     function scoreClass(verdict) {
         const v = (verdict || '').toLowerCase();

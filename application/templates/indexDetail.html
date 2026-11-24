@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/stock-detail.css', v='index-interactions-2') }}">
+{% endblock %}
+{% block content %}
+<div class="stock-detail index-detail" id="indexDetail" data-ticker="{{ index_ticker }}">
+    <header class="stock-detail-header">
+        <div class="stock-company-mark" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="stock-heading">
+            <h1 id="indexName">{{ index_name }}</h1>
+            <div class="stock-symbol-line"><span>INDEX</span><span id="indexTicker">{{ index_ticker }}</span><span id="indexSession">Loading market status…</span></div>
+        </div>
+        <div class="stock-quote">
+            <strong id="indexPrice" aria-live="polite">—</strong>
+            <span id="indexChange"></span>
+        </div>
+        <a class="stock-tv-link" id="indexTradingView" href="https://www.tradingview.com/chart/?symbol=NSE%3ANIFTY" target="_blank" rel="noopener noreferrer" aria-label="Open index chart in TradingView">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
+    </header>
+
+    <nav class="stock-tabs" role="tablist" aria-label="Index details">
+        <button type="button" class="stock-tab active" id="index-tab-prices" role="tab" aria-selected="true" aria-controls="index-panel-prices" data-index-tab="prices">Overview</button>
+        <button type="button" class="stock-tab" id="index-tab-chart" role="tab" aria-selected="false" aria-controls="index-panel-chart" data-index-tab="chart">Chart</button>
+        <button type="button" class="stock-tab" id="index-tab-constituents" role="tab" aria-selected="false" aria-controls="index-panel-constituents" data-index-tab="constituents">Constituents</button>
+    </nav>
+
+    <section class="stock-panel" id="index-panel-prices" role="tabpanel" aria-labelledby="index-tab-prices">
+        <div class="stock-price-summary index-price-summary">
+            <div><span class="stock-eyebrow">Last value</span><strong id="indexSummaryPrice">—</strong></div>
+            <div><span class="stock-eyebrow">Previous close</span><strong id="indexPrevClose">—</strong></div>
+            <div><span class="stock-eyebrow">Period high</span><strong id="indexDayHigh">—</strong></div>
+            <div><span class="stock-eyebrow">Period low</span><strong id="indexDayLow">—</strong></div>
+            <div><span class="stock-eyebrow">Period change</span><strong id="indexPeriodChange">—</strong></div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-card-heading">
+                <div><h2>Index movement</h2><p id="indexChartCaption">Intraday history · Drag to pan · Scroll to zoom</p></div>
+                <div class="index-chart-tools">
+                    <div class="stock-range-controls" data-index-ranges></div>
+                    <div class="stock-chart-zoom" role="group" aria-label="Chart zoom controls">
+                        <button type="button" data-index-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+                        <button type="button" data-index-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+                        <button type="button" data-index-fit title="Fit all data">Fit</button>
+                    </div>
+                </div>
+            </div>
+            <div class="stock-chart-wrap">
+                <canvas data-index-line aria-label="Index value line chart" role="img"></canvas>
+                <div class="stock-chart-empty" hidden></div>
+            </div>
+            <div class="stock-candle-readout" data-index-line-readout aria-live="polite">Drag to pan · Scroll to zoom · Hover for index value</div>
+        </div>
+        <div class="stock-panel-title index-section-title">
+            <div><h2>Market breadth</h2><p>How index constituents are moving today</p></div>
+            <span class="stock-asof" id="indexConstituentAsOf"></span>
+        </div>
+        <div class="stock-price-summary index-breadth-summary">
+            <div><span class="stock-eyebrow">Advancing</span><strong id="indexAdvances">—</strong></div>
+            <div><span class="stock-eyebrow">Declining</span><strong id="indexDeclines">—</strong></div>
+            <div><span class="stock-eyebrow">Unchanged</span><strong id="indexUnchanged">—</strong></div>
+            <div><span class="stock-eyebrow">Constituents</span><strong id="indexConstituentCount">—</strong></div>
+        </div>
+        <p class="stock-disclaimer">Index values and constituent data are provided for research purposes only and may be delayed. Not investment advice.</p>
+    </section>
+
+    <section class="stock-panel" id="index-panel-chart" role="tabpanel" aria-labelledby="index-tab-chart" hidden>
+        <div class="stock-card">
+            <div class="stock-card-heading">
+                <div><h2>Interactive candlestick chart</h2><p>Drag to pan · Scroll to zoom · Hover for OHLC</p></div>
+                <div class="index-chart-tools">
+                    <div class="stock-range-controls" data-index-ranges></div>
+                    <div class="stock-chart-zoom" role="group" aria-label="Chart zoom controls">
+                        <button type="button" data-index-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+                        <button type="button" data-index-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+                        <button type="button" data-index-fit title="Fit all candles">Fit</button>
+                    </div>
+                </div>
+            </div>
+            <div class="stock-chart-wrap stock-chart-wrap-large">
+                <canvas data-index-candles aria-label="Interactive index candlestick chart" role="img"></canvas>
+                <div class="stock-chart-empty" hidden></div>
+            </div>
+            <div class="stock-candle-readout" data-index-readout aria-live="polite">Drag to pan · Scroll to zoom · Hover for OHLC</div>
+        </div>
+    </section>
+
+    <section class="stock-panel" id="index-panel-constituents" role="tabpanel" aria-labelledby="index-tab-constituents" hidden>
+        <div class="stock-panel-title">
+            <div><h2>Index constituents</h2><p>Current constituent weights, prices, and daily movement</p></div>
+            <span class="stock-asof" id="indexWeightSource">Loading constituent data…</span>
+        </div>
+        <div class="stock-table-card">
+            <div class="stock-table-scroll">
+                <table class="ds-table stock-table index-constituent-table" aria-label="Index constituent weights and daily performance">
+                    <thead><tr><th>Company</th><th>Symbol</th><th class="is-numeric">Weight</th><th class="is-numeric">Price</th><th class="is-numeric">Change</th><th class="is-numeric">Index impact*</th><th class="is-numeric">Volume</th></tr></thead>
+                    <tbody id="indexConstituents"><tr><td class="ds-table-empty" colspan="7">Loading index constituents…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <p class="stock-disclaimer">*Estimated contribution in percentage points, calculated as index weight × constituent percentage change. Composition and weight data may be delayed. Constituent links open the corresponding stock detail.</p>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script defer src="{{ url_for('static', filename='Scripts/ohlc_chart.js') }}"></script>
+<script defer src="{{ url_for('static', filename='Scripts/index-detail.js', v='index-interactions-2') }}"></script>
+{% endblock %}

@@ -9,7 +9,7 @@
 .adm-tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:5px;margin-bottom:18px;overflow-x:auto}
 .adm-tab{padding:9px 18px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
 .adm-tab:hover{background:var(--surface-2);color:var(--text)}
-.adm-tab.active{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.25)}
+.adm-tab.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.25)}
 .adm-panel{display:none}.adm-panel.active{display:block}
 
 /* KPI cards */
@@ -116,7 +116,7 @@
 .etpl-card-foot{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 .etpl-btn{padding:6px 14px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
 .etpl-btn:hover{background:var(--surface-2);border-color:#6366f1;color:#6366f1}
-.etpl-btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-color:transparent}
+.etpl-btn-primary{background:var(--brand);color:#fff;border-color:transparent}
 .etpl-btn-primary:hover{box-shadow:0 2px 8px rgba(99,102,241,.3);opacity:.92;color:#fff;border-color:transparent}
 .etpl-admin-badge{padding:6px 12px;border-radius:7px;background:var(--surface-2);color:var(--text-muted);font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:5px}
 .etpl-send-check{margin:0;cursor:pointer}
@@ -230,7 +230,7 @@
 <div class="adm">
   <div class="adm-header">
     <div>
-      <h1><i class="fa-solid fa-shield-halved"></i>Admin Portal</h1>
+      <h1>Admin Portal</h1>
       <p>Manage users, monitor subscriptions, and track system health.</p>
     </div>
     <button class="btn btn-primary btn-sm" id="admRefresh" title="Refresh all data">
@@ -241,6 +241,7 @@
   <div class="adm-tabs" id="admTabs">
     <button class="adm-tab active" data-tab="overview"><i class="fa-solid fa-chart-pie"></i>Overview</button>
     <button class="adm-tab" data-tab="users"><i class="fa-solid fa-users"></i>Users</button>
+    <button class="adm-tab" data-tab="subscriptions">Subscriptions</button>
     <button class="adm-tab" data-tab="emails"><i class="fa-solid fa-envelopes-bulk"></i>Emails</button>
     <button class="adm-tab" data-tab="activity"><i class="fa-solid fa-chart-line"></i>Activity</button>
     <button class="adm-tab" data-tab="system"><i class="fa-solid fa-server"></i>System</button>
@@ -285,6 +286,37 @@
             </tr>
           </thead>
           <tbody id="admUserBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscriptions -->
+  <div class="adm-panel" id="panel-subscriptions">
+    <div class="adm-toolbar">
+      <input class="adm-search" id="admSubscriptionSearch" placeholder="Search by name or email" aria-label="Search subscriptions" />
+      <div class="adm-sub-filters" id="admSubscriptionFilters" aria-label="Filter subscriptions">
+        <button type="button" class="adm-filter active" data-status="all">All</button>
+        <button type="button" class="adm-filter" data-status="active">Active</button>
+        <button type="button" class="adm-filter" data-status="trial">Trial</button>
+        <button type="button" class="adm-filter" data-status="expired">Expired</button>
+        <button type="button" class="adm-filter" data-status="free">Free</button>
+      </div>
+      <span class="adm-count" id="admSubscriptionCount"></span>
+    </div>
+    <div class="adm-table-wrap">
+      <div class="adm-table-scroll">
+        <table class="adm-table">
+          <thead>
+            <tr>
+              <th scope="col">Account</th>
+              <th scope="col">Plan</th>
+              <th scope="col">Status</th>
+              <th scope="col">Plan Ends</th>
+              <th scope="col">Last Login (IST)</th>
+            </tr>
+          </thead>
+          <tbody id="admSubscriptionBody"></tbody>
         </table>
       </div>
     </div>
@@ -432,6 +464,7 @@
   let _stats = {};
   let _sortCol = 'created', _sortAsc = false;
   let _planFilter = 'all', _searchTerm = '';
+  let _subscriptionFilter = 'all', _subscriptionSearch = '';
 
   // Safe JSON fetch — returns parsed JSON or throws with a readable message.
   async function fetchJson(url, opts) {
@@ -476,6 +509,7 @@
       renderKpis();
       renderOverviewCards();
       renderUsers();
+      renderSubscriptions();
       renderSystem();
       loadEmailTemplates();
       loadActivity();
@@ -610,6 +644,73 @@
       </tr>`;
     }).join('');
   }
+
+  const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+
+  function getSubscriptionStatus(user) {
+    if (user.on_trial) return 'trial';
+    if (user.plan && user.plan !== 'free') return 'active';
+    if (user.plan_expires) {
+      const expiryDate = String(user.plan_expires).slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(expiryDate) && expiryDate < today) return 'expired';
+    }
+    return 'free';
+  }
+
+  function formatAuditTimestamp(value) {
+    if (!value) return 'N/A';
+    const timestamp = new Date(value);
+    if (Number.isNaN(timestamp.getTime())) return 'N/A';
+    return new Intl.DateTimeFormat('en-IN', {
+      dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata'
+    }).format(timestamp) + ' IST';
+  }
+
+  function renderSubscriptions() {
+    const filtered = _users.filter(user => {
+      const status = getSubscriptionStatus(user);
+      const query = _subscriptionSearch.trim().toLowerCase();
+      const matchesStatus = _subscriptionFilter === 'all' || status === _subscriptionFilter;
+      const matchesSearch = !query ||
+        (user.name || '').toLowerCase().includes(query) ||
+        (user.email || '').toLowerCase().includes(query);
+      return matchesStatus && matchesSearch;
+    });
+
+    document.getElementById('admSubscriptionCount').textContent =
+      filtered.length + ' of ' + _users.length + ' accounts';
+    document.getElementById('admSubscriptionBody').innerHTML = filtered.map(user => {
+      const status = getSubscriptionStatus(user);
+      const label = status.charAt(0).toUpperCase() + status.slice(1);
+      const displayName = escapeHtml(user.name || 'N/A');
+      const email = escapeHtml(user.email || 'N/A');
+      const plan = escapeHtml((user.plan || 'free').charAt(0).toUpperCase() + (user.plan || 'free').slice(1));
+      return `<tr>
+        <td><strong>${displayName}</strong><br><span class="adm-sub-email">${email}</span></td>
+        <td>${plan}</td>
+        <td><span class="adm-sub-status ${status}"><span aria-hidden="true"></span>${label}</span></td>
+        <td>${formatAuditTimestamp(user.plan_expires)}</td>
+        <td>${formatAuditTimestamp(user.last_login)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('admSubscriptionSearch').addEventListener('input', event => {
+    _subscriptionSearch = event.target.value;
+    renderSubscriptions();
+  });
+
+  document.getElementById('admSubscriptionFilters').addEventListener('click', event => {
+    const button = event.target.closest('[data-status]');
+    if (!button) return;
+    document.querySelectorAll('#admSubscriptionFilters [data-status]').forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    _subscriptionFilter = button.dataset.status;
+    renderSubscriptions();
+  });
 
   // Menu toggle
   window.toggleMenu = function(btn) {
@@ -1288,7 +1389,7 @@
               </div>
             </div>`;
           }).join('')}
-        </div>` : '<div style="font-size:.82rem;color:var(--text-muted)">No errors in the last 24h 🎉</div>'}
+        </div>` : '<div style="font-size:.82rem;color:var(--text-muted)">No errors in the last 24h</div>'}
       </div>
     `;
 

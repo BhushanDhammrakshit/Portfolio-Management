@@ -18,53 +18,68 @@ heatmap_bp = Blueprint("heatmap", __name__)
 SECTOR_STOCKS = {
     "BANK": [
         "HDFCBANK.NS", "ICICIBANK.NS", "KOTAKBANK.NS", "AXISBANK.NS",
-        "AUBANK.NS", "INDUSINDBK.NS", "IDFCFIRSTB.NS",
+        "AUBANK.NS", "INDUSINDBK.NS", "IDFCFIRSTB.NS", "FEDERALBNK.NS",
+        "YESBANK.NS", "BANDHANBNK.NS",
     ],
     "PSU BANK": [
         "SBIN.NS", "BANKBARODA.NS", "PNB.NS", "CANBK.NS",
-        "UNIONBANK.NS", "INDIANB.NS",
+        "UNIONBANK.NS", "INDIANB.NS", "MAHABANK.NS", "CENTRALBK.NS",
+        "UCOBANK.NS", "BANKINDIA.NS",
     ],
     "IT": [
         "TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS", "TECHM.NS",
         "PERSISTENT.NS", "COFORGE.NS", "MPHASIS.NS", "KPITTECH.NS",
+        "LTIM.NS",
     ],
     "FMCG": [
         "HINDUNILVR.NS", "ITC.NS", "NESTLEIND.NS", "BRITANNIA.NS",
-        "DABUR.NS", "COLPAL.NS", "TATACONSUM.NS",
+        "DABUR.NS", "COLPAL.NS", "TATACONSUM.NS", "MARICO.NS",
+        "GODREJCP.NS", "EMAMILTD.NS",
     ],
     "PHARMA": [
         "SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS",
         "LUPIN.NS", "AUROPHARMA.NS", "BIOCON.NS", "TORNTPHARM.NS",
+        "ZYDUSLIFE.NS", "MANKIND.NS",
     ],
     "AUTO": [
         "MARUTI.NS", "M&M.NS", "TATAMOTORS.NS", "BAJAJ-AUTO.NS",
         "EICHERMOT.NS", "HEROMOTOCO.NS", "ASHOKLEY.NS", "TVSMOTOR.NS",
+        "BOSCHLTD.NS", "MOTHERSON.NS",
     ],
     "ENERGY": [
         "RELIANCE.NS", "NTPC.NS", "POWERGRID.NS", "ONGC.NS",
-        "BPCL.NS", "IOC.NS", "COALINDIA.NS",
+        "BPCL.NS", "IOC.NS", "COALINDIA.NS", "TATAPOWER.NS",
+        "GAIL.NS", "ADANIGREEN.NS",
     ],
     "METAL": [
         "TATASTEEL.NS", "JSWSTEEL.NS", "HINDALCO.NS", "VEDL.NS",
-        "SAIL.NS", "NMDC.NS", "JINDALSTEL.NS",
+        "SAIL.NS", "NMDC.NS", "JINDALSTEL.NS", "HINDZINC.NS",
+        "NATIONALUM.NS", "HINDCOPPER.NS",
     ],
     "REALTY": [
         "DLF.NS", "GODREJPROP.NS", "OBEROIRLTY.NS", "PRESTIGE.NS",
-        "LODHA.NS", "NBCC.NS",
+        "LODHA.NS", "NBCC.NS", "BRIGADE.NS", "SOBHA.NS",
+        "SIGNATURE.NS", "MAHLIFE.NS",
     ],
     "CEMENT": [
         "ULTRACEMCO.NS", "SHREECEM.NS", "AMBUJACEM.NS",
-        "DALBHARAT.NS", "ACC.NS",
+        "DALBHARAT.NS", "ACC.NS", "GRASIM.NS", "JKLAKSHMI.NS",
+        "RAMCOCEM.NS", "BIRLACORPN.NS", "HEIDELBERG.NS",
     ],
     "FIN SERVICE": [
         "BAJFINANCE.NS", "BAJAJFINSV.NS", "SBILIFE.NS",
         "HDFCLIFE.NS", "CHOLAFIN.NS", "SHRIRAMFIN.NS",
+        "ICICIPRULI.NS", "MAXFIN.NS", "HDFCAMC.NS", "PFC.NS",
     ],
     "CONSUMER": [
         "TITAN.NS", "TRENT.NS", "ASIANPAINT.NS", "PIDILITIND.NS",
+        "HAVELLS.NS", "DIXON.NS", "VOLTAS.NS", "CROMPTON.NS",
+        "KALYANKJIL.NS", "DMART.NS",
     ],
     "INFRA": [
         "LT.NS", "ADANIENT.NS", "ADANIPORTS.NS", "BHARTIARTL.NS",
+        "IRB.NS", "GMRINFRA.NS", "CONCOR.NS", "RVNL.NS",
+        "IRFC.NS", "BHEL.NS",
     ],
 }
 
@@ -85,7 +100,7 @@ _DEFAULT_MCAP = {
 }
 
 # Cache keys (the shared cache adds the global CACHE_KEY_PREFIX).
-_HEATMAP_KEY = "heatmap:nifty50"
+_HEATMAP_KEY = "heatmap:sector-universe:v2"
 _META_KEY = "heatmap:meta:{symbol}"
 
 
@@ -145,15 +160,26 @@ def _build_heatmap_payload():
         with ThreadPoolExecutor(max_workers=12) as ex:
             list(ex.map(_get_meta, missing_meta))
 
-    sectors = {}
+    sectors = {
+        sector: {"name": sector, "stocks": [], "unavailable": [], "totalMcap": 0}
+        for sector in SECTOR_STOCKS
+    }
     for sym in all_symbols:
         q = quotes.get(sym) or {}
         meta = _get_meta(sym)
         price = q.get("price")
         change = q.get("change_pct")
-        if not price:
-            continue
+        sec = sym_sector[sym]
         short = sym.replace(".NS", "")
+        if not price:
+            sectors[sec]["unavailable"].append({
+                "name": meta["name"],
+                "symbol": short,
+                "price": None,
+                "change": None,
+                "mcap": meta["mcap"],
+            })
+            continue
         result = {
             "name": meta["name"],
             "symbol": short,
@@ -161,13 +187,13 @@ def _build_heatmap_payload():
             "change": round(float(change or 0), 2),
             "mcap": meta["mcap"],
         }
-        sec = sym_sector[sym]
-        if sec not in sectors:
-            sectors[sec] = {"name": sec, "stocks": [], "totalMcap": 0}
         sectors[sec]["stocks"].append(result)
         sectors[sec]["totalMcap"] += result["mcap"]
 
-    return {"sectors": list(sectors.values()), "ts": int(now)}
+    return {
+        "sectors": [sector for sector in sectors.values() if sector["stocks"]],
+        "ts": int(now),
+    }
 
 
 def _load(force=False):

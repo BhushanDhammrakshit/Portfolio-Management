@@ -2,57 +2,49 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-.fs-wrap{max-width:1180px;margin:0 auto}
-.fs-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:6px}
-.fs-head h2{font-size:1.4rem;font-weight:800;margin:0;display:flex;align-items:center;gap:10px}
-.fs-head p{font-size:.84rem;color:var(--text-muted);margin:4px 0 0;max-width:660px}
-.fs-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.fs-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;text-decoration:none}
-.fs-btn:hover{background:var(--surface-2)}
-.fs-meta{font-size:.74rem;color:var(--text-muted);margin:10px 0 16px}
-/* KPI cards */
-.fs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 8px}
-.fs-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
-.fs-kpi .lbl{font-size:.64rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
-.fs-kpi .val{font-size:1.5rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
-.fs-kpi.hit .val{color:#16a34a}.fs-kpi.miss .val{color:#dc2626}.fs-kpi.pend .val{color:#b45309}
-.fs-acc{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none}
-.fs-acc .lbl{color:rgba(255,255,255,.85)}.fs-acc .val{color:#fff}
-.fs-accbar{height:8px;border-radius:5px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
-.fs-accbar > div{height:100%;background:#fff;border-radius:5px}
-/* tables */
-.sec-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);font-weight:700;margin:22px 0 8px;display:flex;align-items:center;gap:8px}
-.fs-table{width:100%;font-size:.81rem;border-collapse:collapse}
-.fs-table th{background:var(--surface-2);text-align:left;padding:9px 10px;font-weight:600;color:var(--text-muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
-.fs-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
-.fs-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:Consolas,monospace}
-.fs-sym{font-weight:700}.fs-sym .nm{display:block;font-weight:500;font-size:.69rem;color:var(--text-muted)}
-.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-.pill-up{background:rgba(22,163,74,.13);color:#16a34a}
-.pill-dn{background:rgba(220,38,38,.13);color:#dc2626}
-.pill-flat{background:rgba(100,116,139,.14);color:var(--text-muted)}
-.pos{color:#16a34a;font-weight:600}.neg{color:#dc2626;font-weight:600}
-.tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.64rem;font-weight:700;text-transform:uppercase}
-.tag-hit{background:rgba(22,163,74,.14);color:#16a34a}
-.tag-miss{background:rgba(220,38,38,.14);color:#dc2626}
-.tag-pend{background:rgba(245,158,11,.16);color:#b45309}
-.hr-cell{font-weight:800}
-.fs-empty{padding:34px;text-align:center;color:var(--text-muted)}
-.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:#6366f1;border-radius:50%;animation:fspin .7s linear infinite;vertical-align:-2px}
+.fs-wrap{max-width:var(--content-max);margin:0 auto}
+.fs-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:var(--space-3);margin-bottom:var(--space-2)}
+.fs-head h2{font-size:var(--fs-page-title);line-height:var(--lh-page-title);font-weight:var(--fw-semibold);margin:0}
+.fs-head p{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--text-secondary);margin:var(--space-1) 0 0;max-width:660px}
+.fs-controls{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}
+.fs-btn{height:var(--control-height);padding:0 var(--space-3);border:var(--border-width) solid var(--border);border-radius:var(--radius);background:var(--bg-surface);color:var(--text-primary);font-size:var(--fs-body);font-weight:var(--fw-medium);cursor:pointer;display:inline-flex;align-items:center;gap:var(--space-2);text-decoration:none}
+.fs-btn:hover{background:var(--bg-subtle)}
+.fs-meta{font-size:var(--fs-caption);color:var(--text-muted);margin:var(--space-2) 0 var(--space-4)}
+.fs-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;margin:0 0 var(--space-2);background:var(--bg-surface);border:var(--border-width) solid var(--border);border-radius:var(--radius);overflow:hidden}
+.fs-kpi{min-width:0;padding:var(--space-3);background:var(--bg-surface);border-right:var(--border-width) solid var(--border)}
+.fs-kpi:last-child{border-right:0}
+.fs-kpi .lbl{font-size:var(--fs-kpi-label);line-height:var(--lh-label);color:var(--text-muted);text-transform:uppercase;font-weight:var(--fw-medium)}
+.fs-kpi .val{font-family:var(--font-mono);font-size:var(--fs-kpi-value);line-height:var(--lh-kpi-value);font-weight:var(--fw-semibold);margin-top:var(--space-1);font-variant-numeric:tabular-nums}
+.fs-kpi.hit .val,.pos{color:var(--positive)}.fs-kpi.miss .val,.neg{color:var(--negative)}.fs-kpi.pend .val{color:var(--warning-ink)}
+.fs-acc{background:var(--bg-surface)}
+.fs-accbar{height:4px;background:var(--bg-subtle);margin-top:var(--space-2);overflow:hidden}
+.fs-accbar > div{height:100%;background:var(--brand)}
+.sec-title{font-size:var(--fs-label);color:var(--text-secondary);font-weight:var(--fw-semibold);margin:var(--space-5) 0 var(--space-2);display:flex;align-items:center;gap:var(--space-2)}
+.fs-table{width:100%;font-size:var(--fs-body);border-collapse:collapse}
+.fs-table th{height:var(--table-head-height);background:var(--bg-subtle);text-align:left;padding:var(--space-2) var(--space-3);font-weight:var(--fw-medium);color:var(--text-secondary);font-size:var(--fs-label);border-bottom:var(--border-width) solid var(--border)}
+.fs-table td{height:var(--table-row-height-compact);padding:var(--space-2) var(--space-3);border-bottom:var(--border-width) solid var(--border);vertical-align:middle}
+.fs-table .num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.fs-sym{font-weight:var(--fw-medium)}.fs-sym .nm{display:block;font-size:var(--fs-caption);color:var(--text-muted)}
+.pill,.tag{display:inline-flex;padding:2px 6px;border-radius:var(--radius-tag);font-size:var(--fs-caption);font-weight:var(--fw-medium);white-space:nowrap}
+.pill-up,.tag-hit{color:var(--positive);background:var(--positive-bg)}
+.pill-dn,.tag-miss{color:var(--negative);background:var(--negative-bg)}
+.pill-flat,.tag-pend{color:var(--text-secondary);background:var(--bg-subtle)}
+.hr-cell{font-weight:var(--fw-semibold)}.hr-high{color:var(--positive)}.hr-mid{color:var(--warning-ink)}.hr-low{color:var(--negative)}
+.fs-empty{padding:var(--space-5);text-align:center;color:var(--text-muted)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:fspin .7s linear infinite;vertical-align:-2px}
 @keyframes fspin{to{transform:rotate(360deg)}}
-.fs-tabs{display:flex;gap:6px;margin:0 0 4px;flex-wrap:wrap}
-.fs-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:.76rem;font-weight:600;cursor:pointer}
-.fs-tab.active{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-color:transparent}
-/* charts */
-.fs-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin:18px 0 4px}
-@media(max-width:760px){.fs-charts{grid-template-columns:1fr}}
-.fs-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-.fs-card h4{margin:0 0 2px;font-size:.92rem;font-weight:800}
-.fs-card .hint{font-size:.72rem;color:var(--text-muted);margin:0 0 8px}
+.fs-tabs{display:flex;gap:var(--space-2);margin:0 0 var(--space-1);border-bottom:var(--border-width) solid var(--border);overflow-x:auto}
+.fs-tab{height:var(--tabs-height);padding:0 var(--space-3);border:0;border-bottom:var(--border-width-active) solid transparent;background:transparent;color:var(--text-secondary);font-size:var(--fs-body);font-weight:var(--fw-medium);cursor:pointer;white-space:nowrap}
+.fs-tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+.fs-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:var(--card-gap);margin:var(--space-4) 0 var(--space-1)}
+@media(max-width:767px){.fs-charts{grid-template-columns:1fr}.fs-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fs-kpi:nth-child(2n){border-right:0}.fs-kpi:last-child{grid-column:1 / -1}}
+.fs-card{background:var(--bg-surface);border:var(--border-width) solid var(--border);border-radius:var(--radius);padding:var(--space-4)}
+.fs-card h4{margin:0 0 var(--space-1);font-size:var(--fs-card-title);font-weight:var(--fw-semibold)}
+.fs-card .hint{font-size:var(--fs-caption);color:var(--text-muted);margin:0 0 var(--space-2)}
 .fs-canvas-wrap{position:relative;height:240px}
-.fs-corr{font-size:.78rem;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);line-height:1.45}
-.fs-corr b{font-weight:800}
-.disclaimer{font-size:.72rem;color:var(--text-muted);margin-top:20px;line-height:1.5}
+.fs-corr{font-size:var(--fs-caption);margin-top:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius);background:var(--bg-subtle);border:var(--border-width) solid var(--border);line-height:var(--lh-body)}
+.fs-corr b{font-weight:var(--fw-semibold)}
+.disclaimer{font-size:var(--fs-caption);color:var(--text-muted);margin-top:var(--space-5);line-height:var(--lh-body)}
 </style>
 
 <div class="fs-wrap">
@@ -153,9 +145,11 @@
 
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt = (n,d=2) => (n==null||isNaN(n))?'—':Number(n).toFixed(d);
+  const fmt = n => window.FCFormat.currency(n,false,'Price is unavailable');
   const signCls = n => (n>0?'pos':(n<0?'neg':''));
-  const signTxt = (n,d=2) => (n==null||isNaN(n))?'—':((n>0?'+':'')+Number(n).toFixed(d));
+  const signTxt = n => window.FCFormat.currency(n,true,'Price change is unavailable');
+  const fmtPct = n => window.FCFormat.percent(n,true,'Percentage is unavailable');
+  const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
   function labelPill(label){
     const L=(label||'').toUpperCase();
@@ -170,9 +164,9 @@
     return `<span class="tag ${t}">${esc(O)}</span>`;
   }
   function hitRateCell(p){
-    if(p==null) return '<span style="color:var(--text-muted)">—</span>';
-    const col = p>=60?'#16a34a':(p>=45?'#b45309':'#dc2626');
-    return `<span class="hr-cell" style="color:${col}">${fmt(p,1)}%</span>`;
+    if(p==null || !Number.isFinite(Number(p))) return window.FCFormat.missing('Hit rate is unavailable');
+    const cls = p>=60?'hr-high':(p>=45?'hr-mid':'hr-low');
+    return `<span class="hr-cell ${cls}">${fmtPct(p)}</span>`;
   }
 
   function showUpgrade(msg){
@@ -190,7 +184,7 @@
     kpisEl.innerHTML = `
       <div class="fs-kpi fs-acc">
         <div class="lbl">Overall hit rate</div>
-        <div class="val">${t.hit_rate_pct==null?'—':fmt(t.hit_rate_pct,1)+'%'}</div>
+        <div class="val">${t.hit_rate_pct==null?window.FCFormat.missing('Hit rate is unavailable'):fmtPct(t.hit_rate_pct)}</div>
         <div class="fs-accbar"><div style="width:${Math.max(0,Math.min(100,t.hit_rate_pct||0))}%"></div></div>
       </div>
       <div class="fs-kpi hit"><div class="lbl">Hits</div><div class="val">${t.hits||0}</div></div>
@@ -223,11 +217,11 @@
         <td>${esc(h.date||'')}</td>
         <td class="fs-sym">${esc(h.symbol)}</td>
         <td>${labelPill(h.predicted)}</td>
-        <td class="num">${h.probability==null?'\u2014':esc(h.probability)+'%'}</td>
+        <td class="num">${window.FCFormat.percent(h.probability,false,'Confidence is unavailable')}</td>
         <td class="num">${fmt(h.prev_close)}</td>
-        <td class="num">${h.predicted_gap_points==null?'\u2014':signTxt(h.predicted_gap_points,0)}</td>
+        <td class="num">${h.predicted_gap_points==null?window.FCFormat.missing('Predicted gap is unavailable'):signTxt(h.predicted_gap_points)}</td>
         <td class="num">${fmt(h.actual_open)}</td>
-        <td class="num ${signCls(h.actual_gap_points)}">${h.actual_gap_points==null?'\u2014':signTxt(h.actual_gap_points,0)}</td>
+        <td class="num ${signCls(h.actual_gap_points)}">${h.actual_gap_points==null?window.FCFormat.missing('Actual gap is unavailable'):signTxt(h.actual_gap_points)}</td>
         <td>${outcomeTag(h.outcome)}</td>
       </tr>`).join('');
   }
@@ -243,7 +237,7 @@
     const labels = buckets.map(b=>b.label);
     const rates  = buckets.map(b=>b.hit_rate_pct==null?null:b.hit_rate_pct);
     const counts = buckets.map(b=>b.evaluated||0);
-    const barCols = rates.map(r=> r==null?'rgba(148,163,184,.4)':(r>=60?'#16a34a':(r>=45?'#f59e0b':'#dc2626')));
+    const barCols = rates.map(r=> r==null?cssVar('--border-strong'):(r>=60?cssVar('--positive'):(r>=45?cssVar('--warning'):cssVar('--negative'))));
 
     if(probChart) probChart.destroy();
     probChart = new Chart(document.getElementById('fsProbChart'),{
@@ -269,7 +263,7 @@
     if(outcomeChart) outcomeChart.destroy();
     outcomeChart = new Chart(document.getElementById('fsOutcomeChart'),{
       type:'doughnut',
-      data:{labels:['Hits','Misses'],datasets:[{data:[t.hits||0,t.misses||0],backgroundColor:['#16a34a','#dc2626'],borderWidth:0}]},
+      data:{labels:['Hits','Misses'],datasets:[{data:[t.hits||0,t.misses||0],backgroundColor:[cssVar('--positive'),cssVar('--negative')],borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
         plugins:{legend:{position:'bottom'}}}
     });

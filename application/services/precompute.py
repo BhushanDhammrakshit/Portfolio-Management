@@ -63,7 +63,7 @@ def _within_preopen_window() -> bool:
     return 8 * 60 + 45 <= mins <= 9 * 60 + 35
 
 # Redis key names (without the global CACHE_KEY_PREFIX, which jset adds).
-K_HEATMAP = "heatmap:nifty50"
+K_HEATMAP = "heatmap:sector-universe:v2"
 K_QUOTE = "quote:{symbol}"
 K_USER_PORTFOLIO = "user:{uid}:portfolio"
 K_USER_ANALYTICS = "user:{uid}:analytics"

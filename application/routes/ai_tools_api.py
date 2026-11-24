@@ -26,11 +26,15 @@ def _email():
 def ai_tools_page():
     if not _auth_ok():
         return redirect(url_for("logIn"))
+    view = request.args.get("view", "watchlist")
+    active_tool_panel = view if view in {"watchlist", "alerts", "strategy", "idea"} else None
+    title = "Watchlist" if view == "watchlist" else "AI & Tools"
     return render_template(
         "aiTools.html",
         name=session.get("name", "User"),
         email=_email(),
-        title="AI & Tools",
+        title=title,
+        active_tool_panel=active_tool_panel,
     )
 
 

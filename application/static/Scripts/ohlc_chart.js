@@ -78,10 +78,11 @@
         const xOf = i => padL + gap * i + (gap - cw) / 2;
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const upColor = isDark ? '#22c55e' : '#16a34a';
-        const dnColor = '#ef4444';
-        const gridColor = isDark ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.18)';
-        const axisColor = isDark ? '#94a3b8' : '#64748b';
+        const cssVars = getComputedStyle(document.documentElement);
+        const upColor = (cssVars.getPropertyValue('--positive').trim() || (isDark ? '#35C07A' : '#0F9D58'));
+        const dnColor = (cssVars.getPropertyValue('--negative').trim() || (isDark ? '#F27266' : '#D93025'));
+        const gridColor = (cssVars.getPropertyValue('--chart-grid').trim() || (isDark ? '#222A35' : '#EEF1F5'));
+        const axisColor = (cssVars.getPropertyValue('--text-muted').trim() || (isDark ? '#7C8698' : '#8A93A5'));
 
         ctx.strokeStyle = gridColor;
         ctx.fillStyle = axisColor;
@@ -119,7 +120,7 @@
         });
 
         if (showMA && n >= 5) {
-            ctx.strokeStyle = isDark ? '#facc15' : '#ca8a04';
+            ctx.strokeStyle = cssVars.getPropertyValue('--warning').trim() || '#E8A100';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             let started = false;

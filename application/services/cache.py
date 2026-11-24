@@ -11,8 +11,8 @@ This module gives the rest of the app a single, simple API:
 
     from application.services.cache import jget, jset, jdelete, lock, mark_active
 
-    jset("heatmap:nifty50", payload, ttl=15)
-    data = jget("heatmap:nifty50")
+    jset("heatmap:sector-universe:v2", payload, ttl=15)
+    data = jget("heatmap:sector-universe:v2")
 
 When ``REDIS_URL`` is set, all operations go through Redis (shared across
 workers and dynos). When it is unset, we fall back to a process-local

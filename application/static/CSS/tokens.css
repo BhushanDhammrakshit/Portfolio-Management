@@ -1,0 +1,470 @@
+/* =========================================================================
+   financeCandle — Design tokens
+   Single source of truth for colour, type, spacing, radii and elevation.
+   Loaded after the legacy stylesheet so the old variables resolve here.
+   ========================================================================= */
+
+:root {
+    color-scheme: light;
+
+    /* ── Surfaces ─────────────────────────────────────────────── */
+    --bg-app: #F4F6F9;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F8FAFC;
+    --bg-raised: #FFFFFF;
+
+    /* ── Borders ──────────────────────────────────────────────── */
+    --border: #E5E8EE;
+    --border-strong: #CBD2DC;
+
+    /* ── Text ─────────────────────────────────────────────────── */
+    --text-primary: #1A2233;
+    --text-secondary: #5B6577;
+    --text-muted: #8A93A5;
+    --text-inverse: #FFFFFF;
+
+    /* ── Brand & meaning ──────────────────────────────────────── */
+    --brand: #1F6FEB;
+    --brand-hover: #1858BD;
+    --brand-soft: #EAF2FE;
+    --brand-border: #C3D9FB;
+    --positive: #0F9D58;
+    --positive-bg: #E8F6EE;
+    --negative: #D93025;
+    --negative-bg: #FDECEA;
+    --warning: #E8A100;
+    --warning-bg: #FFF8E6;
+    --warning-ink: #8A6100;
+    --warning-border: #F0D58A;
+    --positive-border: #BFE6D2;
+    --negative-border: #F3C3BE;
+    --info: var(--brand);
+    --info-bg: var(--brand-soft);
+
+    /* Inverse text on brand fills; dark tooltips */
+    --on-brand: #FFFFFF;
+    --tooltip-bg: #1A2233;
+    --tooltip-fg: #FFFFFF;
+    --tooltip-muted: #A0A9B8;
+    --overlay: rgba(15, 23, 42, 0.4);
+    --overlay-loader: rgba(244, 246, 249, 0.9);
+
+    /* Chart palette — muted, data-first */
+    --chart-1: #1F6FEB;
+    --chart-2: #5B93F0;
+    --chart-3: #93B7F5;
+    --chart-4: #BCD3F9;
+    --chart-5: #D9E6FB;
+    --chart-6: #E8EEF6;
+    --chart-accent: #E8A100;
+    --chart-grid: #EEF1F5;
+    --chart-axis: #8A93A5;
+
+    /* ── Focus ────────────────────────────────────────────────── */
+    --focus-ring: 0 0 0 2px rgba(31, 111, 235, 0.35);
+    --focus-ring-clip: inset 0 0 0 2px rgba(31, 111, 235, 0.35);
+    --focus-border: var(--brand);
+
+    /* ── Typography ───────────────────────────────────────────── */
+    --font-sans: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "Roboto Mono", ui-monospace, SFMono-Regular,
+        Menlo, Consolas, monospace;
+
+    --fs-page-title: 20px;
+    --lh-page-title: 28px;
+    --fs-section-title: 16px;
+    --lh-section-title: 24px;
+    --fs-card-title: 14px;
+    --fs-body: 14px;
+    --lh-body: 20px;
+    --fs-label: 12px;
+    --lh-label: 16px;
+    --fs-caption: 12px;
+    --lh-caption: 16px;
+    --fs-display: 28px;
+    --lh-display: 36px;
+    --fs-marketing-headline: 32px;
+    --lh-marketing-headline: 40px;
+    --fs-kpi: 20px;
+    --market-table-min-width: 640px;
+    --news-sidebar-min-width: 280px;
+    --market-heatmap-height: 60vh;
+    --market-tooltip-max-width: 250px;
+    --market-sector-column-min-width: 80px;
+    --market-sector-column-max-width: 140px;
+    --market-bar-max-width: 64px;
+    --market-label-row-height: 26px;
+    --fw-regular: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+
+    /* ── Spacing (8px grid) ───────────────────────────────────── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+
+    /* ── Radii ────────────────────────────────────────────────── */
+    --radius-tag: 4px;
+    --radius-sm: 4px;
+    --radius: 6px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-pill: 999px;
+    --border-width: 1px;
+    --account-nav-width: 200px;
+    --auth-card-width: 400px;
+    --billing-table-min-width: 640px;
+    --landing-content-width: 720px;
+    --table-row-height: 44px;
+
+    /* ── Elevation ────────────────────────────────────────────── */
+    --shadow-none: none;
+    --shadow-dropdown: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --shadow-modal: 0 1px 2px rgba(16, 24, 40, 0.05);
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    --header-height: 56px;
+    --ticker-height: 36px;
+    --sidebar-width: 240px;
+    --sidebar-width-collapsed: 64px;
+    --nav-rail-width: 64px;
+    --nav-panel-width: 208px;
+    --content-max: 1440px;
+    --page-pad: 24px;
+    --card-gap: 16px;
+    --card-head-height: 44px;
+    --bottom-nav-height: 56px;
+    --table-head-height: 40px;
+    --table-row-height: 44px;
+    --table-row-height-compact: 36px;
+    --control-height-small: 32px;
+    --control-height: 36px;
+    --control-height-large: 40px;
+    --tabs-height: 44px;
+    --badge-height: 20px;
+    --border-width: 1px;
+    --border-width-active: 2px;
+    --tooltip-max-width: 280px;
+    --table-picker-width: 180px;
+    --table-search-min-width: 240px;
+    --table-search-max-width: 360px;
+    --size-visually-hidden: 1px;
+    --space-negative-1: -1px;
+    --fs-kpi-label: 11px;
+    --fs-kpi-value: 20px;
+    --fs-micro: 9px;
+    --lh-kpi-value: 28px;
+    --chart-card-min-height: 240px;
+    --chart-placeholder-min-height: 200px;
+    --account-menu-width: 240px;
+    --persona-menu-width: 280px;
+    --chart-dialog-max-width: 1100px;
+    --chart-dialog-max-height: 720px;
+    --chart-dialog-width: 92vw;
+    --chart-dialog-height: 82vh;
+    --chart-dialog-mobile-width: 96vw;
+    --chart-dialog-mobile-height: 88vh;
+    --modal-max-width: 440px;
+    --upgrade-card-max-width: 560px;
+    --feedback-dialog-max-width: 460px;
+    --feedback-dialog-mobile-max-height: 88dvh;
+    --feedback-textarea-min-height: 120px;
+    --market-dot-size: 6px;
+    --analysis-context-width: 260px;
+    --analysis-signal-table-min-width: 900px;
+    --analysis-portfolio-table-min-width: 680px;
+    --analysis-control-width: 180px;
+    --analysis-search-width: 280px;
+    --analysis-sector-label-min-width: 90px;
+    --analysis-chart-height: 540px;
+    --analysis-chart-height-mobile: 420px;
+    --analysis-empty-min-height: 220px;
+    --analysis-portfolio-empty-min-height: 180px;
+    --analysis-kpi-cell-min-height: 84px;
+    --analysis-summary-cell-min-height: 76px;
+    --watchlist-table-min-width: 1080px;
+    --watchlist-menu-width: 96px;
+    --portfolio-holdings-table-min-width: 940px;
+    --import-method-row-min-height: 84px;
+    --broker-provider-mark-size: 48px;
+    --chat-card-height: min(720px, calc(100dvh - 220px));
+    --chat-card-min-height: 520px;
+    --chat-mobile-card-height: calc(100dvh - 190px);
+    --chat-mobile-card-min-height: 440px;
+    --chat-composer-height: 44px;
+    --chart-toolbar-height: 40px;
+    --chart-toolbar-button-height: 32px;
+    --status-dot-size: 8px;
+    --fs-table-cell: 13px;
+
+    /* ── Motion ───────────────────────────────────────────────── */
+    --transition: 140ms ease;
+    --transition-fast: 120ms ease;
+
+    /* ── Z-index ──────────────────────────────────────────────── */
+    --z-sidebar: 1040;
+    --z-header: 1050;
+    --z-dropdown: 1080;
+    --z-modal: 1090;
+    --z-feedback: 1080;
+
+    /* =====================================================================
+       Legacy aliases — the pre-redesign stylesheet and page templates still
+       read these names. Mapping them here is what re-skins those pages.
+       ===================================================================== */
+    --primary: var(--brand);
+    --primary-dark: var(--brand-hover);
+    --primary-light: var(--brand-soft);
+    --secondary: var(--text-secondary);
+    --accent: var(--warning);
+
+    --success: var(--positive);
+    --success-light: var(--positive-bg);
+    --danger: var(--negative);
+    --danger-light: var(--negative-bg);
+    --warning-light: var(--warning-bg);
+
+    --bg: var(--bg-app);
+    --surface: var(--bg-surface);
+    --surface-2: var(--bg-subtle);
+    --text: var(--text-primary);
+    --text-subtle: var(--text-muted);
+
+    --sidebar-bg: var(--bg-surface);
+    --sidebar-active: var(--brand);
+    --sidebar-text: var(--text-secondary);
+    --sidebar-hover: var(--bg-subtle);
+
+    --shadow-sm: none;
+    --shadow: none;
+    --shadow-md: var(--shadow-dropdown);
+    --shadow-lg: var(--shadow-modal);
+
+    --topbar-height: var(--header-height);
+    --sidebar-width-collapsed-legacy: 76px;
+
+    /* Skeleton */
+    --skel-base: #EDF1F6;
+    --skel-shine: #F8FAFC;
+}
+
+/* ── Dark theme ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg-app: #0E1218;
+    --bg-surface: #161B22;
+    --bg-subtle: #1C222B;
+    --bg-raised: #1C222B;
+
+    --border: #262D38;
+    --border-strong: #38414F;
+
+    --text-primary: #E6EAF0;
+    --text-secondary: #A0A9B8;
+    --text-muted: #7C8698;
+    --text-inverse: #0E1218;
+
+    --brand: #4C8DF6;
+    --brand-hover: #6AA1F8;
+    --brand-soft: rgba(76, 141, 246, 0.14);
+    --brand-border: rgba(76, 141, 246, 0.38);
+    --positive: #35C07A;
+    --positive-bg: rgba(53, 192, 122, 0.14);
+    --negative: #F27266;
+    --negative-bg: rgba(242, 114, 102, 0.14);
+    --warning: #F0B429;
+    --warning-bg: rgba(240, 180, 41, 0.14);
+    --warning-ink: #F0B429;
+    --warning-border: rgba(240, 180, 41, 0.38);
+    --positive-border: rgba(53, 192, 122, 0.38);
+    --negative-border: rgba(242, 114, 102, 0.38);
+    --overlay: rgba(0, 0, 0, 0.55);
+    --overlay-loader: rgba(14, 18, 24, 0.9);
+
+    --chart-1: #4C8DF6;
+    --chart-2: #78A8F8;
+    --chart-3: #9FC1FA;
+    --chart-4: #C2D7FC;
+    --chart-5: #D7E5FC;
+    --chart-6: #E5ECF7;
+    --chart-accent: #F0B429;
+    --chart-grid: #222A35;
+    --chart-axis: #7C8698;
+
+    --focus-ring: 0 0 0 2px rgba(76, 141, 246, 0.45);
+    --focus-ring-clip: inset 0 0 0 2px rgba(76, 141, 246, 0.45);
+
+    --skel-base: #1C222B;
+    --skel-shine: #262D38;
+}
+
+/* Auto theme — follows the OS when data-theme="auto" is present. */
+@media (prefers-color-scheme: dark) {
+    [data-theme="auto"] {
+        color-scheme: dark;
+
+        --bg-app: #0E1218;
+        --bg-surface: #161B22;
+        --bg-subtle: #1C222B;
+        --bg-raised: #1C222B;
+
+        --border: #262D38;
+        --border-strong: #38414F;
+
+        --text-primary: #E6EAF0;
+        --text-secondary: #A0A9B8;
+        --text-muted: #7C8698;
+        --text-inverse: #0E1218;
+
+        --brand: #4C8DF6;
+        --brand-hover: #6AA1F8;
+        --brand-soft: rgba(76, 141, 246, 0.14);
+        --brand-border: rgba(76, 141, 246, 0.38);
+        --positive: #35C07A;
+        --positive-bg: rgba(53, 192, 122, 0.14);
+        --negative: #F27266;
+        --negative-bg: rgba(242, 114, 102, 0.14);
+        --warning: #F0B429;
+        --warning-bg: rgba(240, 180, 41, 0.14);
+        --warning-ink: #F0B429;
+        --warning-border: rgba(240, 180, 41, 0.38);
+        --positive-border: rgba(53, 192, 122, 0.38);
+        --negative-border: rgba(242, 114, 102, 0.38);
+        --overlay: rgba(0, 0, 0, 0.55);
+        --overlay-loader: rgba(14, 18, 24, 0.9);
+
+        --chart-1: #4C8DF6;
+        --chart-2: #78A8F8;
+        --chart-3: #9FC1FA;
+        --chart-4: #C2D7FC;
+        --chart-5: #D7E5FC;
+        --chart-6: #E5ECF7;
+        --chart-accent: #F0B429;
+        --chart-grid: #222A35;
+        --chart-axis: #7C8698;
+
+        --focus-ring: 0 0 0 2px rgba(76, 141, 246, 0.45);
+        --focus-ring-clip: inset 0 0 0 2px rgba(76, 141, 246, 0.45);
+
+        --skel-base: #1C222B;
+        --skel-shine: #262D38;
+    }
+}
+
+/* ── Base typography ─────────────────────────────────────────── */
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--text-primary);
+    background: var(--bg-app);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    font-weight: var(--fw-semibold);
+    line-height: 1.35;
+}
+
+h1 { font-size: var(--fs-page-title); line-height: var(--lh-page-title); }
+h2 { font-size: var(--fs-section-title); line-height: var(--lh-section-title); }
+h3 { font-size: 16px; line-height: 24px; }
+h4 { font-size: 14px; line-height: 20px; }
+h5 { font-size: 14px; line-height: 20px; }
+h6 { font-size: 13px; line-height: 20px; }
+
+p { color: var(--text-secondary); }
+
+small,
+.text-small {
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+}
+
+a {
+    color: var(--brand);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover { color: var(--brand-hover); }
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    opacity: 1;
+    margin: var(--space-4) 0;
+}
+
+::selection {
+    background: var(--brand-soft);
+    color: var(--brand);
+}
+
+:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+/* Numeric type — every price/percent/quantity aligns in a column. */
+.num,
+.fc-num,
+[data-num],
+.ticker-val,
+.ticker-chg,
+.dash-card-value,
+.metric-value,
+.fc-stat-value,
+.holding-current,
+.holding-gain,
+.kpi-box .val,
+.rvol-cell .rv-val,
+.pa-kpi-value,
+.pa-card-pl-value,
+.pa-card-pl-pct,
+.stock-detail-value,
+.fa-target-value,
+.fa-pillar-value,
+.plan-price,
+tbody td.num,
+.tool-table .num,
+.adv-table .num,
+td.text-end,
+th.text-end {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+:root[lang] ::-webkit-scrollbar { width: 8px; height: 8px; }
+:root[lang] ::-webkit-scrollbar-track { background: transparent; }
+:root[lang] ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-pill);
+}
+:root[lang] ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

@@ -1,0 +1,55 @@
+{% from "_icons.html" import icon %}
+
+{% macro ProBadge() -%}
+<span class="pro-badge">Pro</span>
+{%- endmacro %}
+
+{% macro NavRow(href, icon_name, label, active=false, pro=false) -%}
+<a href="{{ href }}" class="nav-row{% if active %} active{% endif %}"{% if active %} aria-current="page"{% endif %}>
+    {{ icon(icon_name, 16) }}<span>{{ label }}</span>{% if pro %}{{ ProBadge() }}{% endif %}
+</a>
+{%- endmacro %}
+
+{% macro AccountMenu(is_admin=false) -%}
+<ul class="dropdown-menu account-menu" aria-label="Account">
+    <li><a class="dropdown-item" href="{{ url_for('profile_page') }}">{{ icon('user', 16) }} My Account</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('billing.billing_page') }}">{{ icon('credit-card', 16) }} Plans &amp; Billing</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('settings') }}">{{ icon('settings', 16) }} Settings</a></li>
+    <li><a class="dropdown-item" href="#" onclick="window.openFeedbackModal();return false">{{ icon('mail', 16) }} Send Feedback</a></li>
+    {% if is_admin %}<li><a class="dropdown-item" href="{{ url_for('admin_portal.admin_page') }}">{{ icon('shield', 16) }} Admin Portal</a></li>{% endif %}
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item account-logout" href="#" id="logoutLink">{{ icon('log-out', 16) }} Logout</a></li>
+</ul>
+{%- endmacro %}
+
+{% macro SectionCard(title, href='#') -%}
+<section class="section-card">
+    <header class="section-card-heading">
+        <h2 class="section-card-title">{{ title }}</h2>
+        <a class="section-card-view-all" href="{{ href }}">View All &gt;</a>
+    </header>
+    <div class="section-card-content">{{ caller() }}</div>
+</section>
+{%- endmacro %}
+
+{% macro ScanCardRow(cards) -%}
+<div class="scan-card-row-wrap">
+    <div class="scan-card-row" role="list">
+        {% for card in cards %}
+        <a class="scan-card" role="listitem" href="{{ card.href }}">
+            <h3 class="scan-card-title">{{ icon(card.icon, 16) }}{{ card.title }}</h3>
+            <span class="scan-card-count">{{ card.count }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    <button type="button" class="scan-row-arrow scan-row-arrow-left" data-scroll-direction="-1" aria-label="Scroll scans left">{{ icon('chevron-left', 16) }}</button>
+    <button type="button" class="scan-row-arrow scan-row-arrow-right" data-scroll-direction="1" aria-label="Scroll scans right">{{ icon('chevron-right', 16) }}</button>
+</div>
+{%- endmacro %}
+
+{% macro InfoBanner(message, href='#', link_label='Learn more') -%}
+<div class="info-banner">
+    <span>{{ message }}</span>
+    {% if href != '#' %}<a href="{{ href }}">{{ link_label }}</a>{% endif %}
+</div>
+{%- endmacro %}

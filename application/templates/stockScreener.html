@@ -1,0 +1,702 @@
+{% extends "layout.html" %}
+{% from "_icons.html" import icon %}
+{% block content %}
+<div class="scans-page screener-page">
+    <header class="page-header">
+        <div>
+            <h1>Stock Screener</h1>
+            <p>Filter NSE stocks on price, volume, fundamentals, technicals and sector.</p>
+        </div>
+        <div class="scans-actions">
+            <span class="scans-asof" id="screenerAsOf"></span>
+            <button type="button" class="ds-button ds-button-secondary ds-button-small" id="screenerRefresh">
+                {{ icon('rotate', 14) }} Refresh
+            </button>
+        </div>
+    </header>
+
+    <div class="ds-info-banner-wrap">
+        <div class="info-banner" id="screenerBanner" role="status">
+            Loading the screening universe — the first run can take a minute while fundamentals are fetched.
+        </div>
+    </div>
+
+    <div class="screener-shell" id="screenerShell">
+        <aside class="screener-panel" id="screenerPanel" aria-label="Screener filters">
+            <div class="screener-panel-head">
+                <span class="screener-panel-title">Filters</span>
+                <button type="button" class="screener-panel-close" id="screenerPanelClose" aria-label="Collapse filters" title="Collapse filters">
+                    {{ icon('chevron-left', 16) }}
+                </button>
+            </div>
+
+            <div class="saved-screens">
+                <label class="ds-field-label" for="savedScreens">Saved screens</label>
+                <div class="saved-screens-row">
+                    <select class="ds-input" id="savedScreens" aria-label="Saved screens">
+                        <option value="">— Select a screen —</option>
+                    </select>
+                    <button type="button" class="ds-button ds-button-secondary ds-button-small" id="saveScreen" title="Save current filters">Save</button>
+                    <button type="button" class="ds-button ds-button-ghost ds-button-small" id="deleteScreen" title="Delete selected screen" aria-label="Delete selected screen">×</button>
+                </div>
+            </div>
+
+            <div class="screener-filters">
+                <details class="filter-group" open>
+                    <summary>Price {{ icon('chevron-down', 14) }}</summary>
+                    <div class="filter-body">
+                        <div class="filter-range">
+                            <label class="filter-field" for="fPriceMin"><span>Min ₹</span>
+                                <input class="ds-input" id="fPriceMin" type="number" min="0" step="1" inputmode="decimal" placeholder="Any">
+                            </label>
+                            <label class="filter-field" for="fPriceMax"><span>Max ₹</span>
+                                <input class="ds-input" id="fPriceMax" type="number" min="0" step="1" inputmode="decimal" placeholder="Any">
+                            </label>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="filter-group" open>
+                    <summary>Volume {{ icon('chevron-down', 14) }}</summary>
+                    <div class="filter-body">
+                        <label class="filter-field" for="fVolMin"><span>Today vs 50-day avg</span>
+                            <select class="ds-input" id="fVolMin">
+                                <option value="">Any multiple</option>
+                                <option value="1">≥ 1×</option>
+                                <option value="1.5">≥ 1.5×</option>
+                                <option value="2">≥ 2×</option>
+                                <option value="3">≥ 3×</option>
+                            </select>
+                        </label>
+                        <label class="filter-field" for="fTurnoverMin"><span>Min turnover (₹ Cr)</span>
+                            <input class="ds-input" id="fTurnoverMin" type="number" min="0" step="1" inputmode="decimal" placeholder="Any">
+                        </label>
+                    </div>
+                </details>
+
+                <details class="filter-group">
+                    <summary>Fundamentals {{ icon('chevron-down', 14) }}</summary>
+                    <div class="filter-body">
+                        <div class="filter-range">
+                            <label class="filter-field" for="fPeMax"><span>P/E max</span>
+                                <input class="ds-input" id="fPeMax" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Any">
+                            </label>
+                            <label class="filter-field" for="fRoeMin"><span>ROE min %</span>
+                                <input class="ds-input" id="fRoeMin" type="number" step="0.1" inputmode="decimal" placeholder="Any">
+                            </label>
+                        </div>
+                        <div class="filter-range">
+                            <label class="filter-field" for="fDeMax"><span>Debt / equity max</span>
+                                <input class="ds-input" id="fDeMax" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Any">
+                            </label>
+                            <label class="filter-field" for="fGrowthMin"><span>Revenue 3Y CAGR min %</span>
+                                <input class="ds-input" id="fGrowthMin" type="number" step="0.1" inputmode="decimal" placeholder="Any">
+                            </label>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="filter-group">
+                    <summary>Technicals {{ icon('chevron-down', 14) }}</summary>
+                    <div class="filter-body">
+                        <label class="filter-check"><input type="checkbox" id="fAbove50"> <span>Price above 50-day SMA</span></label>
+                        <label class="filter-check"><input type="checkbox" id="fAbove200"> <span>Price above 200-day SMA</span></label>
+                        <div class="filter-range">
+                            <label class="filter-field" for="fNear52w"><span>Within % of 52W high</span>
+                                <input class="ds-input" id="fNear52w" type="number" min="0" max="100" step="1" inputmode="decimal" placeholder="Any">
+                            </label>
+                            <label class="filter-field" for="fRet3mMin"><span>3M return min %</span>
+                                <input class="ds-input" id="fRet3mMin" type="number" step="0.1" inputmode="decimal" placeholder="Any">
+                            </label>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="filter-group">
+                    <summary>Sector {{ icon('chevron-down', 14) }}</summary>
+                    <div class="filter-body">
+                        <div class="filter-checks" id="sectorChecks">
+                            <span class="filter-check"><span>Loading sectors…</span></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="screener-panel-foot">
+                <button type="button" class="ds-button ds-button-primary ds-button-small" id="resetFilters">Reset</button>
+            </div>
+        </aside>
+
+        <section class="ds-card screener-results" aria-label="Screener results">
+            <div class="screener-toolbar">
+                <button type="button" class="ds-button ds-button-secondary ds-button-small" id="screenerPanelOpen">
+                    {{ icon('panel-left', 14) }} Filters
+                </button>
+                <span class="result-count"><strong id="resultCount">0</strong> stocks</span>
+                <div class="filter-chips" id="activeFilters"></div>
+                <div class="screener-toolbar-actions">
+                    <input class="ds-input screener-search" id="screenerSearch" type="search" placeholder="Search symbol, name or sector" aria-label="Search screener results">
+                    <details class="ds-column-picker">
+                        <summary>Columns</summary>
+                        <div class="ds-column-options" id="screenColumns">
+                            <label><input type="checkbox" data-col="0" checked> Stock</label>
+                            <label><input type="checkbox" data-col="1" checked> Sector</label>
+                            <label><input type="checkbox" data-col="2" checked> Price</label>
+                            <label><input type="checkbox" data-col="3" checked> Volume multiple</label>
+                            <label><input type="checkbox" data-col="4" checked> 1M return</label>
+                            <label><input type="checkbox" data-col="5" checked> 3M return</label>
+                            <label><input type="checkbox" data-col="6" checked> From 52W high</label>
+                            <label><input type="checkbox" data-col="7" checked> P/E</label>
+                            <label><input type="checkbox" data-col="8" checked> ROE</label>
+                            <label><input type="checkbox" data-col="9" checked> Debt / equity</label>
+                            <label><input type="checkbox" data-col="10" checked> Revenue 3Y CAGR</label>
+                            <label><input type="checkbox" data-col="11" checked> Market cap</label>
+                        </div>
+                    </details>
+                    <button type="button" class="ds-button ds-button-secondary ds-button-small" id="screenerExport">
+                        {{ icon('download', 14) }} Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="ds-table-scroll">
+                <table class="ds-table screener-table" id="screenerTable">
+                    <thead>
+                        <tr>
+                            <th scope="col" data-col="0">Stock</th>
+                            <th scope="col" data-col="1">Sector</th>
+                            <th scope="col" data-col="2" class="is-numeric">Price</th>
+                            <th scope="col" data-col="3" class="is-numeric">Vol ×</th>
+                            <th scope="col" data-col="4" class="is-numeric">1M</th>
+                            <th scope="col" data-col="5" class="is-numeric">3M</th>
+                            <th scope="col" data-col="6" class="is-numeric">52W</th>
+                            <th scope="col" data-col="7" class="is-numeric">P/E</th>
+                            <th scope="col" data-col="8" class="is-numeric">ROE</th>
+                            <th scope="col" data-col="9" class="is-numeric">D/E</th>
+                            <th scope="col" data-col="10" class="is-numeric">Rev 3Y</th>
+                            <th scope="col" data-col="11" class="is-numeric">Mkt cap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="screenerRows">
+                        <tr><td class="ds-table-empty" colspan="12">Loading screening universe…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="screener-footer">
+                <span id="screenerCoverage">—</span>
+                <span id="screenerMeta"></span>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    var STORAGE_KEY = "fcScreenerScreens:v1";
+    var COLLAPSE_KEY = "fcScreenerCollapsed";
+    var F = window.FCFormat || {};
+    var rows = [];
+    var sectors = [];
+    var visibleCols = 12;
+    var search = "";
+    var selectedScreen = "";
+
+    var columns = [
+        { key: "symbol", label: "Stock", numeric: false },
+        { key: "sector", label: "Sector", numeric: false },
+        { key: "price", label: "Price", numeric: true },
+        { key: "vol_multiple", label: "Volume multiple", numeric: true },
+        { key: "ret_1m", label: "1M return", numeric: true },
+        { key: "ret_3m", label: "3M return", numeric: true },
+        { key: "pct_from_52h", label: "From 52W high", numeric: true },
+        { key: "pe", label: "P/E", numeric: true },
+        { key: "roe", label: "ROE", numeric: true },
+        { key: "de", label: "Debt / equity", numeric: true },
+        { key: "rev_growth_3y", label: "Revenue 3Y CAGR", numeric: true },
+        { key: "market_cap", label: "Market cap", numeric: true }
+    ];
+
+    var filters = {
+        priceMin: null,
+        priceMax: null,
+        volMin: null,
+        turnoverMin: null,
+        peMax: null,
+        roeMin: null,
+        deMax: null,
+        growthMin: null,
+        above50: false,
+        above200: false,
+        near52w: null,
+        ret3mMin: null,
+        sectors: []
+    };
+
+    function $(id) { return document.getElementById(id); }
+    function numberValue(id) {
+        var raw = $(id).value.trim();
+        if (raw === "") return null;
+        var value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+    }
+    function fmtCurrency(value) {
+        return window.FCFormat ? window.FCFormat.currency(value) : (value == null ? "N/A" : "₹" + Number(value).toLocaleString("en-IN"));
+    }
+    function fmtPercent(value, signed) {
+        return window.FCFormat ? window.FCFormat.percent(value, signed) : (value == null ? "N/A" : Number(value).toFixed(2) + "%");
+    }
+    function fmtNumber(value, digits) {
+        return window.FCFormat ? window.FCFormat.number(value, digits == null ? 2 : digits) : (value == null ? "N/A" : Number(value).toFixed(digits == null ? 2 : digits));
+    }
+    function fmtCap(value) {
+        return window.FCFormat ? window.FCFormat.volume(value) : (value == null ? "N/A" : String(value));
+    }
+    function na(title) {
+        return '<span class="fc-na" title="' + escapeHtml(title || "This value is unavailable.") + '">N/A</span>';
+    }
+    function escapeHtml(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character];
+        });
+    }
+
+    function readFilters() {
+        filters.priceMin = numberValue("fPriceMin");
+        filters.priceMax = numberValue("fPriceMax");
+        filters.volMin = numberValue("fVolMin");
+        filters.turnoverMin = numberValue("fTurnoverMin");
+        filters.peMax = numberValue("fPeMax");
+        filters.roeMin = numberValue("fRoeMin");
+        filters.deMax = numberValue("fDeMax");
+        filters.growthMin = numberValue("fGrowthMin");
+        filters.above50 = $("fAbove50").checked;
+        filters.above200 = $("fAbove200").checked;
+        filters.near52w = numberValue("fNear52w");
+        filters.ret3mMin = numberValue("fRet3mMin");
+        filters.sectors = Array.prototype.slice.call(document.querySelectorAll("[data-sector]:checked"))
+            .map(function (input) { return input.value; });
+    }
+
+    function applyFiltersToForm() {
+        $("fPriceMin").value = filters.priceMin == null ? "" : filters.priceMin;
+        $("fPriceMax").value = filters.priceMax == null ? "" : filters.priceMax;
+        $("fVolMin").value = filters.volMin == null ? "" : String(filters.volMin);
+        $("fTurnoverMin").value = filters.turnoverMin == null ? "" : filters.turnoverMin;
+        $("fPeMax").value = filters.peMax == null ? "" : filters.peMax;
+        $("fRoeMin").value = filters.roeMin == null ? "" : filters.roeMin;
+        $("fDeMax").value = filters.deMax == null ? "" : filters.deMax;
+        $("fGrowthMin").value = filters.growthMin == null ? "" : filters.growthMin;
+        $("fAbove50").checked = !!filters.above50;
+        $("fAbove200").checked = !!filters.above200;
+        $("fNear52w").value = filters.near52w == null ? "" : filters.near52w;
+        $("fRet3mMin").value = filters.ret3mMin == null ? "" : filters.ret3mMin;
+        document.querySelectorAll("[data-sector]").forEach(function (input) {
+            input.checked = (filters.sectors || []).indexOf(input.value) !== -1;
+        });
+    }
+
+    function passes(row) {
+        if (filters.priceMin != null && (row.price == null || row.price < filters.priceMin)) return false;
+        if (filters.priceMax != null && (row.price == null || row.price > filters.priceMax)) return false;
+        if (filters.volMin != null && (row.vol_multiple == null || row.vol_multiple < filters.volMin)) return false;
+        if (filters.turnoverMin != null && (row.turnover_cr == null || row.turnover_cr < filters.turnoverMin)) return false;
+        if (filters.peMax != null && (row.pe == null || row.pe <= 0 || row.pe > filters.peMax)) return false;
+        if (filters.roeMin != null && (row.roe == null || row.roe < filters.roeMin)) return false;
+        if (filters.deMax != null && (row.de == null || row.de > filters.deMax)) return false;
+        if (filters.growthMin != null && (row.rev_growth_3y == null || row.rev_growth_3y < filters.growthMin)) return false;
+        if (filters.above50 && !row.above_sma50) return false;
+        if (filters.above200 && !row.above_sma200) return false;
+        if (filters.near52w != null && (row.pct_from_52h == null || row.pct_from_52h < -Math.abs(filters.near52w))) return false;
+        if (filters.ret3mMin != null && (row.ret_3m == null || row.ret_3m < filters.ret3mMin)) return false;
+        if (filters.sectors && filters.sectors.length && filters.sectors.indexOf(row.sector) === -1) return false;
+        if (search) {
+            var haystack = [row.symbol, row.name, row.sector].join(" ").toLowerCase();
+            if (haystack.indexOf(search) === -1) return false;
+        }
+        return true;
+    }
+
+    function cellValue(row, key, numeric) {
+        if (key === "symbol") {
+            return '<td data-col="0"><span class="stock-cell" data-symbol="' + escapeHtml(row.symbol) + '" title="Open chart">' +
+                escapeHtml(row.symbol) + "<small>" + escapeHtml(row.name || "") + "</small></span></td>";
+        }
+        if (key === "sector") {
+            return '<td data-col="1" class="sector-cell">' + (row.sector ? escapeHtml(row.sector) : na("Sector is unavailable.")) + "</td>";
+        }
+        if (key === "price") {
+            return '<td data-col="2" class="is-numeric">' + (row.price == null ? na("Price is unavailable.") : fmtCurrency(row.price)) + "</td>";
+        }
+        if (key === "vol_multiple") {
+            if (row.vol_multiple == null) return '<td data-col="3" class="is-numeric">' + na("Volume multiple is unavailable.") + "</td>";
+            var hot = row.vol_multiple >= 3 ? " is-hot" : (row.vol_multiple >= 2 ? " is-warm" : (row.vol_multiple >= 1 ? " is-calm" : ""));
+            var width = Math.max(4, Math.min(100, row.vol_multiple / 4 * 100));
+            return '<td data-col="3" class="is-numeric"><span class="vol-multiple' + hot + '">' +
+                '<span class="vol-meter"><span class="vol-meter-fill' + hot + '" style="width:' + width.toFixed(0) + '%"></span></span>' +
+                fmtNumber(row.vol_multiple, 2) + "×</span></td>";
+        }
+        if (key === "market_cap") {
+            return '<td data-col="11" class="is-numeric">' + (row.market_cap == null ? na("Market cap is unavailable.") : fmtCap(row.market_cap)) + "</td>";
+        }
+        var index = columns.map(function (column) { return column.key; }).indexOf(key);
+        var value = row[key];
+        if (value == null) return '<td data-col="' + index + '" class="is-numeric">' + na(columns[index].label + " is unavailable for this stock.") + "</td>";
+        if (key === "pct_from_52h") {
+            return '<td data-col="' + index + '" class="is-numeric">' + fmtPercent(value, false) + "</td>";
+        }
+        if (key === "pe") {
+            return '<td data-col="' + index + '" class="is-numeric">' + fmtNumber(value, 1) + "</td>";
+        }
+        if (key === "de") {
+            return '<td data-col="' + index + '" class="is-numeric">' + fmtNumber(value, 2) + "</td>";
+        }
+        return '<td data-col="' + index + '" class="is-numeric">' + fmtPercent(value, true) + "</td>";
+    }
+
+    function renderRows() {
+        var matched = rows.filter(passes);
+        $("resultCount").textContent = matched.length.toLocaleString("en-IN");
+        var body = $("screenerRows");
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="12"><div class="screener-no-data">The screening universe has not produced data for this session yet. ' +
+                'Use <strong>Refresh</strong> to rebuild it.</div></td></tr>';
+            return;
+        }
+        if (!matched.length) {
+            body.innerHTML = '<tr><td colspan="12"><div class="screener-no-data">No stocks match the selected filters. <button type="button" class="ds-button ds-button-ghost ds-button-small" id="emptyReset">Reset filters</button></div></td></tr>';
+            var reset = $("emptyReset");
+            if (reset) reset.addEventListener("click", resetFilters);
+            return;
+        }
+        body.innerHTML = matched.map(function (row) {
+            return "<tr>" + columns.map(function (column) {
+                return cellValue(row, column.key, column.numeric);
+            }).join("") + "</tr>";
+        }).join("");
+        applyColumnVisibility();
+        body.querySelectorAll(".stock-cell").forEach(function (cell) {
+            cell.addEventListener("click", function () {
+                window.location.href = "/intraday?symbol=" + encodeURIComponent(cell.getAttribute("data-symbol"));
+            });
+        });
+    }
+
+    function chip(label, clear) {
+        var item = document.createElement("span");
+        item.className = "ds-chip filter-chip";
+        item.appendChild(document.createTextNode(label));
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "filter-chip-remove";
+        button.setAttribute("aria-label", "Remove filter " + label);
+        button.textContent = "×";
+        button.addEventListener("click", function () {
+            clear();
+            renderAll();
+        });
+        item.appendChild(button);
+        return item;
+    }
+
+    function renderChips() {
+        var target = $("activeFilters");
+        target.innerHTML = "";
+        if (filters.priceMin != null || filters.priceMax != null) {
+            var min = filters.priceMin == null ? "Any" : "₹" + filters.priceMin.toLocaleString("en-IN");
+            var max = filters.priceMax == null ? "Any" : "₹" + filters.priceMax.toLocaleString("en-IN");
+            target.appendChild(chip("Price " + min + "–" + max, function () {
+                filters.priceMin = null; filters.priceMax = null;
+                applyFiltersToForm();
+            }));
+        }
+        if (filters.volMin != null) {
+            target.appendChild(chip("Volume ≥ " + filters.volMin + "×", function () {
+                filters.volMin = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.turnoverMin != null) {
+            target.appendChild(chip("Turnover ≥ ₹" + filters.turnoverMin + " Cr", function () {
+                filters.turnoverMin = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.peMax != null) {
+            target.appendChild(chip("P/E ≤ " + filters.peMax, function () {
+                filters.peMax = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.roeMin != null) {
+            target.appendChild(chip("ROE ≥ " + filters.roeMin + "%", function () {
+                filters.roeMin = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.deMax != null) {
+            target.appendChild(chip("D/E ≤ " + filters.deMax, function () {
+                filters.deMax = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.growthMin != null) {
+            target.appendChild(chip("Revenue CAGR ≥ " + filters.growthMin + "%", function () {
+                filters.growthMin = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.above50) {
+            target.appendChild(chip("Above 50-DMA", function () {
+                filters.above50 = false; applyFiltersToForm();
+            }));
+        }
+        if (filters.above200) {
+            target.appendChild(chip("Above 200-DMA", function () {
+                filters.above200 = false; applyFiltersToForm();
+            }));
+        }
+        if (filters.near52w != null) {
+            target.appendChild(chip("Within " + filters.near52w + "% of 52W high", function () {
+                filters.near52w = null; applyFiltersToForm();
+            }));
+        }
+        if (filters.ret3mMin != null) {
+            target.appendChild(chip("3M return ≥ " + filters.ret3mMin + "%", function () {
+                filters.ret3mMin = null; applyFiltersToForm();
+            }));
+        }
+        (filters.sectors || []).forEach(function (sector) {
+            target.appendChild(chip("Sector: " + sector, function () {
+                filters.sectors = filters.sectors.filter(function (item) { return item !== sector; });
+                applyFiltersToForm();
+            }));
+        });
+        if (search) {
+            target.appendChild(chip('Search: "' + search + '"', function () {
+                search = "";
+                $("screenerSearch").value = "";
+            }));
+        }
+    }
+
+    function renderSectors() {
+        var host = $("sectorChecks");
+        if (!sectors.length) {
+            host.innerHTML = '<span class="filter-check"><span>No sector data available.</span></span>';
+            return;
+        }
+        host.innerHTML = sectors.map(function (sector) {
+            return '<label class="filter-check"><input type="checkbox" data-sector value="' + escapeHtml(sector.name) + '">' +
+                "<span>" + escapeHtml(sector.name) + "</span><small>" + sector.count + "</small></label>";
+        }).join("");
+        host.querySelectorAll("[data-sector]").forEach(function (input) {
+            input.addEventListener("change", function () {
+                readFilters();
+                renderChips();
+                renderRows();
+            });
+        });
+        applyFiltersToForm();
+    }
+
+    function applyColumnVisibility() {
+        var hidden = {};
+        document.querySelectorAll("#screenColumns input[data-col]").forEach(function (input) {
+            hidden[Number(input.getAttribute("data-col"))] = !input.checked;
+        });
+        visibleCols = 0;
+        Object.keys(hidden).forEach(function (key) { if (!hidden[key]) visibleCols += 1; });
+        document.querySelectorAll("#screenerTable [data-col]").forEach(function (cell) {
+            cell.hidden = !!hidden[Number(cell.getAttribute("data-col"))];
+        });
+    }
+
+    function renderAll() {
+        readFilters();
+        renderChips();
+        renderRows();
+    }
+
+    function resetFilters() {
+        filters = {
+            priceMin: null, priceMax: null, volMin: null, turnoverMin: null,
+            peMax: null, roeMin: null, deMax: null, growthMin: null,
+            above50: false, above200: false, near52w: null, ret3mMin: null, sectors: []
+        };
+        search = "";
+        $("screenerSearch").value = "";
+        applyFiltersToForm();
+        renderAll();
+    }
+
+    function loadScreens() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function saveScreens(screens) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(screens)); } catch (error) {}
+    }
+
+    function renderSavedScreens() {
+        var select = $("savedScreens");
+        var screens = loadScreens();
+        select.innerHTML = '<option value="">— Select a screen —</option>' + screens.map(function (screen) {
+            return '<option value="' + escapeHtml(screen.name) + '">' + escapeHtml(screen.name) + "</option>";
+        }).join("");
+        select.value = selectedScreen || "";
+    }
+
+    function saveCurrentScreen() {
+        var name = window.prompt("Name this screen");
+        if (!name) return;
+        name = name.trim().slice(0, 48);
+        if (!name) return;
+        readFilters();
+        var screens = loadScreens().filter(function (screen) { return screen.name !== name; });
+        screens.unshift({ name: name, filters: filters });
+        saveScreens(screens.slice(0, 20));
+        selectedScreen = name;
+        renderSavedScreens();
+    }
+
+    function applyScreen(name) {
+        var screen = loadScreens().filter(function (item) { return item.name === name; })[0];
+        if (!screen || !screen.filters) return;
+        filters = Object.assign({}, filters, screen.filters);
+        filters.sectors = Array.isArray(filters.sectors) ? filters.sectors : [];
+        applyFiltersToForm();
+        renderAll();
+    }
+
+    function deleteScreen() {
+        if (!selectedScreen) return;
+        saveScreens(loadScreens().filter(function (screen) { return screen.name !== selectedScreen; }));
+        selectedScreen = "";
+        renderSavedScreens();
+    }
+
+    function exportCsv() {
+        var matched = rows.filter(passes);
+        var cols = [];
+        document.querySelectorAll("#screenColumns input[data-col]").forEach(function (input) {
+            var index = Number(input.getAttribute("data-col"));
+            if (input.checked) cols.push(index);
+        });
+        var lines = [cols.map(function (index) {
+            return '"' + columns[index].label.replace(/"/g, '""') + '"';
+        }).join(",")];
+        matched.forEach(function (row) {
+            lines.push(cols.map(function (index) {
+                var key = columns[index].key;
+                var value = key === "symbol" ? row.symbol + " " + (row.name || "") : row[key];
+                return '"' + String(value == null ? "" : value).replace(/"/g, '""') + '"';
+            }).join(","));
+        });
+        var blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = "stock-screener.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function setBanner(text) {
+        $("screenerBanner").textContent = text;
+    }
+
+    var refreshLabel = $("screenerRefresh").innerHTML;
+
+    function load(force) {
+        var button = $("screenerRefresh");
+        button.disabled = true;
+        button.textContent = "Loading…";
+        setBanner("Loading the screening universe — the first run can take a minute while fundamentals are fetched.");
+        $("screenerRows").innerHTML = '<tr><td class="ds-table-empty" colspan="12">Loading screening universe…</td></tr>';
+        var url = "/api/stock-screener" + (force ? "?refresh=1" : "");
+        fetch(url, { headers: { Accept: "application/json" } })
+            .then(function (response) {
+                if (response.status === 401) {
+                    window.location.href = "/login";
+                    return null;
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (!payload) return;
+                if (payload.error) throw new Error(payload.detail || payload.error || "Screener unavailable");
+                rows = Array.isArray(payload.rows) ? payload.rows : [];
+                sectors = Array.isArray(payload.sectors) ? payload.sectors : [];
+                $("screenerAsOf").textContent = payload.as_of ? "As of " + payload.as_of : "";
+                $("screenerMeta").textContent = payload.cached ? "Cached universe" : "Freshly scanned";
+                $("screenerCoverage").textContent = (payload.fundamentals_covered || 0) + " of " + rows.length +
+                    " stocks have fundamentals · " + (payload.universe_size || rows.length) + "-stock universe";
+                if (!rows.length) {
+                    setBanner("The screening universe is empty right now — the cached market scan has no rows. Refresh to rebuild it.");
+                } else if (payload.fundamentals_partial) {
+                    setBanner("Fundamentals are only available for part of the universe. Refresh to backfill missing names — results are cached for 3 minutes until then.");
+                } else {
+                    setBanner("Screening " + rows.length + " liquid NSE stocks. Filters run locally and update instantly.");
+                }
+                renderSectors();
+                renderAll();
+            })
+            .catch(function (error) {
+                $("screenerRows").innerHTML = '<tr><td colspan="12"><div class="screener-no-data">Could not load the screening universe. ' +
+                    escapeHtml(error.message || "Please try again.") + "</div></td></tr>";
+                setBanner("Screener data is unavailable right now. Try refreshing in a moment.");
+            })
+            .finally(function () {
+                button.disabled = false;
+                button.innerHTML = refreshLabel;
+            });
+    }
+
+    // The table and filters are wired once; every input applies immediately.
+    ["fPriceMin", "fPriceMax", "fTurnoverMin", "fPeMax", "fRoeMin", "fDeMax", "fGrowthMin", "fNear52w", "fRet3mMin"].forEach(function (id) {
+        $(id).addEventListener("input", renderAll);
+    });
+    ["fVolMin", "fAbove50", "fAbove200"].forEach(function (id) {
+        $(id).addEventListener("change", renderAll);
+    });
+    $("screenerSearch").addEventListener("input", function (event) {
+        search = event.target.value.trim().toLowerCase();
+        renderChips();
+        renderRows();
+    });
+    $("resetFilters").addEventListener("click", resetFilters);
+    $("screenerRefresh").addEventListener("click", function () { load(true); });
+    $("saveScreen").addEventListener("click", saveCurrentScreen);
+    $("deleteScreen").addEventListener("click", deleteScreen);
+    $("savedScreens").addEventListener("change", function (event) {
+        selectedScreen = event.target.value;
+        if (selectedScreen) applyScreen(selectedScreen);
+    });
+    $("screenerExport").addEventListener("click", exportCsv);
+    $("screenColumns").addEventListener("change", applyColumnVisibility);
+
+    function setCollapsed(collapsed) {
+        $("screenerShell").classList.toggle("is-collapsed", collapsed);
+        try { localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0"); } catch (error) {}
+    }
+    $("screenerPanelClose").addEventListener("click", function () { setCollapsed(true); });
+    $("screenerPanelOpen").addEventListener("click", function () {
+        setCollapsed(!$("screenerShell").classList.contains("is-collapsed"));
+    });
+    if (window.matchMedia("(max-width: 1023.98px)").matches) {
+        $("screenerShell").classList.add("is-collapsed");
+    } else {
+        try {
+            if (localStorage.getItem(COLLAPSE_KEY) === "1") $("screenerShell").classList.add("is-collapsed");
+        } catch (error) {}
+    }
+
+    renderSavedScreens();
+    load(false);
+})();
+</script>
+{% endblock %}
